@@ -65,6 +65,17 @@ function pill(text, cls = '') {
   return `<span class="pill ${cls}">${esc(text)}</span>`;
 }
 
+/** A labeled progress bar. Pass a workload() result, or a bare 0-100 number. */
+function progressBar(w, { size = '', label = true } = {}) {
+  const pct = typeof w === 'number' ? w : w.pct;
+  const complete = typeof w === 'number' ? pct >= 100 : w.allDone || pct >= 100;
+  return `
+    <div class="progress ${size} ${complete ? 'is-complete' : ''}">
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      ${label ? `<span class="progress-pct">${complete ? 'Done' : `${pct}%`}</span>` : ''}
+    </div>`;
+}
+
 const MODE_LABELS = { 'in-person': 'in person', online: 'online', hybrid: 'hybrid' };
 
 /** "6:00 PM", or "6:00 PM (assumed)" while the real time is unknown. */
@@ -116,7 +127,11 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
           ${showCourse ? dot(task.color) : ''}${esc(task.title)}
         </div>
         ${detail ? `<div class="task-detail">${esc(detail)}</div>` : ''}
-        ${partial ? `<div class="task-detail muted">${task.read} of ${task.pages} pp. read</div>` : ''}
+        ${
+          partial
+            ? `<div class="task-detail muted">${task.read} of ${task.pages} pp. read</div>${progressBar(S.itemPct(task), { size: 'progress-sm' })}`
+            : ''
+        }
         ${task.flag ? `<div class="task-flag">⚠ ${esc(task.flag)}</div>` : ''}
         <div class="tags">${flags}</div>
       </div>
@@ -148,21 +163,38 @@ function viewToday() {
   const upcoming = S.deadlines(TASKS, { withinDays: store.settings().leadDays });
   const soon = S.deadlines(TASKS, { withinDays: 21 }).filter((g) => g.daysUntil > store.settings().leadDays);
 
-  const donePct = (() => {
-    const plans = currentPlans();
-    const total = plans.reduce((sum, p) => sum + p.tasks.reduce((a, t) => a + t.minutes, 0), 0);
-    const left = plans.reduce((sum, p) => sum + p.tasks.reduce((a, t) => a + t.remaining, 0), 0);
-    return total ? Math.round(((total - left) / total) * 100) : 0;
-  })();
+  const plans = currentPlans();
+  const overall = S.workload(plans.flatMap((p) => p.tasks));
 
   return `
     <section class="hero">
       <div class="hero-date">${esc(S.formatDate(new Date(), { weekday: 'long', month: 'long', day: 'numeric' }))}</div>
       <div class="hero-mins">${bucket.minutes ? S.formatMinutes(bucket.minutes) : 'Nothing due'}</div>
       <div class="hero-sub">${bucket.minutes ? "today's reading target" : 'enjoy the quiet'}</div>
-      <div class="bar"><div class="bar-fill" style="width:${donePct}%"></div></div>
-      <div class="hero-sub">${donePct}% of this week's work done</div>
+      <div class="bar"><div class="bar-fill" style="width:${overall.pct}%"></div></div>
+      <div class="hero-sub">${overall.pct}% of this week's work done</div>
     </section>
+
+    ${
+      plans.length
+        ? `<section class="card">
+             <h2>Progress toward next class</h2>
+             ${plans
+               .map(({ course, session, tasks }) => {
+                 const w = S.workload(tasks);
+                 return `
+                 <div class="course-progress">
+                   <div class="course-progress-head">
+                     <span>${dot(course.color)}${esc(course.short || course.name)}</span>
+                     <span class="muted">${esc(session.topic)}</span>
+                   </div>
+                   ${progressBar(w)}
+                 </div>`;
+               })
+               .join('')}
+           </section>`
+        : ''
+    }
 
     ${
       bucket.items.length
@@ -211,7 +243,7 @@ function viewToday() {
 }
 
 function deadlineRow(g) {
-  const mins = g.tasks.reduce((sum, t) => sum + t.remaining, 0);
+  const w = S.workload(g.tasks);
   const urgent = g.daysUntil <= 1 ? 'urgent' : g.daysUntil <= 3 ? 'soon' : '';
   const assignments = g.tasks.filter((t) => t.kind === 'assignment');
   return `
@@ -224,9 +256,10 @@ function deadlineRow(g) {
       <div class="deadline-body">
         <div class="deadline-title">${dot(g.color)}${esc(g.courseName)} — ${esc(g.topic)}</div>
         <div class="deadline-detail">
-          ${mins ? `${S.formatMinutes(mins)} of work left` : 'All done'}
+          ${w.remaining ? `${S.formatMinutes(w.remaining)} of work left` : 'All done'}
           ${assignments.length ? ` · ${esc(assignments.map((a) => a.title).join(', '))}` : ''}
         </div>
+        ${progressBar(w, { size: 'progress-sm' })}
       </div>
     </div>`;
 }
@@ -238,8 +271,7 @@ function viewPlan() {
   return `
     ${plans
       .map(({ course, session, date, tasks, plan }) => {
-        const left = tasks.reduce((a, t) => a + t.remaining, 0);
-        const total = tasks.reduce((a, t) => a + t.minutes, 0);
+        const w = S.workload(tasks);
         const pages = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
         const pagesLeft = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.remainingPages : 0), 0);
         return `
@@ -250,9 +282,10 @@ function viewPlan() {
           </div>
           <p class="topic">${esc(session.topic)}</p>
           <div class="tags">${modePill(session)}</div>
+          ${progressBar(w)}
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
-            <div><span class="stat">${S.formatMinutes(left)}</span><small>of ${S.formatMinutes(total)}</small></div>
+            <div><span class="stat">${S.formatMinutes(w.remaining)}</span><small>of ${S.formatMinutes(w.total)}</small></div>
             <div><span class="stat">${plan.days}</span><small>study days</small></div>
             <div><span class="stat">${S.formatMinutes(plan.perDay)}</span><small>per day</small></div>
           </div>
@@ -311,7 +344,7 @@ function viewSchedule() {
           .map(({ course, session, date }) => {
             const past = date < today;
             const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
-            const mins = tasks.reduce((a, t) => a + t.minutes, 0);
+            const w = S.workload(tasks);
             const pages = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
             return `
             <details class="sched-item ${past ? 'is-past' : ''}" ${S.daysBetween(today, date) >= 0 && S.daysBetween(today, date) <= 7 ? 'open' : ''}>
@@ -319,7 +352,8 @@ function viewSchedule() {
                 <span class="sched-date">${esc(S.formatDate(date, { month: 'short', day: 'numeric' }))}</span>
                 <span class="sched-course">${dot(course.color)}${esc(course.short)}</span>
                 <span class="sched-topic">${esc(session.topic)}${session.mode ? ` <em class="sched-mode">${esc(MODE_LABELS[session.mode])}</em>` : ''}</span>
-                <span class="sched-load">${pages ? `${pages} pp.` : ''}${mins ? ` · ${S.formatMinutes(mins)}` : ''}</span>
+                <span class="sched-load">${pages ? `${pages} pp.` : ''}${w.total ? ` · ${S.formatMinutes(w.total)}` : ''}</span>
+                ${w.total ? `<span class="sched-progress">${progressBar(w, { size: 'progress-sm', label: false })}</span>` : ''}
               </summary>
               <ul class="tasks">${tasks.map((t) => taskLine(t)).join('') || '<li class="empty">No work listed.</li>'}</ul>
             </details>`;

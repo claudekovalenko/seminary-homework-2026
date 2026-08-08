@@ -438,6 +438,23 @@ export function planFor(tasks, deadline, opts = {}) {
 
 /* ---------- deadlines & reminders ---------- */
 
+/** How far into a single reading you are, 0–100. Pages-only; other units are all-or-nothing. */
+export function itemPct(task) {
+  if (task.complete) return 100;
+  if (task.unit !== 'pages' || !task.pages) return 0;
+  return Math.min(100, Math.round((task.read / task.pages) * 100));
+}
+
+/** How much of a group of tasks is done, in minutes and as a percentage. */
+export function workload(tasks) {
+  const total = tasks.reduce((sum, t) => sum + t.minutes, 0);
+  const remaining = tasks.reduce((sum, t) => sum + t.remaining, 0);
+  const done = Math.max(0, total - remaining);
+  const pct = total ? Math.round((done / total) * 100) : tasks.length ? 100 : 0;
+  const allDone = tasks.length > 0 && tasks.every((t) => t.complete);
+  return { total, remaining, done, pct, allDone };
+}
+
 export function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone = false } = {}) {
   const groups = new Map();
   for (const t of tasks) {
