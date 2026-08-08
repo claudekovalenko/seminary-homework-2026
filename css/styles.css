@@ -697,3 +697,28 @@ summary {
 .tab.on {
   color: var(--accent);
 }
+
+.row input[type='time'] {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.row label .dot {
+  margin-right: 6px;
+}
+
+.sched-mode {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  white-space: nowrap;
+}

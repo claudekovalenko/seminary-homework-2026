@@ -139,6 +139,31 @@ export const formatMinutes = (mins) => {
   return r ? `${h}h ${r}m` : `${h}h`;
 };
 
+/* ---------- class times ---------- */
+
+// Fallback used when a course's meeting time has not been confirmed yet.
+export const ASSUMED_CLASS_TIME = '18:00';
+
+/** The time a course meets: your setting first, then the syllabus, then a guess. */
+export function classTimeFor(course) {
+  return settings().classTimes?.[course.id] || course.classTime || ASSUMED_CLASS_TIME;
+}
+
+/** True when the meeting time is still an assumption rather than a known fact. */
+export function classTimeIsAssumed(course) {
+  return !settings().classTimes?.[course.id] && !course.classTime;
+}
+
+/**
+ * The last day you can still read for a class. An evening class leaves the
+ * class day itself usable; a morning one does not.
+ */
+export function lastStudyDay(deadline, from) {
+  const eveningClass = deadline.getHours() >= 17;
+  if (eveningClass && daysBetween(from, deadline) >= 0) return parseDay(deadline);
+  return daysBetween(from, deadline) >= 1 ? addDays(deadline, -1) : from;
+}
+
 /* ---------- normalising the syllabus ---------- */
 
 export const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind}|${idx}`;
@@ -184,8 +209,7 @@ export function projectPace(task, from = startOfToday()) {
   const start = task.startPlanning ? parseDate(task.startPlanning) : from;
   if (parseDay(from) < parseDay(start)) return null;
   const deadline = dueAt(task);
-  const lastDay = daysBetween(from, deadline) >= 1 ? addDays(deadline, -1) : from;
-  const days = studyDaysBetween(from, lastDay, s.studyDays);
+  const days = studyDaysBetween(from, lastStudyDay(deadline, from), s.studyDays);
   const perDay = task.remaining / days.length;
   const todayIsStudyDay = days.some((d) => daysBetween(d, from) === 0);
   return { perDay, days: days.length, todayIsStudyDay, deadline };
@@ -203,7 +227,8 @@ export function buildTasks(data) {
         color: course.color,
         sessionDate: session.date,
         topic: session.topic,
-        classTime: course.classTime
+        classTime: classTimeFor(course),
+        classTimeAssumed: classTimeIsAssumed(course)
       };
 
       (session.readings || []).forEach((item, i) => {
@@ -223,7 +248,7 @@ export function buildTasks(data) {
           verses: item.verses,
           raw: item,
           due: session.date,
-          dueTime: course.classTime,
+          dueTime: classTimeFor(course),
           pages: pagesOf(item, key),
           minutes: minutesOf(item, key),
           estimated: isEstimated(item, key)
@@ -244,7 +269,7 @@ export function buildTasks(data) {
           chapters: session.bible.chapters,
           raw: item,
           due: session.date,
-          dueTime: course.classTime,
+          dueTime: classTimeFor(course),
           pages: 0,
           minutes: minutesOf(item, key),
           estimated: false
@@ -270,7 +295,7 @@ export function buildTasks(data) {
           startPlanning: a.startPlanning || null,
           raw: a,
           due: a.due || session.date,
-          dueTime: a.dueTime || course.classTime,
+          dueTime: a.dueTime || classTimeFor(course),
           pages: 0,
           minutes: isProject ? a.effortMinutes : sitting,
           estimated: isProject,
@@ -337,10 +362,9 @@ export function planFor(tasks, deadline, opts = {}) {
   // Projects are paced separately by projectPace(), so they stay out of here.
   const pending = tasks.filter((t) => !t.complete && t.remaining > 0 && t.unit !== 'project');
 
-  // Work is due before class, so the last useful study day is the day before —
-  // unless class is today or already here, in which case it's today.
-  const lastDay = daysBetween(today, deadline) >= 1 ? addDays(deadline, -1) : today;
-  const days = studyDaysBetween(today, lastDay, s.studyDays);
+  // Work is due before class, so the last useful study day is normally the day
+  // before — but an evening class leaves that day open too.
+  const days = studyDaysBetween(today, lastStudyDay(deadline, today), s.studyDays);
 
   const totalMinutes = pending.reduce((sum, t) => sum + t.remaining, 0);
   const perDay = totalMinutes / days.length;
@@ -432,6 +456,8 @@ export function deadlines(tasks, { from = startOfToday(), withinDays = 21, inclu
         topic: t.topic,
         date: when,
         iso: t.due,
+        time: t.dueTime,
+        timeAssumed: Boolean(t.classTimeAssumed) && !t.raw?.dueTime,
         daysUntil: delta,
         tasks: []
       });

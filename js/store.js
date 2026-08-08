@@ -14,6 +14,9 @@ export const DEFAULT_SETTINGS = {
   minsPerBibleChapter: 5,
   // Default guess when a reading is given as "ch. 4" with no page numbers.
   defaultChapterPages: 22,
+  // Confirmed class times, keyed by course id — overrides whatever the
+  // syllabus data says. Empty until you know when a class actually meets.
+  classTimes: {},
   notificationsEnabled: false,
   reminderHour: 8,
   theme: 'auto'

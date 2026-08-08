@@ -74,11 +74,13 @@ Adding a third course means appending one more object to `courses`.
   "name": "Intermediate Greek",
   "short": "Greek",
   "color": "#1f9d78",
-  "classTime": "11:00",             // used to time the "due before class" deadline
+  "meetingDay": "Tuesday",
+  "classTime": null,                // null = unconfirmed; app assumes 18:00 and says so
   "sessions": [
     {
       "date": "2026-09-01",         // the class meeting; work is due before it
       "topic": "Genitive",
+      "mode": "in-person",          // or "online" / "hybrid"; omit if unknown
       "readings": [
         {
           "order": 1,
@@ -119,11 +121,31 @@ Rules of thumb:
   is stored under, so old ticks may land on the wrong line. Adding at the end is
   safe.
 
-## Things worth checking against the paper syllabi
+## Class times
 
-- **Class times** are placeholders (Theology 09:00, Greek 11:00) — they only
-  affect the hour a due-date reminder considers "passed". Set the real ones in
-  `classTime`.
+Neither course's meeting time is confirmed yet, so the app **assumes 6:00 pm on
+Tuesdays** and labels it as an assumption everywhere it shows (`06:00 PM
+(assumed)`, and a `?` next to deadline times). Set the real times under
+**Settings → Class times** the moment you know them — no file editing needed.
+
+The time is not cosmetic. It decides two things:
+
+- when a due-date reminder counts as passed, and
+- whether class day itself is still available to read in. For an evening class
+  it is, so the plan uses it — which is why the heaviest Theology week drops
+  from ~54 to ~45 minutes a day under the evening assumption.
+
+If a course turns out to meet in the morning, set it to e.g. `09:00` and the
+plan stops counting class day and re-spreads over the days before it.
+
+## In-person vs online
+
+Each session can carry `"mode": "in-person"`, `"online"` or `"hybrid"`. The app
+shows it as a badge on the Plan card and next to the topic in the Schedule.
+Nothing carries a mode yet — send me the in-person/online schedule and it is a
+data-only change to `data/courses.json`.
+
+## Things worth checking against the paper syllabi
 - **Greek, 10/27** — the syllabus reads *"James Matt 2:19–23"*. Recorded as
   Matt 2:19–23 and flagged in the app; worth confirming with the professor.
 - **Page estimates** for chapter-only readings (Webster, Jamieson & Wittman,

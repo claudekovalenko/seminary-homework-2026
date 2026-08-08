@@ -4,7 +4,9 @@
   "notes": [
     "Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.",
     "driver: true == the underlined reading that drives class discussion.",
-    "pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it."
+    "pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.",
+    "classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".",
+    "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known."
   ],
   "courses": [
     {
@@ -12,7 +14,9 @@
       "name": "Theology 1",
       "short": "Theo 1",
       "color": "#5b6ef5",
-      "classTime": "09:00",
+      "meetingDay": "Tuesday",
+      "classTime": null,
+      "classTimeNote": "Time not confirmed — likely Tuesday evening. Set it in Settings.",
       "sessions": [
         {
           "date": "2026-08-18",
@@ -356,7 +360,9 @@
       "name": "Intermediate Greek",
       "short": "Greek",
       "color": "#1f9d78",
-      "classTime": "11:00",
+      "meetingDay": "Tuesday",
+      "classTime": null,
+      "classTimeNote": "Time not confirmed — likely Tuesday evening. Set it in Settings.",
       "sessions": [
         {
           "date": "2026-08-18",

@@ -26,7 +26,10 @@ function rebuild() {
 function currentPlans() {
   return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
     const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
-    return { course, session, date, tasks, plan: S.planFor(tasks, date) };
+    // Pass the deadline with its hour attached: an evening class leaves the
+    // class day itself available to read in.
+    const deadline = S.withTime(date, S.classTimeFor(course));
+    return { course, session, date, deadline, tasks, plan: S.planFor(tasks, deadline) };
   });
 }
 
@@ -58,6 +61,21 @@ const dot = (color) => `<span class="dot" style="--dot:${esc(color)}"></span>`;
 
 function pill(text, cls = '') {
   return `<span class="pill ${cls}">${esc(text)}</span>`;
+}
+
+const MODE_LABELS = { 'in-person': 'in person', online: 'online', hybrid: 'hybrid' };
+
+/** "6:00 PM", or "6:00 PM (assumed)" while the real time is unknown. */
+function classTimeLabel(course, { short = false } = {}) {
+  const time = S.classTimeFor(course);
+  const shown = S.withTime(new Date(), time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (!S.classTimeIsAssumed(course)) return shown;
+  return short ? `${shown}?` : `${shown} (assumed)`;
+}
+
+function modePill(session) {
+  const label = MODE_LABELS[session?.mode];
+  return label ? pill(label, session.mode === 'online' ? 'accent' : '') : '';
 }
 
 function taskLine(task, { showCourse = false, chunk = null } = {}) {
@@ -199,6 +217,7 @@ function deadlineRow(g) {
       <div class="deadline-when">
         <strong>${esc(S.relativeDay(g.date))}</strong>
         <span>${esc(S.formatDate(g.date))}</span>
+        <span>${esc(g.date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}${g.timeAssumed ? '?' : ''}</span>
       </div>
       <div class="deadline-body">
         <div class="deadline-title">${dot(g.color)}${esc(g.courseName)} — ${esc(g.topic)}</div>
@@ -225,9 +244,10 @@ function viewPlan() {
         <section class="card">
           <div class="card-head" style="--accent:${esc(course.color)}">
             <h2>${dot(course.color)}${esc(course.name)}</h2>
-            <span class="card-when">${esc(S.relativeDay(date))} · ${esc(S.formatDate(date))}</span>
+            <span class="card-when">${esc(S.relativeDay(date))} · ${esc(S.formatDate(date))}, ${esc(classTimeLabel(course))}</span>
           </div>
           <p class="topic">${esc(session.topic)}</p>
+          <div class="tags">${modePill(session)}</div>
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
             <div><span class="stat">${S.formatMinutes(left)}</span><small>of ${S.formatMinutes(total)}</small></div>
@@ -296,7 +316,7 @@ function viewSchedule() {
               <summary>
                 <span class="sched-date">${esc(S.formatDate(date, { month: 'short', day: 'numeric' }))}</span>
                 <span class="sched-course">${dot(course.color)}${esc(course.short)}</span>
-                <span class="sched-topic">${esc(session.topic)}</span>
+                <span class="sched-topic">${esc(session.topic)}${session.mode ? ` <em class="sched-mode">${esc(MODE_LABELS[session.mode])}</em>` : ''}</span>
                 <span class="sched-load">${pages ? `${pages} pp.` : ''}${mins ? ` · ${S.formatMinutes(mins)}` : ''}</span>
               </summary>
               <ul class="tasks">${tasks.map((t) => taskLine(t)).join('') || '<li class="empty">No work listed.</li>'}</ul>
@@ -338,6 +358,26 @@ function viewSettings() {
         <span class="unit">:00</span>
       </div>
       <button class="btn ghost" data-action="test-notif">Send a test notification</button>
+    </section>
+
+    <section class="card">
+      <h2>Class times</h2>
+      <p class="note">
+        Not confirmed yet, so the app assumes <strong>6:00 pm</strong> and marks it as an assumption.
+        The time matters for two things: when a due-date reminder counts as passed, and whether class
+        day itself is still available to read in — for an evening class it is, so the plan uses it.
+      </p>
+      ${DATA.courses
+        .map(
+          (c) => `
+        <div class="row">
+          <label for="ct-${esc(c.id)}">${dot(c.color)}${esc(c.name)}${c.meetingDay ? ` <span class="muted">· ${esc(c.meetingDay)}s</span>` : ''}</label>
+          ${S.classTimeIsAssumed(c) ? '<span class="status">assumed</span>' : '<span class="status ok">set</span>'}
+          <input id="ct-${esc(c.id)}" type="time" value="${esc(S.classTimeFor(c))}" data-classtime="${esc(c.id)}">
+        </div>`
+        )
+        .join('')}
+      <button class="btn ghost" data-action="clear-times">Back to assumed times</button>
     </section>
 
     <section class="card">
@@ -506,6 +546,11 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'clear-times') {
+    store.updateSettings({ classTimes: {} });
+    return refresh();
+  }
+
   if (action === 'reset') {
     if (confirm('Clear every tick, page marker and fired reminder? Settings are kept.')) {
       store.resetProgress();
@@ -515,6 +560,15 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  const time = e.target.closest('[data-classtime]');
+  if (time) {
+    const next = { ...store.settings().classTimes };
+    if (time.value) next[time.dataset.classtime] = time.value;
+    else delete next[time.dataset.classtime];
+    store.updateSettings({ classTimes: next });
+    return refresh();
+  }
+
   const el = e.target.closest('[data-setting]');
   if (!el) return;
   const n = Number(el.value);
