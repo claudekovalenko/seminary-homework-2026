@@ -13,6 +13,8 @@ const esc = (s) =>
 /* ---------------- data ---------------- */
 
 async function loadData() {
+  // The single-file build embeds the syllabus here so it works with no server.
+  if (globalThis.__COURSES__) return globalThis.__COURSES__;
   const res = await fetch('./data/courses.json', { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load the syllabus data (${res.status})`);
   return res.json();
@@ -340,6 +342,13 @@ function viewSettings() {
         This app has no server, so it raises them when it is open or when your browser wakes it in
         the background — keep it on your home screen and open it once a day.
       </p>
+      ${
+        location.protocol === 'file:'
+          ? `<p class="note warn-note">You are running the single-file copy straight off this device.
+               Everything works except reminders — browsers do not allow notifications from a page
+               opened out of the filesystem. For those, use the hosted copy added to your home screen.</p>`
+          : ''
+      }
       <div class="row">
         <label for="notif">Notifications</label>
         <span class="status ${perm === 'granted' ? 'ok' : ''}">${esc(perm)}</span>
@@ -605,7 +614,9 @@ async function boot() {
   rebuild();
   render();
 
-  if ('serviceWorker' in navigator) {
+  // A page opened straight off the filesystem cannot have a service worker,
+  // and does not need one — it is already local.
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     try {
       await navigator.serviceWorker.register('./sw.js');
       navigator.serviceWorker.addEventListener('message', (e) => {

@@ -16,6 +16,25 @@ Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.
 
+## Downloading it
+
+Two ways to get it, depending on what you want:
+
+**`dist/seminary.html`** — the whole app as one 75 KB file. Save it, open it,
+done: no server, no install, no network. It carries the syllabus, the planner
+and your ticked-off progress (kept in that browser's local storage). The one
+thing it cannot do is notifications — browsers block those for pages opened out
+of the filesystem — and the app says so in Settings when it detects it is
+running that way. Rebuild it after any change with:
+
+```sh
+node tools/build-single.mjs
+```
+
+**The repo itself** — clone it, or use GitHub's *Code → Download ZIP*. This is
+what you want for the full PWA: home-screen install, offline caching and
+reminders, once it is served over https (see below).
+
 ## Running it
 
 It is plain HTML/CSS/ES modules — no build step, no dependencies. But it does
