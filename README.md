@@ -146,6 +146,7 @@ Nothing carries a mode yet — send me the in-person/online schedule and it is a
 data-only change to `data/courses.json`.
 
 ## Things worth checking against the paper syllabi
+
 - **Greek, 10/27** — the syllabus reads *"James Matt 2:19–23"*. Recorded as
   Matt 2:19–23 and flagged in the app; worth confirming with the professor.
 - **Page estimates** for chapter-only readings (Webster, Jamieson & Wittman,
