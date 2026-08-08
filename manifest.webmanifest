@@ -1,0 +1,23 @@
+{
+  "name": "Seminary Homework",
+  "short_name": "Seminary",
+  "description": "Reading plan, workload breakdown and deadline reminders for the Fall 2026 seminary courses.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1016",
+  "theme_color": "#12141c",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Today", "url": "./#today" },
+    { "name": "This week's plan", "url": "./#plan" },
+    { "name": "Full schedule", "url": "./#schedule" }
+  ]
+}
