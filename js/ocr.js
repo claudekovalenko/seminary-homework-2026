@@ -16,11 +16,11 @@ export const ENGINE_MB = 9;
 
 /**
  * Tesseract reads best at around 300 dpi. PDF pages are measured at 72 dpi, so
- * a scale of ~4 hits that — capped, because a canvas that big on a phone risks
- * being silently refused.
+ * a scale of ~4.2 hits that. The pixel budget, not the scale, is the real cap:
+ * a canvas beyond it is silently refused on phones.
  */
-const TARGET_WIDTH = 2000;
-const MAX_SCALE = 4;
+const TARGET_DPI = 300;
+const MAX_PIXELS = 8e6;
 
 let cancelled = false;
 export const cancel = () => {
@@ -87,7 +87,11 @@ export async function ocrPdf(blob, onProgress) {
 
       const page = await doc.getPage(n);
       const base = page.getViewport({ scale: 1 });
-      const scale = Math.min(MAX_SCALE, Math.max(1, TARGET_WIDTH / base.width));
+      let scale = TARGET_DPI / 72;
+      // Stay inside the pixel budget rather than the scale, so a large page is
+      // reduced instead of failing to allocate.
+      const pixels = base.width * scale * (base.height * scale);
+      if (pixels > MAX_PIXELS) scale *= Math.sqrt(MAX_PIXELS / pixels);
       const viewport = page.getViewport({ scale });
 
       canvas.width = Math.floor(viewport.width);
@@ -98,8 +102,8 @@ export async function ocrPdf(blob, onProgress) {
       await page.render({ canvasContext: ctx, viewport }).promise;
       page.cleanup();
 
-      const { data: result } = await worker.recognize(canvas);
-      pages.push({ page: n, text: tidy(result.text) });
+      const { data: result } = await worker.recognize(canvas, {}, { text: true, blocks: true });
+      pages.push({ page: n, text: layOutLines(result) });
       onProgress?.({ done: n, total: doc.numPages, stage: 'reading' });
     }
   } finally {
@@ -121,11 +125,69 @@ export async function ocrPdf(blob, onProgress) {
 }
 
 /**
- * Tesseract emits one line per line of the page. Rejoin them into paragraphs so
- * the result reads like the extraction path's output rather than a column of
- * fragments.
+ * Rebuild paragraphs from where the lines physically sit on the page.
+ *
+ * Tesseract returns one line per line of print. Joining them on blank lines
+ * alone produced a single unbroken slab of text — unreadable for a chapter.
+ * Typography gives better signals than whitespace does: a paragraph ends when
+ * its last line stops short of the column's right edge, and a new one usually
+ * starts indented or after a wider gap. That is what this reads.
  */
-function tidy(raw) {
+function layOutLines(result) {
+  const lines = (result?.blocks || [])
+    .flatMap((b) => b.paragraphs || [])
+    .flatMap((p) => p.lines || [])
+    .map((l) => ({ text: String(l.text || '').replace(/\s+/g, ' ').trim(), bbox: l.bbox }))
+    .filter((l) => l.text && l.bbox);
+
+  if (!lines.length) return tidyText(result?.text);
+
+  lines.sort((a, b) => a.bbox.y0 - b.bbox.y0);
+
+  // The column edges, taken as the commonest extremes rather than the absolute
+  // ones, so a stray speck in the margin cannot define the page.
+  const rights = lines.map((l) => l.bbox.x1).sort((a, b) => a - b);
+  const lefts = lines.map((l) => l.bbox.x0).sort((a, b) => a - b);
+  const columnRight = rights[Math.floor(rights.length * 0.9)];
+  const columnLeft = lefts[Math.floor(lefts.length * 0.1)];
+  const width = Math.max(1, columnRight - columnLeft);
+
+  // Measure top-to-top, not the space between boxes. Line boxes overlap, since
+  // one line's descenders reach into the next line's ascenders, so the space
+  // between them is routinely negative and useless as a baseline for comparison.
+  const pitches = [];
+  for (let i = 1; i < lines.length; i++) pitches.push(lines[i].bbox.y0 - lines[i - 1].bbox.y0);
+  const sorted = pitches.slice().sort((a, b) => a - b);
+  const typicalPitch = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+
+  let out = '';
+  lines.forEach((line, i) => {
+    if (i === 0) {
+      out = line.text;
+      return;
+    }
+    const prev = lines[i - 1];
+    const pitch = line.bbox.y0 - prev.bbox.y0;
+    // A line that stops well short of the column edge is the end of something.
+    const prevEndedShort = prev.bbox.x1 < columnRight - width * 0.06;
+    const indented = line.bbox.x0 > columnLeft + width * 0.02;
+    const looseLine = typicalPitch > 0 && pitch > typicalPitch * 1.05;
+    const bigGap = typicalPitch > 0 && pitch > typicalPitch * 1.4;
+
+    if (bigGap || (prevEndedShort && (looseLine || indented))) {
+      out += '\n\n' + line.text;
+    } else if (/[-‐‑]$/.test(out)) {
+      out = out.replace(/[-‐‑]$/, '') + line.text;
+    } else {
+      out += ' ' + line.text;
+    }
+  });
+
+  return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/** Fallback when a page yields no line geometry at all. */
+function tidyText(raw) {
   const lines = String(raw || '')
     .split('\n')
     .map((l) => l.replace(/\s+/g, ' ').trim());

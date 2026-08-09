@@ -1987,7 +1987,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v9 · 2026-08-09';
+const BUILD = 'v10 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -2947,7 +2947,8 @@ document.addEventListener('click', async (e) => {
       say(
         `<span class="note">OCR read ${result.pageCount} page${result.pageCount === 1 ? '' : 's'}
          (${Math.round(result.chars / 1000)}k characters)${result.partial ? ', stopped early' : ''}.
-         OCR misreads some words — check anything you quote against the PDF.</span>`
+         It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
+         misreads the odd word, so check anything you quote against the PDF.</span>`
       );
       refresh();
       return go(`read:${id}`);
