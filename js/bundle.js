@@ -927,7 +927,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v7 · 2026-08-09';
+const BUILD = 'v8 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -1776,9 +1776,9 @@ document.addEventListener('click', async (e) => {
 
       if (result.looksScanned) {
         say(
-          `<span class="note warn-note">This PDF is a photographed scan — it has pictures of
-           pages, not text, so there is nothing to pull out. Reading it needs OCR, which the
-           app cannot do yet. Opening the PDF still works.</span>`
+          `<span class="note warn-note">This PDF is a photographed scan — pictures of pages,
+           not text, so there is nothing to pull straight out.</span>
+           <button class="btn small" data-action="run-ocr" data-mat="${esc(id)}">Read it with OCR</button>`
         );
         el.disabled = false;
         return;
@@ -1798,6 +1798,76 @@ document.addEventListener('click', async (e) => {
       say(`<span class="note warn-note">Could not read that PDF: ${esc(err.message)}</span>`);
       el.disabled = false;
     }
+    return;
+  }
+
+  if (action === 'run-ocr') {
+    const id = el.dataset.mat;
+    const status = $(`#extract-${CSS.escape(id)}`);
+    const say = (html) => status && (status.innerHTML = html);
+    const ocr = await import('./ocr.js');
+
+    if (!(await ocr.supported())) {
+      say('<span class="note warn-note">This browser is too old to run the OCR engine.</span>');
+      return;
+    }
+    if (
+      !confirm(
+        `Read this scan with OCR?\n\n` +
+          `It downloads a ~${ocr.ENGINE_MB} MB engine the first time, then takes roughly ` +
+          `10–20 seconds per page. Everything happens on this device — nothing is uploaded.\n\n` +
+          `You can leave the app open and come back to it.`
+      )
+    ) {
+      return;
+    }
+
+    say('<span class="note">Fetching the OCR engine…</span>');
+    const started = Date.now();
+    try {
+      const blob = await lib.getFile(id);
+      if (!blob) throw new Error('That file is not on this device any more.');
+
+      const result = await ocr.ocrPdf(blob, ({ done, total, stage, progress }) => {
+        if (stage === 'engine') {
+          const pct = Math.round((progress || 0) * 100);
+          say(`<span class="note">Fetching the OCR engine… ${pct}%</span>
+               ${progressBar(pct, { size: 'progress-sm' })}
+               <button class="btn small ghost" data-action="cancel-ocr">Cancel</button>`);
+          return;
+        }
+        const per = (Date.now() - started) / Math.max(done, 1);
+        const left = Math.round(((total - done) * per) / 1000);
+        say(`<span class="note">Reading page ${done} of ${total}${left > 5 ? ` · about ${left}s left` : ''}</span>
+             ${progressBar(Math.round((done / total) * 100), { size: 'progress-sm' })}
+             <button class="btn small ghost" data-action="cancel-ocr">Cancel</button>`);
+      });
+
+      if (!result.pages.length) {
+        say('<span class="note warn-note">Cancelled before any page was read.</span>');
+        return;
+      }
+
+      await lib.putText(id, result);
+      extractedIds.add(id);
+      say(
+        `<span class="note">OCR read ${result.pageCount} page${result.pageCount === 1 ? '' : 's'}
+         (${Math.round(result.chars / 1000)}k characters)${result.partial ? ', stopped early' : ''}.
+         OCR misreads some words — check anything you quote against the PDF.</span>`
+      );
+      refresh();
+      return go(`read:${id}`);
+    } catch (err) {
+      say(`<span class="note warn-note">OCR failed: ${esc(err.message)}</span>`);
+    }
+    return;
+  }
+
+  if (action === 'cancel-ocr') {
+    const ocr = await import('./ocr.js');
+    ocr.cancel();
+    el.disabled = true;
+    el.textContent = 'Stopping…';
     return;
   }
 

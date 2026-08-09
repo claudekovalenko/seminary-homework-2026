@@ -13,7 +13,8 @@ const WORKER_URL = '../vendor/pdfjs/pdf.worker.min.mjs';
 
 let pdfjsPromise = null;
 
-async function loadPdfjs() {
+/** Shared with js/ocr.js, which renders the same pages to canvas. */
+export async function loadPdfjs() {
   if (pdfjsPromise) return pdfjsPromise;
   pdfjsPromise = (async () => {
     const pdfjs = await import(new URL(PDFJS_URL, import.meta.url).href);
