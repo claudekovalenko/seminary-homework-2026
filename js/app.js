@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v8 · 2026-08-09';
+const BUILD = 'v9 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -110,18 +110,31 @@ function modePill(session) {
 const ICON_OPEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`;
 const ICON_CLIP = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7-7l9-9a3.3 3.3 0 0 1 4.7 4.7l-9 9a1.7 1.7 0 0 1-2.3-2.3l8.2-8.2"/></svg>`;
 
-/** The open-it / attach-it button that sits on every reading. */
+const ICON_READ = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A9 9 0 0 1 12 7a9 9 0 0 1 9-1.5v12A9 9 0 0 0 12 19a9 9 0 0 0-9-1.5z"/><path d="M12 7v12"/></svg>`;
+
+/**
+ * The buttons on the right of a reading: read the text if we have it, and
+ * open (or attach) the PDF itself.
+ */
 function materialButton(task) {
   if (task.kind !== 'reading') return '';
   const name = task.material || task.title;
   const id = lib.materialId(name);
   const entry = store.libraryEntry(id);
-  if (entry) {
-    return `<button class="matbtn has" data-action="open-material" data-mat="${esc(id)}"
-              title="Open ${esc(entry.title)}" aria-label="Open ${esc(entry.title)}">${ICON_OPEN}</button>`;
-  }
-  return `<button class="matbtn" data-action="find-material" data-mat="${esc(id)}"
-            title="Attach ${esc(name)}" aria-label="Attach ${esc(name)}">${ICON_CLIP}</button>`;
+
+  // Carry the task along so the reader can remind you which pages are assigned.
+  const read = extractedIds.has(id)
+    ? `<button class="matbtn read" data-action="read-here" data-mat="${esc(id)}" data-key="${esc(task.key)}"
+         title="Read ${esc(name)}" aria-label="Read ${esc(name)}">${ICON_READ}</button>`
+    : '';
+
+  const open = entry
+    ? `<button class="matbtn has" data-action="open-material" data-mat="${esc(id)}"
+         title="Open ${esc(entry.title)}" aria-label="Open ${esc(entry.title)}">${ICON_OPEN}</button>`
+    : `<button class="matbtn" data-action="find-material" data-mat="${esc(id)}"
+         title="Attach ${esc(name)}" aria-label="Attach ${esc(name)}">${ICON_CLIP}</button>`;
+
+  return read + open;
 }
 
 function taskLine(task, { showCourse = false, chunk = null } = {}) {
@@ -649,11 +662,15 @@ function viewSettings() {
 
 const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, files: viewFiles, settings: viewSettings };
 
-/** "read:bavinck-..." carries an argument; every other view is a bare name. */
+/** "read:bavinck-...|theo1|2026-09-29|r|0" — every other view is a bare name. */
 function parseView(hash) {
   const raw = hash.replace('#', '') || 'today';
   const [name, ...rest] = raw.split(':');
-  return { name, arg: rest.join(':') || null };
+  const arg = rest.join(':') || null;
+  if (name !== 'read' || !arg) return { name, arg, taskKey: null };
+  // The material id has no pipes; anything after the first one is the task key.
+  const [mat, ...key] = arg.split('|');
+  return { name, arg: mat, taskKey: key.length ? key.join('|') : null };
 }
 
 function render() {
@@ -662,7 +679,7 @@ function render() {
 
   if (name === 'read') {
     main.innerHTML = '<section class="card"><p class="note">Opening…</p></section>';
-    renderReader(arg);
+    renderReader(arg, parseView(view).taskKey);
   } else {
     main.innerHTML = (VIEWS[name] || viewToday)();
   }
@@ -687,8 +704,20 @@ function render() {
   }
 }
 
+/**
+ * What this week actually assigns out of the work, so the reader is not just a
+ * wall of text. Page numbers here are the book's, which need not line up with
+ * the PDF's own page order — so this states them rather than jumping.
+ */
+function assignedNote(taskKey) {
+  const task = taskKey && TASKS.find((t) => t.key === taskKey);
+  if (!task) return '';
+  const due = `${S.relativeDay(S.dueAt(task))} · ${esc(task.courseName)}`;
+  return `<p class="note assigned">Assigned this week: <strong>${esc(task.detail)}</strong> — due ${due}</p>`;
+}
+
 /** The reader: extracted text, laid out to be read rather than skimmed. */
-async function renderReader(id) {
+async function renderReader(id, taskKey) {
   const entry = store.libraryEntry(id);
   const extracted = await lib.getText(id).catch(() => null);
   const main = $('#app');
@@ -708,8 +737,9 @@ async function renderReader(id) {
     <section class="card reader-bar">
       <div class="card-head">
         <h2>${esc(entry.title)}</h2>
-        <span class="card-when">${extracted.pageCount} pages · ${Math.round(extracted.chars / 1000)}k characters</span>
+        <span class="card-when">${extracted.pageCount} pages · ${Math.round(extracted.chars / 1000)}k characters${extracted.ocr ? ' · read by OCR' : ''}</span>
       </div>
+      ${assignedNote(taskKey)}
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost small" data-action="goto-files">Files</button>
         <button class="btn ghost small" data-action="reader-smaller">A−</button>
@@ -823,6 +853,10 @@ document.addEventListener('click', async (e) => {
   }
 
   if (action === 'read-text') return go(`read:${el.dataset.mat}`);
+
+  if (action === 'read-here') {
+    return go(`read:${el.dataset.mat}|${el.dataset.key}`);
+  }
 
   if (action === 'extract-text') {
     const id = el.dataset.mat;

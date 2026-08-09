@@ -980,3 +980,24 @@ summary {
 .reader p:last-child {
   margin-bottom: 0;
 }
+
+.matbtn.read {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+.matbtn.read svg {
+  fill: none;
+}
+
+/* Two icon buttons plus the amount need the row to wrap on narrow phones. */
+.task {
+  flex-wrap: wrap;
+}
+
+.note.assigned {
+  background: var(--bg-elev-2);
+  border-radius: 9px;
+  padding: 8px 10px;
+  margin: 10px 0 0;
+}
