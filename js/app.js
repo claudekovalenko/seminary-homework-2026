@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v12 · 2026-08-09';
+const BUILD = 'v13 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -447,7 +447,11 @@ function readButton(m, entry) {
   if (entry.kind !== 'file') return '';
   if (!/\.pdf$/i.test(entry.fileName || '')) return '';
   if (extractedIds.has(m.id)) {
-    return `<button class="btn small" data-action="read-text" data-mat="${esc(m.id)}">Read text</button>`;
+    const where = store.readingPos(m.id);
+    const marks = store.bookmarksFor(m.id).length;
+    return `<button class="btn small" data-action="read-text" data-mat="${esc(m.id)}">
+              ${where ? `Continue p.${where.page}` : 'Read text'}${marks ? ` · ${marks} ⚑` : ''}
+            </button>`;
   }
   return `<button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Get text</button>`;
 }
@@ -510,7 +514,14 @@ function viewFiles() {
         For any PDF you have copied in, <strong>Get text</strong> pulls the words out and
         lays them out as plain readable prose — good for reading on a phone, searching, or
         copying a quotation. It only works on PDFs that carry a text layer; if yours is a
-        photographed scan the app will say so rather than hand you gibberish.
+        photographed scan the app will say so and offer to read it with <strong>OCR</strong>
+        instead.
+      </p>
+      <p class="note">
+        OCR keeps footnotes at the foot rather than running them into the sentence they
+        interrupt, and checks every word it reads against an English word list, so
+        "incomprehensihility" comes back as the word it was meant to be. It leaves alone
+        anything your book uses repeatedly — names and technical terms are safe.
       </p>
     </section>
 
@@ -717,9 +728,11 @@ function render() {
     main.innerHTML = '<section class="card"><p class="note">Opening…</p></section>';
     renderReader(arg, parseView(view).taskKey);
   } else {
+    window.removeEventListener('scroll', readerScroll);
+    reading = null;
     main.innerHTML = (VIEWS[name] || viewToday)();
+    window.scrollTo(0, 0);
   }
-  main.scrollTop = 0;
   document.querySelectorAll('.tab').forEach((el) =>
     el.classList.toggle('on', el.dataset.view === name || (name === 'read' && el.dataset.view === 'files'))
   );
@@ -752,11 +765,16 @@ function assignedNote(taskKey) {
   return `<p class="note assigned">Assigned this week: <strong>${esc(task.detail)}</strong> — due ${due}</p>`;
 }
 
+/** Which material the reader is showing, so scrolling knows what to remember. */
+let reading = null;
+let readerScroll = () => {};
+
 /** The reader: extracted text, laid out to be read rather than skimmed. */
 async function renderReader(id, taskKey) {
   const entry = store.libraryEntry(id);
   const extracted = await lib.getText(id).catch(() => null);
   const main = $('#app');
+  reading = null;
 
   if (!entry || !extracted) {
     main.innerHTML = `
@@ -769,6 +787,16 @@ async function renderReader(id, taskKey) {
   }
 
   const size = store.settings().readerFontSize || 17;
+  const marks = store.bookmarksFor(id);
+  const marked = new Set(marks.map(store.bookmarkKey));
+  const where = store.readingPos(id);
+
+  const paragraph = (page, index, text, kind = '') => {
+    const key = `${page}:${index}`;
+    return `<p class="${kind} ${marked.has(key) ? 'is-marked' : ''}" id="para-${esc(key)}"
+              data-page="${page}" data-para="${index}">${esc(text)}</p>`;
+  };
+
   main.innerHTML = `
     <section class="card reader-bar">
       <div class="card-head">
@@ -776,28 +804,141 @@ async function renderReader(id, taskKey) {
         <span class="card-when">${extracted.pageCount} pages · ${Math.round(extracted.chars / 1000)}k characters${extracted.ocr ? ' · read by OCR' : ''}</span>
       </div>
       ${assignedNote(taskKey)}
+      ${
+        where
+          ? `<p class="note resumed" id="resumed">Picked up where you left off — page ${where.page}.
+               <button class="linkbtn" data-action="reader-top">Start at the beginning</button></p>`
+          : ''
+      }
       <div class="btn-row" style="margin-top:10px">
         <button class="btn ghost small" data-action="goto-files">Files</button>
         <button class="btn ghost small" data-action="reader-smaller">A−</button>
         <button class="btn ghost small" data-action="reader-bigger">A+</button>
+        <button class="btn small" data-action="bookmark-here" id="bookmark-btn">Bookmark</button>
         <button class="btn ghost small" data-action="copy-text">Copy all</button>
       </div>
+      <div class="reader-progress">
+        <div class="progress progress-sm">
+          <div class="progress-track"><div class="progress-fill" id="reader-fill" style="width:0%"></div></div>
+        </div>
+        <span class="progress-pct" id="reader-place">page ${where?.page || 1} of ${extracted.pageCount}</span>
+      </div>
+      <div id="bookmark-list">${bookmarkList(marks)}</div>
     </section>
     <section class="card reader" style="--reader-size:${size}px">
       ${extracted.pages
-        .filter((p) => p.text)
-        .map(
-          (p) => `
+        .filter((p) => p.text || p.notes)
+        .map((p) => {
+          const body = (p.text || '').split('\n\n').filter(Boolean);
+          const notes = (p.notes || '').split('\n\n').filter(Boolean);
+          return `
         <div class="reader-page">
           <div class="reader-pagenum">page ${p.page}</div>
-          ${p.text
-            .split('\n\n')
-            .map((para) => `<p>${esc(para)}</p>`)
-            .join('')}
-        </div>`
-        )
+          ${body.map((para, i) => paragraph(p.page, i, para)).join('')}
+          ${
+            notes.length
+              ? `<div class="reader-notes">
+                   <div class="reader-notes-head">Footnotes</div>
+                   ${notes.map((para, i) => paragraph(p.page, body.length + i, para, 'note-para')).join('')}
+                 </div>`
+              : ''
+          }
+        </div>`;
+        })
         .join('')}
-    </section>`;
+    </section>
+    <button class="fab" data-action="bookmark-here" id="fab-bookmark" title="Bookmark this spot">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
+    </button>`;
+
+  reading = { id, pages: extracted.pageCount };
+  watchReadingPosition();
+  if (where) jumpTo(where, { smooth: false });
+}
+
+function bookmarkList(marks) {
+  if (!marks.length) return '';
+  return `
+    <details class="bookmarks" ${marks.length <= 3 ? 'open' : ''}>
+      <summary>${marks.length} bookmark${marks.length === 1 ? '' : 's'}</summary>
+      <ul>
+        ${marks
+          .map(
+            (m) => `
+          <li>
+            <button class="bookmark-go" data-action="goto-mark" data-page="${m.page}" data-para="${m.para}">
+              <span class="bookmark-page">p.${m.page}</span>
+              <span class="bookmark-text">${esc(m.text)}</span>
+            </button>
+            <button class="bookmark-drop" data-action="drop-mark" data-key="${esc(store.bookmarkKey(m))}"
+                    aria-label="Remove bookmark">✕</button>
+          </li>`
+          )
+          .join('')}
+      </ul>
+    </details>`;
+}
+
+/** The paragraph currently at the top of the screen — where you are reading. */
+function topParagraph() {
+  const paras = document.querySelectorAll('.reader p[data-page]');
+  const line = 120; // below the sticky header, where the eye actually is
+  let last = null;
+  for (const p of paras) {
+    if (p.getBoundingClientRect().top > line) break;
+    last = p;
+  }
+  return last || paras[0] || null;
+}
+
+function markOf(el) {
+  return el && { page: Number(el.dataset.page), para: Number(el.dataset.para), text: el.textContent.trim().slice(0, 70) };
+}
+
+function jumpTo({ page, para }, { smooth = true } = {}) {
+  const el = document.getElementById(`para-${page}:${para}`) || document.getElementById(`para-${page}:0`);
+  if (!el) return;
+  // Leave room for the header, which would otherwise sit over the line you came
+  // back for.
+  const top = el.getBoundingClientRect().top + window.scrollY - 96;
+  window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+  el.classList.add('just-jumped');
+  setTimeout(() => el.classList.remove('just-jumped'), 1400);
+}
+
+/**
+ * Remember the place without being asked. Reading is not something you should
+ * have to bookmark to keep — the app should simply know where you were.
+ */
+function watchReadingPosition() {
+  let queued = false;
+  const update = () => {
+    queued = false;
+    if (!reading) return;
+    const mark = markOf(topParagraph());
+    if (!mark) return;
+    store.setReadingPos(reading.id, { page: mark.page, para: mark.para });
+    const place = $('#reader-place');
+    if (place) place.textContent = `page ${mark.page} of ${reading.pages}`;
+    const fill = $('#reader-fill');
+    if (fill) fill.style.width = `${Math.round((mark.page / Math.max(1, reading.pages)) * 100)}%`;
+    const on = store.bookmarksFor(reading.id).some((m) => store.bookmarkKey(m) === `${mark.page}:${mark.para}`);
+    const btn = $('#bookmark-btn');
+    if (btn) {
+      btn.textContent = on ? 'Bookmarked' : 'Bookmark';
+      btn.classList.toggle('ghost', on);
+    }
+    $('#fab-bookmark')?.classList.toggle('on', on);
+  };
+  const onScroll = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(update);
+  };
+  window.removeEventListener('scroll', readerScroll);
+  readerScroll = onScroll;
+  window.addEventListener('scroll', readerScroll, { passive: true });
+  update();
 }
 
 async function showStorageUsage() {
@@ -888,6 +1029,38 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'bookmark-here') {
+    if (!reading) return;
+    const mark = markOf(topParagraph());
+    if (!mark) return;
+    const added = store.toggleBookmark(reading.id, mark);
+    const marks = store.bookmarksFor(reading.id);
+    $('#bookmark-list').innerHTML = bookmarkList(marks);
+    document.getElementById(`para-${mark.page}:${mark.para}`)?.classList.toggle('is-marked', added);
+    readerScroll();
+    return;
+  }
+
+  if (action === 'goto-mark') {
+    return jumpTo({ page: Number(el.dataset.page), para: Number(el.dataset.para) });
+  }
+
+  if (action === 'drop-mark') {
+    if (!reading) return;
+    const [page, para] = el.dataset.key.split(':');
+    store.removeBookmark(reading.id, el.dataset.key);
+    document.getElementById(`para-${page}:${para}`)?.classList.remove('is-marked');
+    $('#bookmark-list').innerHTML = bookmarkList(store.bookmarksFor(reading.id));
+    readerScroll();
+    return;
+  }
+
+  if (action === 'reader-top') {
+    $('#resumed')?.remove();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
   if (action === 'read-text') return go(`read:${el.dataset.mat}`);
 
   if (action === 'read-here') {
@@ -972,8 +1145,9 @@ document.addEventListener('click', async (e) => {
           ? `Carry on reading from page ${from.nextPage}?\n\n` +
               `The ${from.pageCount} pages already read are kept.`
           : `Read this scan with OCR?\n\n` +
-              `It downloads a ~${ocr.ENGINE_MB} MB engine the first time, then takes roughly ` +
-              `10–20 seconds per page. Everything happens on this device — nothing is uploaded.\n\n` +
+              `It downloads a ~${ocr.ENGINE_MB} MB engine and English word list the first time, ` +
+              `then takes roughly 10–20 seconds per page. Everything happens on this device — ` +
+              `nothing is uploaded.\n\n` +
               `Keep this screen in front of you while it works. Switching to another app pauses ` +
               `it — phones freeze web pages in the background, and no app on the web can get ` +
               `around that. Nothing is lost when it does: every page is saved the moment it is ` +
@@ -1021,6 +1195,10 @@ document.addEventListener('click', async (e) => {
                  <button class="btn small ghost" data-action="cancel-ocr">Cancel</button>`);
             return;
           }
+          if (stage === 'words') {
+            say('<span class="note">Checking the words against English…</span>');
+            return;
+          }
           const per = (Date.now() - started) / Math.max(done - alreadyDone, 1);
           const left = Math.round(((total - done) * per) / 1000);
           say(`<span class="note">Reading page ${done} of ${total}${left > 5 ? ` · about ${left}s left` : ''}
@@ -1046,8 +1224,10 @@ document.addEventListener('click', async (e) => {
          of ${result.totalPages} (${Math.round(result.chars / 1000)}k characters)${
            result.partial ? ' — stopped early; the Resume button carries on' : ''
          }.
+         ${result.repaired ? `Repaired ${result.repaired} misread word${result.repaired === 1 ? '' : 's'}. ` : ''}
+         ${result.notePages ? `Footnotes were found on ${result.notePages} page${result.notePages === 1 ? '' : 's'} and kept separate. ` : ''}
          It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
-         misreads the odd word, so check anything you quote against the PDF.</span>`
+         still misreads the odd word, so check anything you quote against the PDF.</span>`
       );
       if (result.partial) return refresh();
       refresh();
@@ -1139,6 +1319,7 @@ document.addEventListener('click', async (e) => {
       await lib.deleteFile(el.dataset.mat).catch(() => {});
       await lib.deleteText(el.dataset.mat).catch(() => {});
       extractedIds.delete(el.dataset.mat);
+      store.forgetReading(el.dataset.mat);
     }
     store.removeLibraryEntry(el.dataset.mat);
     return refresh();
@@ -1302,8 +1483,11 @@ async function boot() {
   await checkReminders();
 
   // Re-check when you come back to the app, and if it is left open overnight.
+  // Leaving the app must not lose the last few lines you read.
+  addEventListener('pagehide', () => store.flush());
+
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) return;
+    if (document.hidden) return store.flush();
     // Coming back to a run in progress: leave the screen exactly as it was, or
     // the redraw would detach the very element it is reporting into.
     if (!ocrRunning) refresh();

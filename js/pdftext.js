@@ -179,7 +179,10 @@ export async function extractText(blob, onProgress) {
 /** Whole document as one string, with page markers for orientation. */
 export function toPlainText(extracted) {
   return extracted.pages
-    .filter((p) => p.text)
-    .map((p) => `— page ${p.page} —\n\n${p.text}`)
+    .filter((p) => p.text || p.notes)
+    .map((p) => {
+      const notes = p.notes ? `\n\nFootnotes\n\n${p.notes}` : '';
+      return `— page ${p.page} —\n\n${p.text}${notes}`;
+    })
     .join('\n\n');
 }

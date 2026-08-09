@@ -29,7 +29,9 @@ const EMPTY = {
   progress: {}, // itemKey -> pages already read (for readings split across days)
   library: {}, // materialId -> { title, kind: 'link'|'file', url?, fileName?, fileSize? }
   overrides: {}, // itemKey -> page count (number)
-  fired: {} // reminderKey -> ISO timestamp
+  fired: {}, // reminderKey -> ISO timestamp
+  reading: {}, // materialId -> { page, para } — where you had got to
+  bookmarks: {} // materialId -> [{ page, para, text, at }]
 };
 
 function read() {
@@ -43,7 +45,9 @@ function read() {
       progress: parsed.progress || {},
       library: parsed.library || {},
       overrides: parsed.overrides || {},
-      fired: parsed.fired || {}
+      fired: parsed.fired || {},
+      reading: parsed.reading || {},
+      bookmarks: parsed.bookmarks || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -111,6 +115,62 @@ export function removeLibraryEntry(id) {
   persist();
 }
 
+/* ---------- where you are in a book ---------- */
+
+export const readingPos = (id) => state.reading[id] || null;
+
+/**
+ * Saved on every scroll, so it must not touch the disk on every scroll.
+ * localStorage writes are synchronous and would stutter the page; the position
+ * is only worth persisting once you have settled somewhere.
+ */
+let posTimer = null;
+export function setReadingPos(id, pos) {
+  if (!pos) delete state.reading[id];
+  else state.reading[id] = { ...pos, at: new Date().toISOString() };
+  clearTimeout(posTimer);
+  posTimer = setTimeout(persist, 700);
+}
+
+/** Write a deferred change out now — before the app is closed or hidden. */
+export function flush() {
+  if (!posTimer) return;
+  clearTimeout(posTimer);
+  posTimer = null;
+  persist();
+}
+
+export const bookmarksFor = (id) => state.bookmarks[id] || [];
+
+export const bookmarkKey = (mark) => `${mark.page}:${mark.para}`;
+
+/** Adding a bookmark you already have removes it, so the button toggles. */
+export function toggleBookmark(id, mark) {
+  const list = state.bookmarks[id] || [];
+  const key = bookmarkKey(mark);
+  const without = list.filter((m) => bookmarkKey(m) !== key);
+  const added = without.length === list.length;
+  if (added) without.push({ ...mark, at: new Date().toISOString() });
+  without.sort((a, b) => a.page - b.page || a.para - b.para);
+  if (without.length) state.bookmarks[id] = without;
+  else delete state.bookmarks[id];
+  persist();
+  return added;
+}
+
+export function removeBookmark(id, key) {
+  const list = (state.bookmarks[id] || []).filter((m) => bookmarkKey(m) !== key);
+  if (list.length) state.bookmarks[id] = list;
+  else delete state.bookmarks[id];
+  persist();
+}
+
+export function forgetReading(id) {
+  delete state.reading[id];
+  delete state.bookmarks[id];
+  persist();
+}
+
 export const overrideFor = (key) => state.overrides[key];
 
 export function setOverride(key, pages) {
@@ -138,7 +198,9 @@ export function importData(json) {
     progress: parsed.progress || {},
     library: parsed.library || {},
     overrides: parsed.overrides || {},
-    fired: parsed.fired || {}
+    fired: parsed.fired || {},
+    reading: parsed.reading || {},
+    bookmarks: parsed.bookmarks || {}
   };
   persist();
 }

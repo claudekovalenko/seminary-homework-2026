@@ -945,9 +945,11 @@ summary {
   flex-wrap: wrap;
 }
 
+/* Deliberately not sticky. It carries the progress readout and the bookmark
+   list now, and pinning all that to the top of a phone leaves barely half a
+   screen to read in. The bookmark button floats instead, so the one control you
+   need mid-chapter is always in reach. */
 .reader-bar {
-  position: sticky;
-  top: 0;
   z-index: 5;
 }
 
@@ -1015,4 +1017,181 @@ summary {
   margin: 0;
   flex: 1;
   min-width: 140px;
+}
+
+/* ---------- footnotes, bookmarks and your place in a book ---------- */
+
+/* Footnotes are set apart because running them into the body is what made the
+   old readings unusable — a citation would land mid-sentence. */
+.reader-notes {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.reader-notes-head {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.reader p.note-para {
+  font-size: 0.84em;
+  line-height: 1.55;
+  color: var(--muted-strong, var(--muted));
+  margin-bottom: 0.7em;
+}
+
+.reader p[data-page] {
+  scroll-margin-top: 96px;
+}
+
+.reader p.is-marked {
+  position: relative;
+  border-left: 3px solid var(--accent, #7aa2ff);
+  padding-left: 10px;
+  margin-left: -13px;
+}
+
+.reader p.just-jumped {
+  animation: settle 1.4s ease-out;
+  border-radius: 6px;
+}
+
+@keyframes settle {
+  from {
+    background: color-mix(in srgb, var(--accent, #7aa2ff) 26%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.reader-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.reader-progress .progress {
+  flex: 1;
+}
+
+.note.resumed {
+  background: var(--bg-elev-2);
+  border-radius: 9px;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent, #7aa2ff);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.bookmarks {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.bookmarks summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.bookmarks ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bookmarks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bookmark-go {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bookmark-page {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.bookmark-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-drop {
+  flex: none;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 15px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+/* The one control that has to stay reachable while you are reading. */
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom));
+  z-index: 8;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg-elev-2);
+  color: var(--muted);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.fab svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+.fab.on {
+  color: var(--accent, #7aa2ff);
+  border-color: color-mix(in srgb, var(--accent, #7aa2ff) 55%, transparent);
+}
+
+.fab.on svg {
+  fill: currentColor;
 }
