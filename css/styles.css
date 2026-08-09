@@ -1195,3 +1195,31 @@ summary {
 .fab.on svg {
   fill: currentColor;
 }
+
+/* The Bookmarks section: every mark from every book, gathered in one place. */
+.bookmark-book + .bookmark-book {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.bookmark-book-name {
+  font-size: 13.5px;
+  margin-bottom: 6px;
+}
+
+.bookmark-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.bookmark-rows li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

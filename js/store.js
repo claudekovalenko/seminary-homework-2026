@@ -142,6 +142,10 @@ export function flush() {
 
 export const bookmarksFor = (id) => state.bookmarks[id] || [];
 
+export const bookmarksAll = () => state.bookmarks;
+
+export const readingAll = () => state.reading;
+
 export const bookmarkKey = (mark) => `${mark.page}:${mark.para}`;
 
 /** Adding a bookmark you already have removes it, so the button toggles. */

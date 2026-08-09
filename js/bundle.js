@@ -144,6 +144,10 @@ function flush() {
 
 const bookmarksFor = (id) => state.bookmarks[id] || [];
 
+const bookmarksAll = () => state.bookmarks;
+
+const readingAll = () => state.reading;
+
 const bookmarkKey = (mark) => `${mark.page}:${mark.para}`;
 
 /** Adding a bookmark you already have removes it, so the button toggles. */
@@ -218,7 +222,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor} = __mod_store;
@@ -989,7 +993,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v13 · 2026-08-09';
+const BUILD = 'v14 · 2026-08-10';
 
 let DATA = null;
 let TASKS = [];
@@ -1126,7 +1130,13 @@ function materialButton(task) {
 
 function taskLine(task, { showCourse = false, chunk = null } = {}) {
   const done = task.complete;
-  const checked = chunk ? (task.read >= chunk.through ? 'checked' : '') : done ? 'checked' : '';
+  // A part-way chunk is ticked once you have read past its last page. A whole
+  // item is ticked only when it is marked done — page arithmetic cannot answer
+  // it, because a Bible reading or a Greek passage has no page count at all,
+  // and "0 pages read of 0" reads as finished. That is what made the Bible
+  // reading permanently ticked, and impossible to untick.
+  const ticked = chunk ? (chunk.whole ? done : task.read >= chunk.through) : done;
+  const checked = ticked ? 'checked' : '';
   const detail = chunk ? chunk.label : task.detail;
   const amount = chunk
     ? S.formatMinutes(chunk.minutes)
@@ -1135,7 +1145,8 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
       : S.amountLabel(task.raw, task.key);
 
   const attrs = chunk
-    ? `data-action="chunk" data-key="${esc(task.key)}" data-from="${chunk.from}" data-through="${chunk.through}" data-total="${task.pages}"`
+    ? `data-action="chunk" data-key="${esc(task.key)}" data-from="${chunk.from}" data-through="${chunk.through}"
+       data-total="${task.pages}" ${chunk.whole ? 'data-whole="1"' : ''}`
     : `data-action="toggle" data-key="${esc(task.key)}"`;
 
   const partial = !chunk && task.read > 0 && !done;
@@ -1473,11 +1484,80 @@ function redoRow(m, entry) {
     </div>`;
 }
 
+/**
+ * Every bookmark you have made, across every book, in one place.
+ *
+ * A bookmark buried inside the book it points at is only findable if you
+ * already remember which book that was. This is the section that answers
+ * "where was that passage?" without you having to.
+ */
+function bookmarksSection() {
+  const books = materials()
+    .map((m) => ({ m, marks: store.bookmarksFor(m.id) }))
+    .filter((b) => b.marks.length);
+  const total = books.reduce((sum, b) => sum + b.marks.length, 0);
+  const named = new Map(materials().map((m) => [m.id, m.name]));
+  const places = Object.entries(store.readingAll()).filter(([id]) => extractedIds.has(id));
+
+  if (!total && !places.length) {
+    return `
+      <section class="card">
+        <h2>Bookmarks</h2>
+        <p class="note">
+          Nothing marked yet. While you are reading, the ⚑ button in the bottom corner
+          saves the spot you are at — and the app remembers where you stopped even if
+          you do not mark it.
+        </p>
+      </section>`;
+  }
+
+  return `
+    <section class="card">
+      <h2>Bookmarks</h2>
+      ${
+        places.length
+          ? `<p class="note">Reading now: ${places
+              .map(([id, pos]) => {
+                const name = named.get(id) || store.libraryEntry(id)?.title || id;
+                return `<button class="linkbtn" data-action="resume-read" data-mat="${esc(id)}">${esc(name)} — p.${pos.page}</button>`;
+              })
+              .join(' · ')}</p>`
+          : ''
+      }
+      ${books
+        .map(
+          ({ m, marks }) => `
+        <div class="bookmark-book">
+          <div class="bookmark-book-name">${esc(m.name)} <span class="muted">· ${marks.length}</span></div>
+          <ul class="bookmark-rows">
+            ${marks
+              .map(
+                (mk) => `
+              <li>
+                <button class="bookmark-go" data-action="open-mark" data-mat="${esc(m.id)}"
+                        data-page="${mk.page}" data-para="${mk.para}">
+                  <span class="bookmark-page">p.${mk.page}</span>
+                  <span class="bookmark-text">${esc(mk.text)}</span>
+                </button>
+                <button class="bookmark-drop" data-action="drop-mark-here" data-mat="${esc(m.id)}"
+                        data-key="${esc(store.bookmarkKey(mk))}" aria-label="Remove bookmark">✕</button>
+              </li>`
+              )
+              .join('')}
+          </ul>
+        </div>`
+        )
+        .join('')}
+    </section>`;
+}
+
 function viewFiles() {
   const list = materials();
   const attached = list.filter((m) => store.libraryEntry(m.id)).length;
 
   return `
+    ${bookmarksSection()}
+
     <section class="card">
       <h2>Your materials</h2>
       <p class="note">
@@ -1752,6 +1832,8 @@ function assignedNote(taskKey) {
 /** Which material the reader is showing, so scrolling knows what to remember. */
 let reading = null;
 let readerScroll = () => {};
+/** A passage to land on once the reader has painted, set by the bookmark list. */
+let pendingJump = null;
 
 /** The reader: extracted text, laid out to be read rather than skimmed. */
 async function renderReader(id, taskKey) {
@@ -1837,7 +1919,10 @@ async function renderReader(id, taskKey) {
 
   reading = { id, pages: extracted.pageCount };
   watchReadingPosition();
-  if (where) jumpTo(where, { smooth: false });
+  // A bookmark you tapped wins over where you happened to stop reading.
+  const target = pendingJump || where;
+  pendingJump = null;
+  if (target) jumpTo(target, { smooth: false });
 }
 
 function bookmarkList(marks) {
@@ -1965,7 +2050,8 @@ document.addEventListener('click', async (e) => {
     const total = Number(el.dataset.total);
     if (el.checked) {
       store.setProgress(key, through);
-      if (through >= total) store.setDone(key, true);
+      // The whole item in one go, or the last chunk of one split across days.
+      if (el.dataset.whole || through >= total) store.setDone(key, true);
     } else {
       // Rewind to the page this chunk started on.
       store.setDone(key, false);
@@ -2027,6 +2113,19 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'goto-mark') {
     return jumpTo({ page: Number(el.dataset.page), para: Number(el.dataset.para) });
+  }
+
+  // From the Bookmarks section: open the book, then land on the passage.
+  if (action === 'open-mark') {
+    pendingJump = { page: Number(el.dataset.page), para: Number(el.dataset.para) };
+    return go(`read:${el.dataset.mat}`);
+  }
+
+  if (action === 'resume-read') return go(`read:${el.dataset.mat}`);
+
+  if (action === 'drop-mark-here') {
+    store.removeBookmark(el.dataset.mat, el.dataset.key);
+    return refresh();
   }
 
   if (action === 'drop-mark') {
