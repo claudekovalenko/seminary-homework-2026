@@ -9,6 +9,8 @@
 
 const DB_NAME = 'seminary-library';
 const STORE = 'files';
+// Extracted text lives beside the file it came from, keyed by the same id.
+const TEXT_STORE = 'text';
 
 export const available = typeof indexedDB !== 'undefined';
 
@@ -19,7 +21,7 @@ function open() {
   dbPromise = new Promise((resolve, reject) => {
     let req;
     try {
-      req = indexedDB.open(DB_NAME, 1);
+      req = indexedDB.open(DB_NAME, 2);
     } catch (err) {
       reject(err);
       return;
@@ -27,6 +29,7 @@ function open() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      if (!db.objectStoreNames.contains(TEXT_STORE)) db.createObjectStore(TEXT_STORE);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error('IndexedDB unavailable'));
@@ -35,11 +38,11 @@ function open() {
   return dbPromise;
 }
 
-async function tx(mode, run) {
+async function tx(mode, run, storeName = STORE) {
   const db = await open();
   return new Promise((resolve, reject) => {
-    const t = db.transaction(STORE, mode);
-    const req = run(t.objectStore(STORE));
+    const t = db.transaction(storeName, mode);
+    const req = run(t.objectStore(storeName));
     t.oncomplete = () => resolve(req?.result);
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error);
@@ -50,6 +53,13 @@ export const putFile = (id, blob) => tx('readwrite', (s) => s.put(blob, id));
 export const getFile = (id) => tx('readonly', (s) => s.get(id));
 export const deleteFile = (id) => tx('readwrite', (s) => s.delete(id));
 export const listFileIds = () => tx('readonly', (s) => s.getAllKeys());
+
+/* ---------- text extracted from those files ---------- */
+
+export const putText = (id, extracted) => tx('readwrite', (s) => s.put(extracted, id), TEXT_STORE);
+export const getText = (id) => tx('readonly', (s) => s.get(id), TEXT_STORE);
+export const deleteText = (id) => tx('readwrite', (s) => s.delete(id), TEXT_STORE);
+export const listTextIds = () => tx('readonly', (s) => s.getAllKeys(), TEXT_STORE);
 
 /** A stable key for a work, derived from its title. */
 export function materialId(name) {

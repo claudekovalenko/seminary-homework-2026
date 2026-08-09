@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   // Confirmed class times, keyed by course id — overrides whatever the
   // syllabus data says. Empty until you know when a class actually meets.
   classTimes: {},
+  readerFontSize: 17,
   notificationsEnabled: false,
   reminderHour: 8,
   theme: 'auto'
@@ -789,6 +790,8 @@ const __mod_library = (() => {
 
 const DB_NAME = 'seminary-library';
 const STORE = 'files';
+// Extracted text lives beside the file it came from, keyed by the same id.
+const TEXT_STORE = 'text';
 
 const available = typeof indexedDB !== 'undefined';
 
@@ -799,7 +802,7 @@ function open() {
   dbPromise = new Promise((resolve, reject) => {
     let req;
     try {
-      req = indexedDB.open(DB_NAME, 1);
+      req = indexedDB.open(DB_NAME, 2);
     } catch (err) {
       reject(err);
       return;
@@ -807,6 +810,7 @@ function open() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      if (!db.objectStoreNames.contains(TEXT_STORE)) db.createObjectStore(TEXT_STORE);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error('IndexedDB unavailable'));
@@ -815,11 +819,11 @@ function open() {
   return dbPromise;
 }
 
-async function tx(mode, run) {
+async function tx(mode, run, storeName = STORE) {
   const db = await open();
   return new Promise((resolve, reject) => {
-    const t = db.transaction(STORE, mode);
-    const req = run(t.objectStore(STORE));
+    const t = db.transaction(storeName, mode);
+    const req = run(t.objectStore(storeName));
     t.oncomplete = () => resolve(req?.result);
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error);
@@ -830,6 +834,13 @@ const putFile = (id, blob) => tx('readwrite', (s) => s.put(blob, id));
 const getFile = (id) => tx('readonly', (s) => s.get(id));
 const deleteFile = (id) => tx('readwrite', (s) => s.delete(id));
 const listFileIds = () => tx('readonly', (s) => s.getAllKeys());
+
+/* ---------- text extracted from those files ---------- */
+
+const putText = (id, extracted) => tx('readwrite', (s) => s.put(extracted, id), TEXT_STORE);
+const getText = (id) => tx('readonly', (s) => s.get(id), TEXT_STORE);
+const deleteText = (id) => tx('readwrite', (s) => s.delete(id), TEXT_STORE);
+const listTextIds = () => tx('readonly', (s) => s.getAllKeys(), TEXT_STORE);
 
 /** A stable key for a work, derived from its title. */
 function materialId(name) {
@@ -907,7 +918,7 @@ const formatBytes = (n) => {
   if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 };
-return { available, putFile, getFile, deleteFile, listFileIds, materialId, safeUrl, openLink, openStoredFile, requestPersistence, usage, formatBytes };
+return { available, putFile, getFile, deleteFile, listFileIds, putText, getText, deleteText, listTextIds, materialId, safeUrl, openLink, openStoredFile, requestPersistence, usage, formatBytes };
 })();
 (() => {
 const store = __mod_store;
@@ -916,7 +927,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v6 · 2026-08-09';
+const BUILD = 'v7 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -940,6 +951,15 @@ async function loadData() {
 
 function rebuild() {
   TASKS = S.buildTasks(DATA);
+}
+
+/** Refresh the set of materials that already have extracted text. */
+async function loadExtractedIds() {
+  try {
+    extractedIds = new Set(await lib.listTextIds());
+  } catch {
+    extractedIds = new Set();
+  }
 }
 
 /** The class meeting each course is currently working toward, with its plan. */
@@ -1324,6 +1344,21 @@ function materials() {
   });
 }
 
+// Which materials already have text pulled out of them. Filled asynchronously
+// before the Files view renders, because IndexedDB cannot be read inline.
+let extractedIds = new Set();
+
+/** "Read text" once text exists, "Get text" for a PDF we could read. */
+function readButton(m, entry) {
+  if (entry.kind !== 'file') return '';
+  const isPdf = /\.pdf$/i.test(entry.fileName || '');
+  if (!isPdf) return '';
+  if (extractedIds.has(m.id)) {
+    return `<button class="btn small" data-action="read-text" data-mat="${esc(m.id)}">Read text</button>`;
+  }
+  return `<button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Get text</button>`;
+}
+
 function viewFiles() {
   const list = materials();
   const attached = list.filter((m) => store.libraryEntry(m.id)).length;
@@ -1344,6 +1379,12 @@ function viewFiles() {
         across your devices and costs no space here.
         <strong>File</strong> copies a PDF into this app so it opens instantly and works
         offline, but it lives on this device only.
+      </p>
+      <p class="note">
+        For any PDF you have copied in, <strong>Get text</strong> pulls the words out and
+        lays them out as plain readable prose — good for reading on a phone, searching, or
+        copying a quotation. It only works on PDFs that carry a text layer; if yours is a
+        photographed scan the app will say so rather than hand you gibberish.
       </p>
     </section>
 
@@ -1374,11 +1415,13 @@ function viewFiles() {
               ${
                 e
                   ? `<button class="btn small" data-action="open-material" data-mat="${esc(m.id)}">Open</button>
+                     ${readButton(m, e)}
                      <button class="btn small ghost" data-action="detach" data-mat="${esc(m.id)}">Remove</button>`
                   : `<button class="btn small ghost" data-action="attach-link" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">Link</button>
                      <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>`
               }
             </div>
+            <div class="material-extract" id="extract-${esc(m.id)}"></div>
           </div>`;
         })
         .join('')}
@@ -1528,20 +1571,89 @@ function viewSettings() {
 
 const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, files: viewFiles, settings: viewSettings };
 
+/** "read:bavinck-..." carries an argument; every other view is a bare name. */
+function parseView(hash) {
+  const raw = hash.replace('#', '') || 'today';
+  const [name, ...rest] = raw.split(':');
+  return { name, arg: rest.join(':') || null };
+}
+
 function render() {
   const main = $('#app');
-  main.innerHTML = (VIEWS[view] || viewToday)();
-  main.scrollTop = 0;
-  document.querySelectorAll('.tab').forEach((el) => el.classList.toggle('on', el.dataset.view === view));
-  document.title = view === 'today' ? 'Seminary — Today' : `Seminary — ${view}`;
+  const { name, arg } = parseView(view);
 
-  if (view === 'files') {
+  if (name === 'read') {
+    main.innerHTML = '<section class="card"><p class="note">Opening…</p></section>';
+    renderReader(arg);
+  } else {
+    main.innerHTML = (VIEWS[name] || viewToday)();
+  }
+  main.scrollTop = 0;
+  document.querySelectorAll('.tab').forEach((el) =>
+    el.classList.toggle('on', el.dataset.view === name || (name === 'read' && el.dataset.view === 'files'))
+  );
+  document.title = name === 'today' ? 'Seminary — Today' : `Seminary — ${name}`;
+
+  if (name === 'files') {
+    loadExtractedIds().then(() => {
+      // Only redraw if the set actually changed the buttons we just painted.
+      const shown = new Set([...document.querySelectorAll('[data-action="read-text"]')].map((b) => b.dataset.mat));
+      const same = shown.size === extractedIds.size && [...extractedIds].every((id) => shown.has(id));
+      if (!same && parseView(view).name === 'files') render();
+    });
     if (focusMaterial) {
       $(`#mat-${CSS.escape(focusMaterial)}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       focusMaterial = null;
     }
     showStorageUsage();
   }
+}
+
+/** The reader: extracted text, laid out to be read rather than skimmed. */
+async function renderReader(id) {
+  const entry = store.libraryEntry(id);
+  const extracted = await lib.getText(id).catch(() => null);
+  const main = $('#app');
+
+  if (!entry || !extracted) {
+    main.innerHTML = `
+      <section class="card">
+        <h2>Nothing to read yet</h2>
+        <p class="note">Extract the text from the Files tab first.</p>
+        <button class="btn" data-action="goto-files">Back to Files</button>
+      </section>`;
+    return;
+  }
+
+  const size = store.settings().readerFontSize || 17;
+  main.innerHTML = `
+    <section class="card reader-bar">
+      <div class="card-head">
+        <h2>${esc(entry.title)}</h2>
+        <span class="card-when">${extracted.pageCount} pages · ${Math.round(extracted.chars / 1000)}k characters</span>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn ghost small" data-action="goto-files">Files</button>
+        <button class="btn ghost small" data-action="reader-smaller">A−</button>
+        <button class="btn ghost small" data-action="reader-bigger">A+</button>
+        <button class="btn ghost small" data-action="copy-text">Copy all</button>
+      </div>
+    </section>
+    <section class="card reader" style="--reader-size:${size}px">
+      ${extracted.pages
+        .filter((p) => p.text)
+        .map(
+          (p) => `
+        <div class="reader-page">
+          <div class="reader-pagenum">page ${p.page}</div>
+          ${p.text
+            .split('\n\n')
+            .map((para) => `<p>${esc(para)}</p>`)
+            .join('')}
+        </div>`
+        )
+        .join('')}
+    </section>`;
 }
 
 async function showStorageUsage() {
@@ -1604,6 +1716,88 @@ document.addEventListener('click', async (e) => {
       console.warn('Could not clear the offline copy', err);
     }
     location.replace(`${location.pathname}?updated=${Date.now()}${location.hash}`);
+    return;
+  }
+
+  if (action === 'goto-files') return go('files');
+
+  if (action === 'reader-bigger' || action === 'reader-smaller') {
+    const cur = store.settings().readerFontSize || 17;
+    const next = Math.min(26, Math.max(13, cur + (action === 'reader-bigger' ? 1 : -1)));
+    store.updateSettings({ readerFontSize: next });
+    $('.reader')?.style.setProperty('--reader-size', `${next}px`);
+    return;
+  }
+
+  if (action === 'copy-text') {
+    const id = parseView(view).arg;
+    const extracted = await lib.getText(id).catch(() => null);
+    if (!extracted) return;
+    const { toPlainText } = await import('./pdftext.js');
+    try {
+      await navigator.clipboard.writeText(toPlainText(extracted));
+      el.textContent = 'Copied';
+      setTimeout(() => (el.textContent = 'Copy all'), 1500);
+    } catch {
+      alert('This browser would not let the app write to the clipboard.');
+    }
+    return;
+  }
+
+  if (action === 'read-text') return go(`read:${el.dataset.mat}`);
+
+  if (action === 'extract-text') {
+    const id = el.dataset.mat;
+    const entry = store.libraryEntry(id);
+    const status = $(`#extract-${CSS.escape(id)}`);
+    if (!entry || entry.kind !== 'file') return;
+
+    const say = (html) => status && (status.innerHTML = html);
+
+    if (globalThis.__COURSES__) {
+      // The single-file copy has no sibling files to lazily import from.
+      say(`<span class="note warn-note">Reading text out of a PDF needs the hosted app —
+           this is the standalone offline copy. Opening the PDF still works.</span>`);
+      return;
+    }
+
+    el.disabled = true;
+    say('<span class="note">Loading the PDF reader (about 1.6 MB, once)…</span>');
+
+    try {
+      const blob = await lib.getFile(id);
+      if (!blob) throw new Error('That file is not stored on this device any more.');
+
+      const { extractText } = await import('./pdftext.js');
+      const result = await extractText(blob, ({ done, total }) => {
+        say(`<span class="note">Reading page ${done} of ${total}…</span>
+             ${progressBar(Math.round((done / total) * 100), { size: 'progress-sm' })}`);
+      });
+
+      if (result.looksScanned) {
+        say(
+          `<span class="note warn-note">This PDF is a photographed scan — it has pictures of
+           pages, not text, so there is nothing to pull out. Reading it needs OCR, which the
+           app cannot do yet. Opening the PDF still works.</span>`
+        );
+        el.disabled = false;
+        return;
+      }
+
+      await lib.putText(id, result);
+      extractedIds.add(id);
+      const partial =
+        result.emptyPages > 0
+          ? ` ${result.emptyPages} of ${result.pageCount} pages had no text — probably images or plates.`
+          : '';
+      say(`<span class="note">Got ${Math.round(result.chars / 1000)}k characters from
+           ${result.pageCount - result.emptyPages} pages.${partial}</span>`);
+      refresh();
+      return go(`read:${id}`);
+    } catch (err) {
+      say(`<span class="note warn-note">Could not read that PDF: ${esc(err.message)}</span>`);
+      el.disabled = false;
+    }
     return;
   }
 
@@ -1674,7 +1868,11 @@ document.addEventListener('click', async (e) => {
     const entry = store.libraryEntry(el.dataset.mat);
     if (!entry) return;
     if (!confirm(`Remove the attachment for "${entry.title}"?`)) return;
-    if (entry.kind === 'file') await lib.deleteFile(el.dataset.mat).catch(() => {});
+    if (entry.kind === 'file') {
+      await lib.deleteFile(el.dataset.mat).catch(() => {});
+      await lib.deleteText(el.dataset.mat).catch(() => {});
+      extractedIds.delete(el.dataset.mat);
+    }
     store.removeLibraryEntry(el.dataset.mat);
     return refresh();
   }
@@ -1805,6 +2003,7 @@ async function boot() {
     return;
   }
   rebuild();
+  await loadExtractedIds();
   render();
 
   // A page opened straight off the filesystem cannot have a service worker,

@@ -1,0 +1,10 @@
+# Vendored pdf.js
+
+`pdfjs-dist` 5.7.284, Apache-2.0 (see LICENSE). Only the two files the app needs:
+
+- `pdf.min.mjs` — the library
+- `pdf.worker.min.mjs` — the parsing worker
+
+Vendored rather than loaded from a CDN so the app keeps working offline and
+pulls in no third-party network calls. Both are loaded lazily by
+`js/pdftext.js` on first use, not precached, so installing the app stays small.

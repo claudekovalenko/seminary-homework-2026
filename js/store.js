@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS = {
   // Confirmed class times, keyed by course id — overrides whatever the
   // syllabus data says. Empty until you know when a class actually meets.
   classTimes: {},
+  readerFontSize: 17,
   notificationsEnabled: false,
   reminderHour: 8,
   theme: 'auto'
