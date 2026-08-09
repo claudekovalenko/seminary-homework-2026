@@ -5,17 +5,13 @@
 // that had once loaded the app kept serving that version forever, and new
 // features silently never arrived. Now every load paints instantly from cache
 // *and* refreshes the cache in the background, so the next load is current.
-const CACHE = 'seminary-v5';
+const CACHE = 'seminary-v6';
 
 const SHELL = [
   './',
   './index.html',
   './css/styles.css',
-  './js/app.js',
-  './js/store.js',
-  './js/schedule.js',
-  './js/notify.js',
-  './js/library.js',
+  './js/bundle.js',
   './data/courses.json',
   './manifest.webmanifest',
   './icons/icon.svg',

@@ -28,7 +28,7 @@ of the filesystem — and the app says so in Settings when it detects it is
 running that way. Rebuild it after any change with:
 
 ```sh
-node tools/build-single.mjs
+node tools/build.mjs
 ```
 
 **The repo itself** — clone it, or use GitHub's *Code → Download ZIP*. This is
@@ -37,9 +37,17 @@ reminders, once it is served over https (see below).
 
 ## Running it
 
-It is plain HTML/CSS/ES modules — no build step, no dependencies. But it does
-use `fetch` and a service worker, so it has to be *served*, not opened as a
-`file://` URL:
+The source is plain HTML/CSS/ES modules with no dependencies. `tools/build.mjs`
+concatenates `js/*.js` into `js/bundle.js`, which is what `index.html` actually
+loads, versioned as `bundle.js?v=vN`. **Run it after editing anything in `js/`**
+— the browser never sees the individual modules.
+
+One file instead of a module graph is deliberate: it gives the whole app a
+single cache key, so bumping the version invalidates all of it at once. When
+index.html loaded six separate modules, a stale service worker could serve a
+fresh page beside stale code and the app would half-update.
+
+It needs to be *served*, not opened as a `file://` URL:
 
 ```sh
 python3 -m http.server 8000
@@ -55,6 +63,16 @@ publishes the site on every push to `main`. Then:
 - **iPhone/iPad** — open the page in Safari → Share → *Add to Home Screen*.
   This step is required before notifications will work at all on iOS.
 - **Android** — Chrome will offer *Install app*, or use the ⋮ menu.
+
+## Updating a device that will not update
+
+Every release bumps `BUILD` in `js/app.js` and `CACHE` in `sw.js` together.
+If a phone is still showing an old version, open the site with the version
+query — `.../seminary-homework-2026/?v=v6`. The query misses the old worker's
+cache entirely, so the page and the bundle both come from the network, and the
+new worker then replaces the old one for good. **Settings → App version** shows
+what a device is really running, and has a button that clears the offline copy
+outright.
 
 ## About the reminders
 

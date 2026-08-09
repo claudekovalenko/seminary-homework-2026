@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v5 · 2026-08-09';
+const BUILD = 'v6 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -910,7 +910,9 @@ async function boot() {
         location.reload();
       });
 
-      const reg = await navigator.serviceWorker.register('./sw.js');
+      // updateViaCache 'none' keeps the browser's HTTP cache out of the update
+      // check, so a new worker is noticed the first time the app is opened.
+      const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
       reg.update().catch(() => {});
       navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'check-deadlines') checkReminders();
