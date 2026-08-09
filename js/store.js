@@ -26,6 +26,7 @@ const EMPTY = {
   settings: { ...DEFAULT_SETTINGS },
   done: {}, // itemKey -> true
   progress: {}, // itemKey -> pages already read (for readings split across days)
+  library: {}, // materialId -> { title, kind: 'link'|'file', url?, fileName?, fileSize? }
   overrides: {}, // itemKey -> page count (number)
   fired: {} // reminderKey -> ISO timestamp
 };
@@ -39,6 +40,7 @@ function read() {
       settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
       done: parsed.done || {},
       progress: parsed.progress || {},
+      library: parsed.library || {},
       overrides: parsed.overrides || {},
       fired: parsed.fired || {}
     };
@@ -92,6 +94,22 @@ export function setProgress(key, pages) {
   persist();
 }
 
+/* ---------- attached course materials ---------- */
+
+export const libraryEntry = (id) => state.library[id];
+
+export const libraryAll = () => state.library;
+
+export function setLibraryEntry(id, entry) {
+  state.library[id] = { ...entry, addedAt: entry.addedAt || new Date().toISOString() };
+  persist();
+}
+
+export function removeLibraryEntry(id) {
+  delete state.library[id];
+  persist();
+}
+
 export const overrideFor = (key) => state.overrides[key];
 
 export function setOverride(key, pages) {
@@ -117,6 +135,7 @@ export function importData(json) {
     settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
     done: parsed.done || {},
     progress: parsed.progress || {},
+    library: parsed.library || {},
     overrides: parsed.overrides || {},
     fired: parsed.fired || {}
   };

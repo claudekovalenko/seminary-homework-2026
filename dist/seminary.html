@@ -680,7 +680,7 @@ summary {
   right: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: color-mix(in srgb, var(--bg-elev) 92%, transparent);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
@@ -836,6 +836,110 @@ summary {
   white-space: nowrap;
 }
 
+/* ---------- attached materials ---------- */
+
+.matbtn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.matbtn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.matbtn.has {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+}
+
+.inline-icon svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  vertical-align: -1px;
+}
+
+.material {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 70px;
+}
+
+.material:first-child {
+  border-top: 0;
+}
+
+.material.is-focus {
+  animation: flash 1.6s ease;
+}
+
+@keyframes flash {
+  0%,
+  55% {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.material-head {
+  flex: 1;
+  min-width: 0;
+}
+
+.material-title {
+  font-size: 14.5px;
+}
+
+.material-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.material-attached {
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.material-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn.small {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+
 </style>
   </head>
   <body>
@@ -866,6 +970,10 @@ summary {
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
         Schedule
       </button>
+      <button class="tab" data-view="files">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+        Files
+      </button>
       <button class="tab" data-view="settings">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" /></svg>
         Settings
@@ -873,7 +981,7 @@ summary {
     </nav>
 
     <script type="module">
-globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":null,"classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"John Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}]},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":null,"classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2","estPages":30,"estimated":true},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage."}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}]}]};
+globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":null,"classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}]},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":null,"classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2","estPages":30,"estimated":true},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}]}]};
 const __mod_store = (() => {
 // Local persistence: settings, per-item completion, page-count overrides,
 // and a record of which reminders have already fired.
@@ -903,6 +1011,7 @@ const EMPTY = {
   settings: { ...DEFAULT_SETTINGS },
   done: {}, // itemKey -> true
   progress: {}, // itemKey -> pages already read (for readings split across days)
+  library: {}, // materialId -> { title, kind: 'link'|'file', url?, fileName?, fileSize? }
   overrides: {}, // itemKey -> page count (number)
   fired: {} // reminderKey -> ISO timestamp
 };
@@ -916,6 +1025,7 @@ function read() {
       settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
       done: parsed.done || {},
       progress: parsed.progress || {},
+      library: parsed.library || {},
       overrides: parsed.overrides || {},
       fired: parsed.fired || {}
     };
@@ -969,6 +1079,22 @@ function setProgress(key, pages) {
   persist();
 }
 
+/* ---------- attached course materials ---------- */
+
+const libraryEntry = (id) => state.library[id];
+
+const libraryAll = () => state.library;
+
+function setLibraryEntry(id, entry) {
+  state.library[id] = { ...entry, addedAt: entry.addedAt || new Date().toISOString() };
+  persist();
+}
+
+function removeLibraryEntry(id) {
+  delete state.library[id];
+  persist();
+}
+
 const overrideFor = (key) => state.overrides[key];
 
 function setOverride(key, pages) {
@@ -994,6 +1120,7 @@ function importData(json) {
     settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
     done: parsed.done || {},
     progress: parsed.progress || {},
+    library: parsed.library || {},
     overrides: parsed.overrides || {},
     fired: parsed.fired || {}
   };
@@ -1011,7 +1138,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, overrideFor, setOverride, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, overrideFor, setOverride, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor} = __mod_store;
@@ -1256,6 +1383,8 @@ function buildTasks(data) {
           kind: 'reading',
           order: item.order ?? i + 1,
           title: item.source,
+          // The physical book/PDF this reading lives in — attachments key off it.
+          material: item.material || item.source,
           detail: item.ref,
           format: item.format,
           driver: Boolean(item.driver),
@@ -1635,9 +1764,12 @@ return { supported, permission, requestPermission, checkReminders, dailyNudge, r
 const store = __mod_store;
 const S = __mod_schedule;
 const notify = __mod_notify;
+const lib = __mod_library;
 let DATA = null;
 let TASKS = [];
 let view = location.hash.replace('#', '') || 'today';
+// Set when you tap a paperclip in a reading list: the Files view scrolls to it.
+let focusMaterial = null;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) =>
@@ -1724,6 +1856,23 @@ function modePill(session) {
   return label ? pill(label, session.mode === 'online' ? 'accent' : '') : '';
 }
 
+const ICON_OPEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`;
+const ICON_CLIP = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7-7l9-9a3.3 3.3 0 0 1 4.7 4.7l-9 9a1.7 1.7 0 0 1-2.3-2.3l8.2-8.2"/></svg>`;
+
+/** The open-it / attach-it button that sits on every reading. */
+function materialButton(task) {
+  if (task.kind !== 'reading') return '';
+  const name = task.material || task.title;
+  const id = lib.materialId(name);
+  const entry = store.libraryEntry(id);
+  if (entry) {
+    return `<button class="matbtn has" data-action="open-material" data-mat="${esc(id)}"
+              title="Open ${esc(entry.title)}" aria-label="Open ${esc(entry.title)}">${ICON_OPEN}</button>`;
+  }
+  return `<button class="matbtn" data-action="find-material" data-mat="${esc(id)}"
+            title="Attach ${esc(name)}" aria-label="Attach ${esc(name)}">${ICON_CLIP}</button>`;
+}
+
 function taskLine(task, { showCourse = false, chunk = null } = {}) {
   const done = task.complete;
   const checked = chunk ? (task.read >= chunk.through ? 'checked' : '') : done ? 'checked' : '';
@@ -1768,6 +1917,7 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
         ${task.flag ? `<div class="task-flag">⚠ ${esc(task.flag)}</div>` : ''}
         <div class="tags">${flags}</div>
       </div>
+      ${materialButton(task)}
       <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
               ${task.unit === 'pages' && !chunk ? `data-action="edit-pages" data-key="${esc(task.key)}"` : 'disabled'}>
         ${esc(amount)}
@@ -1996,6 +2146,112 @@ function viewSchedule() {
     </section>`;
 }
 
+/** Every distinct work assigned this term, with where it is used. */
+function materials() {
+  const map = new Map();
+  for (const t of TASKS) {
+    if (t.kind !== 'reading') continue;
+    const name = t.material || t.title;
+    const id = lib.materialId(name);
+    if (!map.has(id)) {
+      map.set(id, { id, name, courses: new Set(), uses: 0, isPdf: false, nextDue: null });
+    }
+    const m = map.get(id);
+    m.courses.add(t.course);
+    m.uses += 1;
+    if (t.format === 'pdf') m.isPdf = true;
+    const due = S.parseDate(t.due);
+    if (!t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
+  }
+  return [...map.values()].sort((a, b) => {
+    if (a.nextDue && b.nextDue && +a.nextDue !== +b.nextDue) return a.nextDue - b.nextDue;
+    if (a.nextDue && !b.nextDue) return -1;
+    if (!a.nextDue && b.nextDue) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function viewFiles() {
+  const list = materials();
+  const attached = list.filter((m) => store.libraryEntry(m.id)).length;
+
+  return `
+    <section class="card">
+      <h2>Your materials</h2>
+      <p class="note">
+        Attach each book or PDF once and it opens from every class that assigns it —
+        tap the <span class="inline-icon">${ICON_OPEN}</span> next to any reading.
+      </p>
+      <div class="progress ${attached === list.length ? 'is-complete' : ''}">
+        <div class="progress-track"><div class="progress-fill" style="width:${Math.round((attached / list.length) * 100)}%"></div></div>
+        <span class="progress-pct">${attached}/${list.length}</span>
+      </div>
+      <p class="note" style="margin-top:10px">
+        <strong>Link</strong> points at a file in Google Drive, Dropbox or iCloud — it syncs
+        across your devices and costs no space here.
+        <strong>File</strong> copies a PDF into this app so it opens instantly and works
+        offline, but it lives on this device only.
+      </p>
+    </section>
+
+    <section class="card">
+      ${list
+        .map((m) => {
+          const e = store.libraryEntry(m.id);
+          const where = [...m.courses].join(', ');
+          return `
+          <div class="material ${focusMaterial === m.id ? 'is-focus' : ''}" id="mat-${esc(m.id)}">
+            <div class="material-head">
+              <div class="material-title">${esc(m.name)}</div>
+              <div class="material-meta">
+                ${esc(where)} · used in ${m.uses} ${m.uses === 1 ? 'class' : 'classes'}
+                ${m.isPdf ? ' · syllabus supplies a PDF' : ''}
+                ${m.nextDue ? ` · next ${esc(S.formatDate(m.nextDue, { month: 'short', day: 'numeric' }))}` : ''}
+              </div>
+              ${
+                e
+                  ? `<div class="material-attached">
+                       ${e.kind === 'link' ? '🔗' : '📄'}
+                       ${esc(e.kind === 'link' ? shortUrl(e.url) : `${e.fileName} (${lib.formatBytes(e.fileSize)})`)}
+                     </div>`
+                  : ''
+              }
+            </div>
+            <div class="material-actions">
+              ${
+                e
+                  ? `<button class="btn small" data-action="open-material" data-mat="${esc(m.id)}">Open</button>
+                     <button class="btn small ghost" data-action="detach" data-mat="${esc(m.id)}">Remove</button>`
+                  : `<button class="btn small ghost" data-action="attach-link" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">Link</button>
+                     <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>`
+              }
+            </div>
+          </div>`;
+        })
+        .join('')}
+    </section>
+
+    <section class="card">
+      <h2>Storage</h2>
+      <p class="note" id="storage-line">Checking…</p>
+      <p class="note">
+        Links are included in <em>Settings → Export progress</em>. Copied files are not —
+        they stay in this browser. If you clear site data or switch devices, re-attach them.
+      </p>
+    </section>`;
+}
+
+/** "drive.google.com/…/view" — enough to recognise, short enough to fit. */
+function shortUrl(url) {
+  try {
+    const u = new URL(url);
+    const tail = u.pathname.length > 24 ? `…${u.pathname.slice(-20)}` : u.pathname;
+    return `${u.hostname.replace(/^www\./, '')}${tail}`;
+  } catch {
+    return url;
+  }
+}
+
 function viewSettings() {
   const s = store.settings();
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -2107,7 +2363,7 @@ function viewSettings() {
 
 /* ---------------- shell ---------------- */
 
-const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, settings: viewSettings };
+const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, files: viewFiles, settings: viewSettings };
 
 function render() {
   const main = $('#app');
@@ -2115,6 +2371,27 @@ function render() {
   main.scrollTop = 0;
   document.querySelectorAll('.tab').forEach((el) => el.classList.toggle('on', el.dataset.view === view));
   document.title = view === 'today' ? 'Seminary — Today' : `Seminary — ${view}`;
+
+  if (view === 'files') {
+    if (focusMaterial) {
+      $(`#mat-${CSS.escape(focusMaterial)}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      focusMaterial = null;
+    }
+    showStorageUsage();
+  }
+}
+
+async function showStorageUsage() {
+  const line = $('#storage-line');
+  if (!line) return;
+  if (!lib.available) {
+    line.textContent = 'This browser cannot copy files in — links still work.';
+    return;
+  }
+  const est = await lib.usage();
+  const files = await lib.listFileIds().catch(() => []);
+  const count = `${files.length} file${files.length === 1 ? '' : 's'} copied into the app`;
+  line.textContent = est ? `${count} · ${lib.formatBytes(est.used)} used of about ${lib.formatBytes(est.quota)} available.` : count;
 }
 
 function go(next) {
@@ -2150,6 +2427,78 @@ document.addEventListener('click', async (e) => {
       store.setDone(key, false);
       store.setProgress(key, Number(el.dataset.from) || 0);
     }
+    return refresh();
+  }
+
+  if (action === 'find-material') {
+    // Tapped the paperclip on a reading: jump to Files and highlight that work.
+    focusMaterial = el.dataset.mat;
+    return go('files');
+  }
+
+  if (action === 'open-material') {
+    const id = el.dataset.mat;
+    const entry = store.libraryEntry(id);
+    if (!entry) return;
+    if (entry.kind === 'link') {
+      if (!lib.openLink(entry.url)) alert('That link is no longer valid. Remove it and add it again.');
+      return;
+    }
+    const opened = await lib.openStoredFile(id, entry.fileName);
+    if (!opened) {
+      alert(`"${entry.fileName}" is not stored on this device.\n\nAttach it again from the Files tab — copied files do not travel between devices.`);
+    }
+    return;
+  }
+
+  if (action === 'attach-link') {
+    const { mat: id, title } = el.dataset;
+    const current = store.libraryEntry(id);
+    const answer = prompt(
+      `Paste a link for "${title}".\n\nGoogle Drive, Dropbox, OneDrive, iCloud — any https:// address.`,
+      current?.url || 'https://'
+    );
+    if (answer === null) return;
+    const url = lib.safeUrl(answer);
+    if (!url) {
+      alert('That does not look like a web link — it needs to start with https://');
+      return;
+    }
+    store.setLibraryEntry(id, { title, kind: 'link', url });
+    return refresh();
+  }
+
+  if (action === 'attach-file') {
+    const { mat: id, title } = el.dataset;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.epub,application/pdf,application/epub+zip,image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        await lib.putFile(id, file);
+        store.setLibraryEntry(id, { title, kind: 'file', fileName: file.name, fileSize: file.size });
+        lib.requestPersistence();
+        refresh();
+      } catch (err) {
+        alert(
+          `Could not store that file: ${err.message}\n\n` +
+            'Copying files needs the hosted version of the app, not the single-file offline copy. ' +
+            'A link works either way.'
+        );
+      }
+    };
+    input.click();
+    return;
+  }
+
+  if (action === 'detach') {
+    const entry = store.libraryEntry(el.dataset.mat);
+    if (!entry) return;
+    if (!confirm(`Remove the attachment for "${entry.title}"?`)) return;
+    if (entry.kind === 'file') await lib.deleteFile(el.dataset.mat).catch(() => {});
+    store.removeLibraryEntry(el.dataset.mat);
     return refresh();
   }
 

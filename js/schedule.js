@@ -239,6 +239,8 @@ export function buildTasks(data) {
           kind: 'reading',
           order: item.order ?? i + 1,
           title: item.source,
+          // The physical book/PDF this reading lives in — attachments key off it.
+          material: item.material || item.source,
           detail: item.ref,
           format: item.format,
           driver: Boolean(item.driver),

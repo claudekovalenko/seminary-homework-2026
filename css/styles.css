@@ -666,7 +666,7 @@ summary {
   right: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: color-mix(in srgb, var(--bg-elev) 92%, transparent);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
@@ -820,4 +820,108 @@ summary {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---------- attached materials ---------- */
+
+.matbtn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.matbtn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.matbtn.has {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+}
+
+.inline-icon svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  vertical-align: -1px;
+}
+
+.material {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 70px;
+}
+
+.material:first-child {
+  border-top: 0;
+}
+
+.material.is-focus {
+  animation: flash 1.6s ease;
+}
+
+@keyframes flash {
+  0%,
+  55% {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.material-head {
+  flex: 1;
+  min-width: 0;
+}
+
+.material-title {
+  font-size: 14.5px;
+}
+
+.material-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.material-attached {
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.material-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn.small {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  border-radius: 8px;
 }

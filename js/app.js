@@ -1,10 +1,13 @@
 import * as store from './store.js';
 import * as S from './schedule.js';
 import * as notify from './notify.js';
+import * as lib from './library.js';
 
 let DATA = null;
 let TASKS = [];
 let view = location.hash.replace('#', '') || 'today';
+// Set when you tap a paperclip in a reading list: the Files view scrolls to it.
+let focusMaterial = null;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) =>
@@ -91,6 +94,23 @@ function modePill(session) {
   return label ? pill(label, session.mode === 'online' ? 'accent' : '') : '';
 }
 
+const ICON_OPEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`;
+const ICON_CLIP = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7-7l9-9a3.3 3.3 0 0 1 4.7 4.7l-9 9a1.7 1.7 0 0 1-2.3-2.3l8.2-8.2"/></svg>`;
+
+/** The open-it / attach-it button that sits on every reading. */
+function materialButton(task) {
+  if (task.kind !== 'reading') return '';
+  const name = task.material || task.title;
+  const id = lib.materialId(name);
+  const entry = store.libraryEntry(id);
+  if (entry) {
+    return `<button class="matbtn has" data-action="open-material" data-mat="${esc(id)}"
+              title="Open ${esc(entry.title)}" aria-label="Open ${esc(entry.title)}">${ICON_OPEN}</button>`;
+  }
+  return `<button class="matbtn" data-action="find-material" data-mat="${esc(id)}"
+            title="Attach ${esc(name)}" aria-label="Attach ${esc(name)}">${ICON_CLIP}</button>`;
+}
+
 function taskLine(task, { showCourse = false, chunk = null } = {}) {
   const done = task.complete;
   const checked = chunk ? (task.read >= chunk.through ? 'checked' : '') : done ? 'checked' : '';
@@ -135,6 +155,7 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
         ${task.flag ? `<div class="task-flag">⚠ ${esc(task.flag)}</div>` : ''}
         <div class="tags">${flags}</div>
       </div>
+      ${materialButton(task)}
       <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
               ${task.unit === 'pages' && !chunk ? `data-action="edit-pages" data-key="${esc(task.key)}"` : 'disabled'}>
         ${esc(amount)}
@@ -363,6 +384,112 @@ function viewSchedule() {
     </section>`;
 }
 
+/** Every distinct work assigned this term, with where it is used. */
+function materials() {
+  const map = new Map();
+  for (const t of TASKS) {
+    if (t.kind !== 'reading') continue;
+    const name = t.material || t.title;
+    const id = lib.materialId(name);
+    if (!map.has(id)) {
+      map.set(id, { id, name, courses: new Set(), uses: 0, isPdf: false, nextDue: null });
+    }
+    const m = map.get(id);
+    m.courses.add(t.course);
+    m.uses += 1;
+    if (t.format === 'pdf') m.isPdf = true;
+    const due = S.parseDate(t.due);
+    if (!t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
+  }
+  return [...map.values()].sort((a, b) => {
+    if (a.nextDue && b.nextDue && +a.nextDue !== +b.nextDue) return a.nextDue - b.nextDue;
+    if (a.nextDue && !b.nextDue) return -1;
+    if (!a.nextDue && b.nextDue) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function viewFiles() {
+  const list = materials();
+  const attached = list.filter((m) => store.libraryEntry(m.id)).length;
+
+  return `
+    <section class="card">
+      <h2>Your materials</h2>
+      <p class="note">
+        Attach each book or PDF once and it opens from every class that assigns it —
+        tap the <span class="inline-icon">${ICON_OPEN}</span> next to any reading.
+      </p>
+      <div class="progress ${attached === list.length ? 'is-complete' : ''}">
+        <div class="progress-track"><div class="progress-fill" style="width:${Math.round((attached / list.length) * 100)}%"></div></div>
+        <span class="progress-pct">${attached}/${list.length}</span>
+      </div>
+      <p class="note" style="margin-top:10px">
+        <strong>Link</strong> points at a file in Google Drive, Dropbox or iCloud — it syncs
+        across your devices and costs no space here.
+        <strong>File</strong> copies a PDF into this app so it opens instantly and works
+        offline, but it lives on this device only.
+      </p>
+    </section>
+
+    <section class="card">
+      ${list
+        .map((m) => {
+          const e = store.libraryEntry(m.id);
+          const where = [...m.courses].join(', ');
+          return `
+          <div class="material ${focusMaterial === m.id ? 'is-focus' : ''}" id="mat-${esc(m.id)}">
+            <div class="material-head">
+              <div class="material-title">${esc(m.name)}</div>
+              <div class="material-meta">
+                ${esc(where)} · used in ${m.uses} ${m.uses === 1 ? 'class' : 'classes'}
+                ${m.isPdf ? ' · syllabus supplies a PDF' : ''}
+                ${m.nextDue ? ` · next ${esc(S.formatDate(m.nextDue, { month: 'short', day: 'numeric' }))}` : ''}
+              </div>
+              ${
+                e
+                  ? `<div class="material-attached">
+                       ${e.kind === 'link' ? '🔗' : '📄'}
+                       ${esc(e.kind === 'link' ? shortUrl(e.url) : `${e.fileName} (${lib.formatBytes(e.fileSize)})`)}
+                     </div>`
+                  : ''
+              }
+            </div>
+            <div class="material-actions">
+              ${
+                e
+                  ? `<button class="btn small" data-action="open-material" data-mat="${esc(m.id)}">Open</button>
+                     <button class="btn small ghost" data-action="detach" data-mat="${esc(m.id)}">Remove</button>`
+                  : `<button class="btn small ghost" data-action="attach-link" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">Link</button>
+                     <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>`
+              }
+            </div>
+          </div>`;
+        })
+        .join('')}
+    </section>
+
+    <section class="card">
+      <h2>Storage</h2>
+      <p class="note" id="storage-line">Checking…</p>
+      <p class="note">
+        Links are included in <em>Settings → Export progress</em>. Copied files are not —
+        they stay in this browser. If you clear site data or switch devices, re-attach them.
+      </p>
+    </section>`;
+}
+
+/** "drive.google.com/…/view" — enough to recognise, short enough to fit. */
+function shortUrl(url) {
+  try {
+    const u = new URL(url);
+    const tail = u.pathname.length > 24 ? `…${u.pathname.slice(-20)}` : u.pathname;
+    return `${u.hostname.replace(/^www\./, '')}${tail}`;
+  } catch {
+    return url;
+  }
+}
+
 function viewSettings() {
   const s = store.settings();
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -474,7 +601,7 @@ function viewSettings() {
 
 /* ---------------- shell ---------------- */
 
-const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, settings: viewSettings };
+const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, files: viewFiles, settings: viewSettings };
 
 function render() {
   const main = $('#app');
@@ -482,6 +609,27 @@ function render() {
   main.scrollTop = 0;
   document.querySelectorAll('.tab').forEach((el) => el.classList.toggle('on', el.dataset.view === view));
   document.title = view === 'today' ? 'Seminary — Today' : `Seminary — ${view}`;
+
+  if (view === 'files') {
+    if (focusMaterial) {
+      $(`#mat-${CSS.escape(focusMaterial)}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      focusMaterial = null;
+    }
+    showStorageUsage();
+  }
+}
+
+async function showStorageUsage() {
+  const line = $('#storage-line');
+  if (!line) return;
+  if (!lib.available) {
+    line.textContent = 'This browser cannot copy files in — links still work.';
+    return;
+  }
+  const est = await lib.usage();
+  const files = await lib.listFileIds().catch(() => []);
+  const count = `${files.length} file${files.length === 1 ? '' : 's'} copied into the app`;
+  line.textContent = est ? `${count} · ${lib.formatBytes(est.used)} used of about ${lib.formatBytes(est.quota)} available.` : count;
 }
 
 function go(next) {
@@ -517,6 +665,78 @@ document.addEventListener('click', async (e) => {
       store.setDone(key, false);
       store.setProgress(key, Number(el.dataset.from) || 0);
     }
+    return refresh();
+  }
+
+  if (action === 'find-material') {
+    // Tapped the paperclip on a reading: jump to Files and highlight that work.
+    focusMaterial = el.dataset.mat;
+    return go('files');
+  }
+
+  if (action === 'open-material') {
+    const id = el.dataset.mat;
+    const entry = store.libraryEntry(id);
+    if (!entry) return;
+    if (entry.kind === 'link') {
+      if (!lib.openLink(entry.url)) alert('That link is no longer valid. Remove it and add it again.');
+      return;
+    }
+    const opened = await lib.openStoredFile(id, entry.fileName);
+    if (!opened) {
+      alert(`"${entry.fileName}" is not stored on this device.\n\nAttach it again from the Files tab — copied files do not travel between devices.`);
+    }
+    return;
+  }
+
+  if (action === 'attach-link') {
+    const { mat: id, title } = el.dataset;
+    const current = store.libraryEntry(id);
+    const answer = prompt(
+      `Paste a link for "${title}".\n\nGoogle Drive, Dropbox, OneDrive, iCloud — any https:// address.`,
+      current?.url || 'https://'
+    );
+    if (answer === null) return;
+    const url = lib.safeUrl(answer);
+    if (!url) {
+      alert('That does not look like a web link — it needs to start with https://');
+      return;
+    }
+    store.setLibraryEntry(id, { title, kind: 'link', url });
+    return refresh();
+  }
+
+  if (action === 'attach-file') {
+    const { mat: id, title } = el.dataset;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.epub,application/pdf,application/epub+zip,image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        await lib.putFile(id, file);
+        store.setLibraryEntry(id, { title, kind: 'file', fileName: file.name, fileSize: file.size });
+        lib.requestPersistence();
+        refresh();
+      } catch (err) {
+        alert(
+          `Could not store that file: ${err.message}\n\n` +
+            'Copying files needs the hosted version of the app, not the single-file offline copy. ' +
+            'A link works either way.'
+        );
+      }
+    };
+    input.click();
+    return;
+  }
+
+  if (action === 'detach') {
+    const entry = store.libraryEntry(el.dataset.mat);
+    if (!entry) return;
+    if (!confirm(`Remove the attachment for "${entry.title}"?`)) return;
+    if (entry.kind === 'file') await lib.deleteFile(el.dataset.mat).catch(() => {});
+    store.removeLibraryEntry(el.dataset.mat);
     return refresh();
   }
 
