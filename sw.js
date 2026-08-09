@@ -1,6 +1,11 @@
 // Offline shell + background deadline checks.
-// Bump CACHE whenever the app files change so clients pick up the new version.
-const CACHE = 'seminary-v1';
+//
+// Caching strategy, learned the hard way: the app shell is served
+// stale-while-revalidate, never plain cache-first. Cache-first meant a phone
+// that had once loaded the app kept serving that version forever, and new
+// features silently never arrived. Now every load paints instantly from cache
+// *and* refreshes the cache in the background, so the next load is current.
+const CACHE = 'seminary-v5';
 
 const SHELL = [
   './',
@@ -10,6 +15,7 @@ const SHELL = [
   './js/store.js',
   './js/schedule.js',
   './js/notify.js',
+  './js/library.js',
   './data/courses.json',
   './manifest.webmanifest',
   './icons/icon.svg',
@@ -37,37 +43,41 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// `no-cache` forces a revalidation against the server. Without it the browser's
+// own HTTP cache can answer this fetch, and "network-first" quietly serves
+// week-old files — which is exactly how a new version fails to arrive.
+async function freshen(request) {
+  const res = await fetch(request, { cache: 'no-cache' });
+  if (res && res.ok) {
+    const copy = res.clone();
+    const cache = await caches.open(CACHE);
+    await cache.put(request, copy);
+  }
+  return res;
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
-  // The syllabus is the one file worth refreshing eagerly: network first,
-  // cache as the fallback so the app still opens on a plane.
-  if (request.url.includes('/data/courses.json')) {
+  // The page, its code and the syllabus go to the network first. They have to
+  // agree with each other: serving a fresh index.html beside a stale app.js
+  // renders the new layout against old code. Cache is the offline fallback.
+  const code = ['document', 'script', 'style'].includes(request.destination);
+  if (request.mode === 'navigate' || code || request.url.includes('/data/courses.json')) {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match(request))
+      freshen(request).catch(async () => (await caches.match(request)) || caches.match('./index.html'))
     );
     return;
   }
 
+  // Icons and everything else change rarely and are the bulky part: answer from
+  // cache at once, refresh behind the scenes for next time.
   event.respondWith(
-    caches.match(request).then(
-      (hit) =>
-        hit ||
-        fetch(request)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
-            return res;
-          })
-          .catch(() => caches.match('./index.html'))
-    )
+    caches.match(request).then((hit) => {
+      const network = freshen(request).catch(() => hit);
+      return hit || network;
+    })
   );
 });
 

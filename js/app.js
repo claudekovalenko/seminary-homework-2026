@@ -3,6 +3,10 @@ import * as S from './schedule.js';
 import * as notify from './notify.js';
 import * as lib from './library.js';
 
+// Shown in Settings so you can tell at a glance which version a device is
+// actually running. Bump it alongside the service worker's CACHE.
+const BUILD = 'v5 · 2026-08-09';
+
 let DATA = null;
 let TASKS = [];
 let view = location.hash.replace('#', '') || 'today';
@@ -596,6 +600,16 @@ function viewSettings() {
         <button class="btn danger" data-action="reset">Reset progress</button>
       </div>
       <p class="note">Term: ${esc(DATA.term)} · ${DATA.courses.length} courses · ${TASKS.length} tracked items</p>
+    </section>
+
+    <section class="card">
+      <h2>App version</h2>
+      <p class="note">
+        Running <strong>${esc(BUILD)}</strong>. The app updates itself in the background, but if a
+        new feature has not shown up, this forces it: it clears the offline copy and reloads.
+        Your progress and attachments are untouched.
+      </p>
+      <button class="btn ghost" data-action="force-update">Reload the latest version</button>
     </section>`;
 }
 
@@ -666,6 +680,20 @@ document.addEventListener('click', async (e) => {
       store.setProgress(key, Number(el.dataset.from) || 0);
     }
     return refresh();
+  }
+
+  if (action === 'force-update') {
+    // Drop the offline copy and every worker, then come back from the network.
+    try {
+      const regs = (await navigator.serviceWorker?.getRegistrations?.()) || [];
+      await Promise.all(regs.map((r) => r.unregister()));
+      const keys = (await caches?.keys?.()) || [];
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch (err) {
+      console.warn('Could not clear the offline copy', err);
+    }
+    location.replace(`${location.pathname}?updated=${Date.now()}${location.hash}`);
+    return;
   }
 
   if (action === 'find-material') {
@@ -872,7 +900,18 @@ async function boot() {
   // and does not need one — it is already local.
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     try {
-      await navigator.serviceWorker.register('./sw.js');
+      // If a newer worker takes over mid-session, pick up its files right away
+      // rather than leaving a stale app on screen until the next cold start.
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloading) return;
+        reloading = true;
+        location.reload();
+      });
+
+      const reg = await navigator.serviceWorker.register('./sw.js');
+      reg.update().catch(() => {});
       navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'check-deadlines') checkReminders();
       });
