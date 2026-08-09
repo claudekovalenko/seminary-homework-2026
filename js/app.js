@@ -5,13 +5,16 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v11 · 2026-08-09';
+const BUILD = 'v12 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
 let view = location.hash.replace('#', '') || 'today';
 // Set when you tap a paperclip in a reading list: the Files view scrolls to it.
 let focusMaterial = null;
+// The material an OCR run is working on, if any. Re-rendering mid-run would
+// throw away the progress line it is writing into, so redraws wait for it.
+let ocrRunning = null;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) =>
@@ -461,9 +464,22 @@ function redoRow(m, entry) {
   const how = info?.ocr ? 'read by OCR' : 'from the PDF text layer';
   const size = info?.chars ? `${Math.round(info.chars / 1000)}k characters, ` : '';
   const has = extractedIds.has(m.id);
+
+  // An OCR run that was interrupted — by switching apps, or by tapping Cancel —
+  // keeps every page it had already read. Offer to carry on from there rather
+  // than making you pay for those pages twice.
+  const paused = info?.ocr && info.complete === false && info.nextPage > 1;
+  const resume = paused
+    ? `<div class="material-redo">
+         <span class="note">Paused after page ${info.pageCount} of ${info.totalPages}. Nothing read so far is lost.</span>
+         <button class="btn small" data-action="run-ocr" data-resume="1" data-mat="${esc(m.id)}">Resume OCR</button>
+       </div>`
+    : '';
+
   return `
+    ${resume}
     <div class="material-redo">
-      <span class="note">${has ? `Text stored — ${size}${how}.` : ''} Read it again:</span>
+      <span class="note">${has ? `Text stored — ${size}${how}.` : ''} ${paused ? 'Or start over:' : 'Read it again:'}</span>
       <button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Extract</button>
       <button class="btn small ghost" data-action="run-ocr" data-mat="${esc(m.id)}">OCR</button>
     </div>`;
@@ -944,59 +960,102 @@ document.addEventListener('click', async (e) => {
       say('<span class="note warn-note">This browser is too old to run the OCR engine.</span>');
       return;
     }
+
+    // Resume picks up the saved pages; the plain OCR button starts from page 1
+    // and overwrites, which is how you redo a bad reading.
+    const prior = el.dataset.resume ? await lib.getText(id).catch(() => null) : null;
+    const from = prior?.ocr && prior.complete === false && prior.nextPage > 1 ? prior : null;
+
     if (
       !confirm(
-        `Read this scan with OCR?\n\n` +
-          `It downloads a ~${ocr.ENGINE_MB} MB engine the first time, then takes roughly ` +
-          `10–20 seconds per page. Everything happens on this device — nothing is uploaded.\n\n` +
-          `You can leave the app open and come back to it.`
+        from
+          ? `Carry on reading from page ${from.nextPage}?\n\n` +
+              `The ${from.pageCount} pages already read are kept.`
+          : `Read this scan with OCR?\n\n` +
+              `It downloads a ~${ocr.ENGINE_MB} MB engine the first time, then takes roughly ` +
+              `10–20 seconds per page. Everything happens on this device — nothing is uploaded.\n\n` +
+              `Keep this screen in front of you while it works. Switching to another app pauses ` +
+              `it — phones freeze web pages in the background, and no app on the web can get ` +
+              `around that. Nothing is lost when it does: every page is saved the moment it is ` +
+              `read, and a Resume button picks up where it stopped.`
       )
     ) {
       return;
     }
 
+    // Saving after each page means an interruption costs one page, not the run.
+    const remember = async (result) => {
+      await lib.putText(id, result);
+      extractedIds.add(id);
+      const cur = store.libraryEntry(id);
+      if (cur) {
+        store.setLibraryEntry(id, {
+          ...cur,
+          text: {
+            chars: result.chars,
+            pageCount: result.pageCount,
+            totalPages: result.totalPages,
+            complete: result.complete,
+            nextPage: result.nextPage,
+            ocr: true
+          }
+        });
+      }
+    };
+
     say('<span class="note">Fetching the OCR engine…</span>');
     const started = Date.now();
+    ocrRunning = id;
     try {
       const blob = await lib.getFile(id);
       if (!blob) throw new Error('That file is not on this device any more.');
 
-      const result = await ocr.ocrPdf(blob, ({ done, total, stage, progress }) => {
-        if (stage === 'engine') {
-          const pct = Math.round((progress || 0) * 100);
-          say(`<span class="note">Fetching the OCR engine… ${pct}%</span>
-               ${progressBar(pct, { size: 'progress-sm' })}
+      const alreadyDone = from ? from.pages.length : 0;
+      const result = await ocr.ocrPdf(
+        blob,
+        ({ done, total, stage, progress }) => {
+          if (stage === 'engine') {
+            const pct = Math.round((progress || 0) * 100);
+            say(`<span class="note">Fetching the OCR engine… ${pct}%</span>
+                 ${progressBar(pct, { size: 'progress-sm' })}
+                 <button class="btn small ghost" data-action="cancel-ocr">Cancel</button>`);
+            return;
+          }
+          const per = (Date.now() - started) / Math.max(done - alreadyDone, 1);
+          const left = Math.round(((total - done) * per) / 1000);
+          say(`<span class="note">Reading page ${done} of ${total}${left > 5 ? ` · about ${left}s left` : ''}
+               <br>Saved as it goes — leaving the app only pauses it.</span>
+               ${progressBar(Math.round((done / total) * 100), { size: 'progress-sm' })}
                <button class="btn small ghost" data-action="cancel-ocr">Cancel</button>`);
-          return;
+        },
+        {
+          startPage: from ? from.nextPage : 1,
+          pages: from ? from.pages : [],
+          onPage: ({ pages, lastPage, total }) => remember(ocr.summarise(pages, lastPage, total))
         }
-        const per = (Date.now() - started) / Math.max(done, 1);
-        const left = Math.round(((total - done) * per) / 1000);
-        say(`<span class="note">Reading page ${done} of ${total}${left > 5 ? ` · about ${left}s left` : ''}</span>
-             ${progressBar(Math.round((done / total) * 100), { size: 'progress-sm' })}
-             <button class="btn small ghost" data-action="cancel-ocr">Cancel</button>`);
-      });
+      );
 
       if (!result.pages.length) {
-        say('<span class="note warn-note">Cancelled before any page was read.</span>');
+        say('<span class="note warn-note">Stopped before any page was read.</span>');
         return;
       }
 
-      await lib.putText(id, result);
-      extractedIds.add(id);
-      const ocrEntry = store.libraryEntry(id);
-      if (ocrEntry) {
-        store.setLibraryEntry(id, { ...ocrEntry, text: { chars: result.chars, pageCount: result.pageCount, ocr: true } });
-      }
+      await remember(result);
       say(
         `<span class="note">OCR read ${result.pageCount} page${result.pageCount === 1 ? '' : 's'}
-         (${Math.round(result.chars / 1000)}k characters)${result.partial ? ', stopped early' : ''}.
+         of ${result.totalPages} (${Math.round(result.chars / 1000)}k characters)${
+           result.partial ? ' — stopped early; the Resume button carries on' : ''
+         }.
          It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
          misreads the odd word, so check anything you quote against the PDF.</span>`
       );
+      if (result.partial) return refresh();
       refresh();
       return go(`read:${id}`);
     } catch (err) {
       say(`<span class="note warn-note">OCR failed: ${esc(err.message)}</span>`);
+    } finally {
+      ocrRunning = null;
     }
     return;
   }
@@ -1244,10 +1303,11 @@ async function boot() {
 
   // Re-check when you come back to the app, and if it is left open overnight.
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      refresh();
-      checkReminders();
-    }
+    if (document.hidden) return;
+    // Coming back to a run in progress: leave the screen exactly as it was, or
+    // the redraw would detach the very element it is reporting into.
+    if (!ocrRunning) refresh();
+    checkReminders();
   });
   setInterval(checkReminders, 60 * 60 * 1000);
 }

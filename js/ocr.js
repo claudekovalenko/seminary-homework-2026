@@ -27,6 +27,41 @@ export const cancel = () => {
   cancelled = true;
 };
 
+// Holding the screen awake is the only "keep running" a web app gets. It stops
+// the device sleeping mid-run; it does not survive switching away, because iOS
+// freezes the page outright and no API can prevent that.
+let wakeLock = null;
+let holding = false;
+
+// The browser drops the lock whenever the page is hidden, and will not hand it
+// back on its own. Ask again each time we are looked at, for as long as a run
+// is still going.
+async function reacquire() {
+  if (!holding || document.hidden) return;
+  try {
+    wakeLock = (await navigator.wakeLock?.request('screen')) || null;
+  } catch {
+    wakeLock = null;
+  }
+}
+
+async function keepAwake() {
+  holding = true;
+  document.addEventListener('visibilitychange', reacquire);
+  await reacquire();
+}
+
+async function releaseAwake() {
+  holding = false;
+  document.removeEventListener('visibilitychange', reacquire);
+  try {
+    await wakeLock?.release();
+  } catch {
+    /* already gone */
+  }
+  wakeLock = null;
+}
+
 /** WASM SIMD — every browser new enough to run this app has it, but check. */
 export async function supported() {
   try {
@@ -66,23 +101,25 @@ async function makeWorker(onLoad) {
  * onProgress({done, total, stage}) fires as it goes; call cancel() to stop.
  * Returns the same shape as pdftext.extractText, so the reader treats them alike.
  */
-export async function ocrPdf(blob, onProgress) {
+export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = [], onPage } = {}) {
   cancelled = false;
   const pdfjs = await loadPdfjs();
   const data = new Uint8Array(await blob.arrayBuffer());
   const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
 
-  onProgress?.({ done: 0, total: doc.numPages, stage: 'engine' });
+  onProgress?.({ done: startPage - 1, total: doc.numPages, stage: 'engine' });
   const worker = await makeWorker((status, progress) =>
-    onProgress?.({ done: 0, total: doc.numPages, stage: 'engine', status, progress })
+    onProgress?.({ done: startPage - 1, total: doc.numPages, stage: 'engine', status, progress })
   );
+  await keepAwake();
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  const pages = [];
+  const pages = [...done];
+  let lastPage = startPage - 1;
 
   try {
-    for (let n = 1; n <= doc.numPages; n++) {
+    for (let n = startPage; n <= doc.numPages; n++) {
       if (cancelled) break;
 
       const page = await doc.getPage(n);
@@ -104,23 +141,35 @@ export async function ocrPdf(blob, onProgress) {
 
       const { data: result } = await worker.recognize(canvas, {}, { text: true, blocks: true });
       pages.push({ page: n, text: layOutLines(result) });
+      lastPage = n;
+      // Hand each page over as it lands. Switching away freezes the page, so
+      // anything not already saved is lost — save after every page, not at the end.
+      await onPage?.({ pages: pages.slice(), lastPage: n, total: doc.numPages });
       onProgress?.({ done: n, total: doc.numPages, stage: 'reading' });
     }
   } finally {
     await worker.terminate();
     await doc.destroy();
+    await releaseAwake();
     canvas.width = canvas.height = 0;
   }
 
-  const chars = pages.reduce((sum, p) => sum + p.text.length, 0);
+  return summarise(pages, lastPage, doc.numPages);
+}
+
+/** The stored shape, whether the run finished or stopped part-way. */
+export function summarise(pages, lastPage, total) {
   return {
     pages,
-    chars,
+    chars: pages.reduce((sum, p) => sum + p.text.length, 0),
     pageCount: pages.length,
+    totalPages: total,
     emptyPages: pages.filter((p) => p.text.length < 40).length,
     looksScanned: false,
     ocr: true,
-    partial: cancelled
+    complete: lastPage >= total,
+    nextPage: lastPage + 1,
+    partial: lastPage < total
   };
 }
 
