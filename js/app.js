@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v10 · 2026-08-09';
+const BUILD = 'v11 · 2026-08-09';
 
 let DATA = null;
 let TASKS = [];
@@ -442,12 +442,31 @@ let extractedIds = new Set();
 /** "Read text" once text exists, "Get text" for a PDF we could read. */
 function readButton(m, entry) {
   if (entry.kind !== 'file') return '';
-  const isPdf = /\.pdf$/i.test(entry.fileName || '');
-  if (!isPdf) return '';
+  if (!/\.pdf$/i.test(entry.fileName || '')) return '';
   if (extractedIds.has(m.id)) {
     return `<button class="btn small" data-action="read-text" data-mat="${esc(m.id)}">Read text</button>`;
   }
   return `<button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Get text</button>`;
+}
+
+/**
+ * Once text has been stored the "Get text" button is gone, which left no way
+ * to redo a bad reading — the results of an older, worse version were stuck
+ * there for good. Both routes stay reachable, and either one overwrites.
+ */
+function redoRow(m, entry) {
+  if (!entry || entry.kind !== 'file') return '';
+  if (!/\.pdf$/i.test(entry.fileName || '')) return '';
+  const info = entry.text;
+  const how = info?.ocr ? 'read by OCR' : 'from the PDF text layer';
+  const size = info?.chars ? `${Math.round(info.chars / 1000)}k characters, ` : '';
+  const has = extractedIds.has(m.id);
+  return `
+    <div class="material-redo">
+      <span class="note">${has ? `Text stored — ${size}${how}.` : ''} Read it again:</span>
+      <button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Extract</button>
+      <button class="btn small ghost" data-action="run-ocr" data-mat="${esc(m.id)}">OCR</button>
+    </div>`;
 }
 
 function viewFiles() {
@@ -512,6 +531,7 @@ function viewFiles() {
                      <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>`
               }
             </div>
+            ${redoRow(m, e)}
             <div class="material-extract" id="extract-${esc(m.id)}"></div>
           </div>`;
         })
@@ -898,6 +918,7 @@ document.addEventListener('click', async (e) => {
 
       await lib.putText(id, result);
       extractedIds.add(id);
+      store.setLibraryEntry(id, { ...entry, text: { chars: result.chars, pageCount: result.pageCount, ocr: false } });
       const partial =
         result.emptyPages > 0
           ? ` ${result.emptyPages} of ${result.pageCount} pages had no text — probably images or plates.`
@@ -962,6 +983,10 @@ document.addEventListener('click', async (e) => {
 
       await lib.putText(id, result);
       extractedIds.add(id);
+      const ocrEntry = store.libraryEntry(id);
+      if (ocrEntry) {
+        store.setLibraryEntry(id, { ...ocrEntry, text: { chars: result.chars, pageCount: result.pageCount, ocr: true } });
+      }
       say(
         `<span class="note">OCR read ${result.pageCount} page${result.pageCount === 1 ? '' : 's'}
          (${Math.round(result.chars / 1000)}k characters)${result.partial ? ', stopped early' : ''}.

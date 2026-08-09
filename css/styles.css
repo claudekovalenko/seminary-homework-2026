@@ -1001,3 +1001,18 @@ summary {
   padding: 8px 10px;
   margin: 10px 0 0;
 }
+
+.material-redo {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.material-redo .note {
+  margin: 0;
+  flex: 1;
+  min-width: 140px;
+}
