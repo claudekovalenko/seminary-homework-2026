@@ -337,6 +337,70 @@ export function nextSessionPerCourse(data, from = startOfToday()) {
   return [...map.values()].sort((a, b) => a.date - b.date);
 }
 
+/* ---------- falling behind ---------- */
+
+/**
+ * When the reading for a class meeting became yours to do: the day after the
+ * course last met. That is the window an even pace is measured against, and
+ * without it "behind" has nothing to be behind of.
+ */
+export function windowStartFor(course, session) {
+  const here = parseDate(session.date);
+  let prev = null;
+  for (const s of course.sessions) {
+    const d = parseDate(s.date);
+    if (d < here && (!prev || d > prev)) prev = d;
+  }
+  return prev ? addDays(prev, 1) : addDays(here, -7);
+}
+
+/**
+ * Whether you are keeping up, and by how much you are not.
+ *
+ * The plan already re-spreads whatever is left over the days that remain, so
+ * missing a day silently raises every day after it. This works out by how much:
+ * compare what is actually left against what an even pace from the start of the
+ * week would have left by now. The difference is the reading you owe yourself.
+ */
+export function pace(tasks, deadline, { from = startOfToday(), windowStart = null } = {}) {
+  const s = settings();
+  const total = tasks.reduce((sum, t) => sum + t.minutes, 0);
+  const remaining = tasks.reduce((sum, t) => sum + t.remaining, 0);
+  const start = windowStart && windowStart < from ? windowStart : from;
+  const whole = studyDaysBetween(start, lastStudyDay(deadline, start), s.studyDays);
+  const left = studyDaysBetween(from, lastStudyDay(deadline, from), s.studyDays);
+
+  const evenPerDay = total / whole.length;
+  const perDayNow = remaining / left.length;
+  // Where an even pace would have left you standing today.
+  const shouldRemain = Math.min(total, evenPerDay * left.length);
+  const behind = Math.max(0, remaining - shouldRemain);
+
+  return {
+    total,
+    remaining,
+    evenPerDay,
+    perDayNow,
+    behind,
+    daysMissed: evenPerDay > 0 ? Math.round(behind / evenPerDay) : 0,
+    daysLeft: left.length,
+    days: whole.length,
+    // Half a day's slippage is rounding, not a problem worth a banner.
+    onTrack: behind < evenPerDay * 0.5
+  };
+}
+
+/**
+ * Unfinished work whose class has already met.
+ *
+ * The schedule moves on the moment a class is over, so without this the reading
+ * you never got to simply disappears — no reminder, no plan, nothing ever asks
+ * for it again.
+ */
+export function overdue(tasks, { from = new Date() } = {}) {
+  return tasks.filter((t) => !t.complete && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+}
+
 /* ---------- the day-by-day plan ---------- */
 
 function studyDaysBetween(from, to, studyDays) {

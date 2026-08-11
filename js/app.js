@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v14 · 2026-08-10';
+const BUILD = 'v15 · 2026-08-10';
 
 let DATA = null;
 let TASKS = [];
@@ -44,19 +44,42 @@ async function loadExtractedIds() {
 }
 
 /** The class meeting each course is currently working toward, with its plan. */
+/** Reading whose class has already met and which was never ticked off. */
+function lateWork(from = new Date()) {
+  return S.overdue(
+    TASKS.filter((t) => t.unit !== 'project'),
+    { from }
+  ).map((t) => ({ ...t, overdue: true }));
+}
+
 function currentPlans() {
+  const late = lateWork();
   return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
     const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+    const owed = late.filter((t) => t.courseId === course.id);
     // Pass the deadline with its hour attached: an evening class leaves the
     // class day itself available to read in.
     const deadline = S.withTime(date, S.classTimeFor(course));
-    return { course, session, date, deadline, tasks, plan: S.planFor(tasks, deadline) };
+    return {
+      course,
+      session,
+      date,
+      deadline,
+      tasks,
+      owed,
+      // What you owe from last week is planned first, ahead of this week's
+      // reading — otherwise it sits at the back of the queue for ever.
+      plan: S.planFor([...owed, ...tasks], deadline),
+      // Measured on this week's reading alone. What is owed from a class that
+      // has already met is its own number, not a bigger version of this one.
+      pace: S.pace(tasks, deadline, { windowStart: S.windowStartFor(course, session) })
+    };
   });
 }
 
 function activeProjects(from = S.startOfToday()) {
-  return TASKS.filter((t) => t.unit === 'project' && !t.complete && S.dueAt(t) >= new Date())
-    .map((t) => ({ task: t, pace: S.projectPace(t, from) }))
+  return TASKS.filter((t) => t.unit === 'project' && !t.complete)
+    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: S.dueAt(t) < new Date() }))
     .filter((p) => p.pace);
 }
 
@@ -65,15 +88,22 @@ function todayBucket() {
   const today = S.startOfToday();
   const items = [];
   let minutes = 0;
-  for (const { course, plan } of currentPlans()) {
+  // How much of today is the reading you set out to do, and how much is making
+  // up lost ground. Two things put you there — work from a class that has
+  // already met, and days of this week's reading you did not get to — so both
+  // are counted, and neither is counted twice.
+  let catchUp = 0;
+  for (const { course, plan, pace } of currentPlans()) {
     const day = plan.plan.find((d) => S.daysBetween(d.date, today) === 0);
     if (!day) continue;
     for (const atom of day.items) items.push({ ...atom, course });
     minutes += day.minutes;
+    const owedToday = day.items.filter((a) => a.task.overdue).reduce((sum, a) => sum + a.minutes, 0);
+    catchUp += owedToday + Math.max(0, day.minutes - owedToday - pace.evenPerDay);
   }
   const projects = activeProjects(today).filter((p) => p.pace.todayIsStudyDay);
   projects.forEach((p) => (minutes += p.pace.perDay));
-  return { items, projects, minutes, title: items.map((i) => i.task.title) };
+  return { items, projects, minutes, catchUp, title: items.map((i) => i.task.title) };
 }
 
 /* ---------------- shared bits of markup ---------------- */
@@ -163,6 +193,7 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
 
   const partial = !chunk && task.read > 0 && !done;
   const flags = [
+    task.overdue ? pill('overdue', 'warn') : '',
     task.driver ? pill('drives discussion', 'accent') : '',
     task.format === 'pdf' ? pill('PDF') : '',
     task.kind === 'assignment' && !task.project ? pill(task.type || 'assignment', 'warn') : '',
@@ -215,6 +246,58 @@ function dayRow(day, courseColor) {
 
 /* ---------------- views ---------------- */
 
+/**
+ * What to say when you are behind.
+ *
+ * The plan has already absorbed the missed reading — it re-spreads whatever is
+ * left over the days that remain, every time it is drawn. What it never did was
+ * say so, which made today's larger number look arbitrary. This is the card that
+ * explains it, and the place unfinished work from a class that has already met
+ * gets picked up rather than quietly dropped.
+ */
+function catchUpCard(plans, projects) {
+  const slipping = plans.filter((p) => !p.pace.onTrack && p.pace.behind > 0);
+  const owed = plans.flatMap((p) => p.owed);
+  const lateProjects = projects.filter((p) => p.overdue);
+  if (!slipping.length && !owed.length && !lateProjects.length) return '';
+
+  return `
+    <section class="card catchup">
+      <h2>Catching up</h2>
+      ${slipping
+        .map(
+          (p) => `
+        <p class="note">
+          ${dot(p.course.color)}<strong>${esc(p.course.short || p.course.name)}</strong> —
+          about ${S.formatMinutes(p.pace.behind)} behind${p.pace.daysMissed >= 1 ? `, roughly ${p.pace.daysMissed} study ${p.pace.daysMissed === 1 ? 'day' : 'days'}` : ''}.
+          The missed pages are already spread across the ${p.pace.daysLeft}
+          ${p.pace.daysLeft === 1 ? 'day' : 'days'} you have left, not piled onto today: that works out
+          at <strong>${S.formatMinutes(p.pace.perDayNow)}</strong> a day against the
+          ${S.formatMinutes(p.pace.evenPerDay)} you started at. The Plan tab has the day-by-day, which
+          varies a little either side of that to break at real page boundaries.
+        </p>`
+        )
+        .join('')}
+      ${
+        owed.length
+          ? `<p class="note warn-note">
+               ${owed.length} reading${owed.length === 1 ? '' : 's'} from a class that has already met
+               ${owed.length === 1 ? 'is' : 'are'} still unticked, so ${owed.length === 1 ? 'it is' : 'they are'}
+               planned ahead of this week's work — or tick ${owed.length === 1 ? 'it' : 'them'} off here if
+               you are letting ${owed.length === 1 ? 'it' : 'them'} go.
+             </p>
+             <ul class="tasks">${owed.map((t) => taskLine(t, { showCourse: true })).join('')}</ul>`
+          : ''
+      }
+      ${
+        lateProjects.length
+          ? `<p class="note warn-note">Past its due date:
+               ${lateProjects.map((p) => esc(p.task.title)).join(', ')}.</p>`
+          : ''
+      }
+    </section>`;
+}
+
 function viewToday() {
   const bucket = todayBucket();
   const upcoming = S.deadlines(TASKS, { withinDays: store.settings().leadDays });
@@ -227,10 +310,15 @@ function viewToday() {
     <section class="hero">
       <div class="hero-date">${esc(S.formatDate(new Date(), { weekday: 'long', month: 'long', day: 'numeric' }))}</div>
       <div class="hero-mins">${bucket.minutes ? S.formatMinutes(bucket.minutes) : 'Nothing due'}</div>
-      <div class="hero-sub">${bucket.minutes ? "today's reading target" : 'enjoy the quiet'}</div>
+      <div class="hero-sub">
+        ${bucket.minutes ? "today's reading target" : 'enjoy the quiet'}
+        ${bucket.catchUp >= 5 ? ` · ${S.formatMinutes(bucket.catchUp)} of it catching up` : ''}
+      </div>
       <div class="bar"><div class="bar-fill" style="width:${overall.pct}%"></div></div>
       <div class="hero-sub">${overall.pct}% of this week's work done</div>
     </section>
+
+    ${catchUpCard(plans, activeProjects())}
 
     ${
       plans.length
@@ -327,10 +415,11 @@ function viewPlan() {
 
   return `
     ${plans
-      .map(({ course, session, date, tasks, plan }) => {
-        const w = S.workload(tasks);
-        const pages = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
-        const pagesLeft = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.remainingPages : 0), 0);
+      .map(({ course, session, date, tasks, owed, plan, pace }) => {
+        const all = [...owed, ...tasks];
+        const w = S.workload(all);
+        const pages = all.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
+        const pagesLeft = all.reduce((a, t) => a + (t.unit === 'pages' ? t.remainingPages : 0), 0);
         return `
         <section class="card">
           <div class="card-head" style="--accent:${esc(course.color)}">
@@ -346,10 +435,23 @@ function viewPlan() {
             <div><span class="stat">${plan.days}</span><small>study days</small></div>
             <div><span class="stat">${S.formatMinutes(plan.perDay)}</span><small>per day</small></div>
           </div>
+          <p class="note pace ${pace.onTrack && !owed.length ? 'ok' : 'behind'}">
+            ${
+              owed.length
+                ? `${owed.length} reading${owed.length === 1 ? '' : 's'} still owed from a class already past,
+                   planned before this week's. This week's own reading is
+                   ${pace.onTrack ? 'on pace' : `${S.formatMinutes(pace.behind)} behind`}.`
+                : pace.onTrack
+                  ? `On pace — ${S.formatMinutes(pace.evenPerDay)} a day was the plan and it still is.`
+                  : `${S.formatMinutes(pace.behind)} behind. Started at ${S.formatMinutes(pace.evenPerDay)} a day;
+                     ${S.formatMinutes(pace.perDayNow)} a day now over the ${pace.daysLeft}
+                     ${pace.daysLeft === 1 ? 'day' : 'days'} left.`
+            }
+          </p>
           <div class="days">${plan.plan.map((d) => dayRow(d, course.color)).join('')}</div>
           <details class="all-readings">
-            <summary>Everything due for this class (${tasks.length})</summary>
-            <ul class="tasks">${tasks.map((t) => taskLine(t)).join('')}</ul>
+            <summary>Everything due for this class (${all.length})</summary>
+            <ul class="tasks">${all.map((t) => taskLine(t)).join('')}</ul>
           </details>
         </section>`;
       })

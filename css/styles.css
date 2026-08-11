@@ -1223,3 +1223,25 @@ summary {
   align-items: center;
   gap: 6px;
 }
+
+/* ---------- catching up ---------- */
+
+.card.catchup {
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
+}
+
+.card.catchup .tasks {
+  margin-top: 6px;
+}
+
+.note.pace {
+  margin: 0 0 10px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: var(--bg-elev-2);
+}
+
+.note.pace.behind {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}

@@ -5,7 +5,7 @@
 // that had once loaded the app kept serving that version forever, and new
 // features silently never arrived. Now every load paints instantly from cache
 // *and* refreshes the cache in the background, so the next load is current.
-const CACHE = 'seminary-v14';
+const CACHE = 'seminary-v15';
 
 const SHELL = [
   './',
