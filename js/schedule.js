@@ -164,6 +164,69 @@ export function lastStudyDay(deadline, from) {
   return daysBetween(from, deadline) >= 1 ? addDays(deadline, -1) : from;
 }
 
+/* ---------- Bible readings, passage by passage ---------- */
+
+/**
+ * Break a week's Bible reading into the passages it is actually made of.
+ *
+ *   "Ps 1; Ps 27; 1 Cor 13; Rev 22"  -> four passages
+ *   "Isa 40–48"                      -> nine, one per chapter
+ *   "Rom 1–2:15"                     -> "Rom 1" and "Rom 2:1–15"
+ *   "Rom 5:12–21"                    -> one, since it is part of a chapter
+ *
+ * A syllabus writes a week's worth on one line; a day's reading is one chapter
+ * of it. Anything unparseable is kept whole rather than mangled — better a
+ * passage that does not split than one that comes out wrong.
+ */
+export function bibleUnits(ref) {
+  const out = [];
+  for (const piece of String(ref || '').split(/[;,]/)) {
+    const segment = piece.trim();
+    if (!segment) continue;
+
+    const parts = segment.match(/^(.*[A-Za-z.])\s+([\d:–—-]+)$/);
+    if (!parts) {
+      out.push(segment);
+      continue;
+    }
+    const book = parts[1].trim();
+    const spec = parts[2];
+
+    // Part of a single chapter: "5:12–21", "3:16".
+    if (/^\d+:\d+([–—-]\d+)?$/.test(spec)) {
+      out.push(`${book} ${spec}`);
+      continue;
+    }
+    // Whole chapters, then part of the last: "1–2:15".
+    const partial = spec.match(/^(\d+)[–—-](\d+):(\d+)$/);
+    if (partial) {
+      for (let n = Number(partial[1]); n < Number(partial[2]); n++) out.push(`${book} ${n}`);
+      out.push(`${book} ${partial[2]}:1–${partial[3]}`);
+      continue;
+    }
+    // A run of whole chapters: "40–48".
+    const run = spec.match(/^(\d+)[–—-](\d+)$/);
+    if (run && Number(run[2]) > Number(run[1])) {
+      for (let n = Number(run[1]); n <= Number(run[2]); n++) out.push(`${book} ${n}`);
+      continue;
+    }
+    out.push(segment);
+  }
+  return out;
+}
+
+/**
+ * How many of `count` things to do on each of `days` days, heaviest first.
+ * Six readings over five days is 2,1,1,1,1 — the extra goes at the front, where
+ * there is still time to absorb it, rather than at the end against the deadline.
+ */
+export function spread(count, days) {
+  if (days <= 0) return [];
+  const each = Math.floor(count / days);
+  const extra = count % days;
+  return Array.from({ length: days }, (_, i) => each + (i < extra ? 1 : 0));
+}
+
 /* ---------- normalising the syllabus ---------- */
 
 export const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind}|${idx}`;
@@ -186,17 +249,21 @@ function applyProgress(task) {
       complete: false
     };
   }
-  const read = task.unit === 'pages' ? Math.min(progressFor(task.key), task.pages) : 0;
+  // Bible reading is counted in chapters, not pages, but it is tracked exactly
+  // the same way: how many of them you have got through so far.
+  const counted = task.unit === 'pages' || task.unit === 'chapters';
+  const read = counted ? Math.min(progressFor(task.key), task.pages) : 0;
 
   // A reading given only as "ch. 4" still has a length, so give it a notional
   // 1..n range. That lets it be split across days as "pages 1–8 of 22" instead
   // of being dumped whole onto one evening.
   const hasRealRanges = Boolean(task.ranges?.length);
-  const baseRanges = hasRealRanges ? task.ranges : task.unit === 'pages' && task.pages > 0 ? [[1, task.pages]] : null;
+  const baseRanges = hasRealRanges ? task.ranges : counted && task.pages > 0 ? [[1, task.pages]] : null;
 
   const remainingRanges = baseRanges ? sliceRanges(baseRanges, read)[1] : null;
   const remainingPages = baseRanges ? rangePages(remainingRanges) : Math.max(0, task.pages - read);
-  const remaining = task.unit === 'pages' ? remainingPages * s.minsPerPage : task.minutes;
+  const perUnit = task.unit === 'chapters' ? s.minsPerBibleChapter : s.minsPerPage;
+  const remaining = counted ? remainingPages * perUnit : task.minutes;
   return { ...task, read, baseRanges, synthetic: !hasRealRanges, remainingPages, remainingRanges, remaining, complete: false };
 }
 
@@ -259,7 +326,12 @@ export function buildTasks(data) {
 
       if (session.bible) {
         const key = keyFor(course.id, session.date, 'b', 0);
-        const item = { unit: 'chapters', chapters: session.bible.chapters };
+        // The passages themselves, so a day can be given one chapter rather
+        // than "the Bible reading" whole. The syllabus's own count is a
+        // fallback for anything the parser cannot make sense of.
+        const units = bibleUnits(session.bible.ref);
+        const chapters = units.length || session.bible.chapters || 0;
+        const item = { unit: 'chapters', chapters };
         tasks.push({
           ...ctx,
           key,
@@ -268,11 +340,12 @@ export function buildTasks(data) {
           title: 'Bible reading',
           detail: session.bible.ref,
           unit: 'chapters',
-          chapters: session.bible.chapters,
+          chapters,
+          units,
           raw: item,
           due: session.date,
           dueTime: classTimeFor(course),
-          pages: 0,
+          pages: chapters,
           minutes: minutesOf(item, key),
           estimated: false
         });
@@ -438,9 +511,15 @@ export function planFor(tasks, deadline, opts = {}) {
   const chunkLabel = (task, ranges) =>
     task.synthetic ? `pages ${formatRanges(ranges)} of ${task.pages}` : `pp. ${formatRanges(ranges)}`;
 
+  // Bible reading is paced by the day rather than by the minute: a chapter a
+  // day is the point of it, not an even division of effort. It is placed
+  // directly onto days further down, so it stays out of the general packing.
+  const scripture = pending.filter((t) => t.kind === 'bible' && t.units?.length);
+
   // Chop anything much bigger than one day's share into page-accurate chunks.
   const atoms = [];
   for (const task of pending) {
+    if (scripture.includes(task)) continue;
     const splittable =
       task.unit === 'pages' && task.remainingRanges?.length && task.remaining > perDay * 1.2 && perDay > 0;
 
@@ -499,6 +578,31 @@ export function planFor(tasks, deadline, opts = {}) {
     plan[i].minutes += atom.minutes;
   }
 
+  // A chapter a day, as far as it goes. With more chapters left than days the
+  // extra are clumped onto the earliest days and named together — "Gen 1, Gen
+  // 2" — rather than one day being handed the lot at the end.
+  for (const task of scripture) {
+    const left = task.units.slice(task.read);
+    const share = spread(left.length, days.length);
+    let taken = 0;
+    share.forEach((count, i) => {
+      if (!count) return;
+      const passages = left.slice(taken, taken + count);
+      plan[i].items.push({
+        task,
+        minutes: count * s.minsPerBibleChapter,
+        ranges: null,
+        label: passages.join(', '),
+        passages,
+        whole: task.read + taken + count >= task.pages && task.read + taken === 0,
+        from: task.read + taken,
+        through: task.read + taken + count
+      });
+      plan[i].minutes += count * s.minsPerBibleChapter;
+      taken += count;
+    });
+  }
+
   return { plan, totalMinutes, perDay, days: days.length, pending, deadline };
 }
 
@@ -507,7 +611,8 @@ export function planFor(tasks, deadline, opts = {}) {
 /** How far into a single reading you are, 0–100. Pages-only; other units are all-or-nothing. */
 export function itemPct(task) {
   if (task.complete) return 100;
-  if (task.unit !== 'pages' || !task.pages) return 0;
+  // Pages and chapters are both simply counted through.
+  if ((task.unit !== 'pages' && task.unit !== 'chapters') || !task.pages) return 0;
   return Math.min(100, Math.round((task.read / task.pages) * 100));
 }
 

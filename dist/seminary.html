@@ -1260,6 +1260,13 @@ summary {
   background: color-mix(in srgb, var(--warn) 10%, transparent);
 }
 
+/* Each course's reading in its own block, Bible reading beneath its course. */
+.today-group .card-head h2 {
+  color: var(--text);
+  text-transform: none;
+  font-size: 15px;
+}
+
 </style>
   </head>
   <body>
@@ -1741,6 +1748,69 @@ function lastStudyDay(deadline, from) {
   return daysBetween(from, deadline) >= 1 ? addDays(deadline, -1) : from;
 }
 
+/* ---------- Bible readings, passage by passage ---------- */
+
+/**
+ * Break a week's Bible reading into the passages it is actually made of.
+ *
+ *   "Ps 1; Ps 27; 1 Cor 13; Rev 22"  -> four passages
+ *   "Isa 40–48"                      -> nine, one per chapter
+ *   "Rom 1–2:15"                     -> "Rom 1" and "Rom 2:1–15"
+ *   "Rom 5:12–21"                    -> one, since it is part of a chapter
+ *
+ * A syllabus writes a week's worth on one line; a day's reading is one chapter
+ * of it. Anything unparseable is kept whole rather than mangled — better a
+ * passage that does not split than one that comes out wrong.
+ */
+function bibleUnits(ref) {
+  const out = [];
+  for (const piece of String(ref || '').split(/[;,]/)) {
+    const segment = piece.trim();
+    if (!segment) continue;
+
+    const parts = segment.match(/^(.*[A-Za-z.])\s+([\d:–—-]+)$/);
+    if (!parts) {
+      out.push(segment);
+      continue;
+    }
+    const book = parts[1].trim();
+    const spec = parts[2];
+
+    // Part of a single chapter: "5:12–21", "3:16".
+    if (/^\d+:\d+([–—-]\d+)?$/.test(spec)) {
+      out.push(`${book} ${spec}`);
+      continue;
+    }
+    // Whole chapters, then part of the last: "1–2:15".
+    const partial = spec.match(/^(\d+)[–—-](\d+):(\d+)$/);
+    if (partial) {
+      for (let n = Number(partial[1]); n < Number(partial[2]); n++) out.push(`${book} ${n}`);
+      out.push(`${book} ${partial[2]}:1–${partial[3]}`);
+      continue;
+    }
+    // A run of whole chapters: "40–48".
+    const run = spec.match(/^(\d+)[–—-](\d+)$/);
+    if (run && Number(run[2]) > Number(run[1])) {
+      for (let n = Number(run[1]); n <= Number(run[2]); n++) out.push(`${book} ${n}`);
+      continue;
+    }
+    out.push(segment);
+  }
+  return out;
+}
+
+/**
+ * How many of `count` things to do on each of `days` days, heaviest first.
+ * Six readings over five days is 2,1,1,1,1 — the extra goes at the front, where
+ * there is still time to absorb it, rather than at the end against the deadline.
+ */
+function spread(count, days) {
+  if (days <= 0) return [];
+  const each = Math.floor(count / days);
+  const extra = count % days;
+  return Array.from({ length: days }, (_, i) => each + (i < extra ? 1 : 0));
+}
+
 /* ---------- normalising the syllabus ---------- */
 
 const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind}|${idx}`;
@@ -1763,17 +1833,21 @@ function applyProgress(task) {
       complete: false
     };
   }
-  const read = task.unit === 'pages' ? Math.min(progressFor(task.key), task.pages) : 0;
+  // Bible reading is counted in chapters, not pages, but it is tracked exactly
+  // the same way: how many of them you have got through so far.
+  const counted = task.unit === 'pages' || task.unit === 'chapters';
+  const read = counted ? Math.min(progressFor(task.key), task.pages) : 0;
 
   // A reading given only as "ch. 4" still has a length, so give it a notional
   // 1..n range. That lets it be split across days as "pages 1–8 of 22" instead
   // of being dumped whole onto one evening.
   const hasRealRanges = Boolean(task.ranges?.length);
-  const baseRanges = hasRealRanges ? task.ranges : task.unit === 'pages' && task.pages > 0 ? [[1, task.pages]] : null;
+  const baseRanges = hasRealRanges ? task.ranges : counted && task.pages > 0 ? [[1, task.pages]] : null;
 
   const remainingRanges = baseRanges ? sliceRanges(baseRanges, read)[1] : null;
   const remainingPages = baseRanges ? rangePages(remainingRanges) : Math.max(0, task.pages - read);
-  const remaining = task.unit === 'pages' ? remainingPages * s.minsPerPage : task.minutes;
+  const perUnit = task.unit === 'chapters' ? s.minsPerBibleChapter : s.minsPerPage;
+  const remaining = counted ? remainingPages * perUnit : task.minutes;
   return { ...task, read, baseRanges, synthetic: !hasRealRanges, remainingPages, remainingRanges, remaining, complete: false };
 }
 
@@ -1836,7 +1910,12 @@ function buildTasks(data) {
 
       if (session.bible) {
         const key = keyFor(course.id, session.date, 'b', 0);
-        const item = { unit: 'chapters', chapters: session.bible.chapters };
+        // The passages themselves, so a day can be given one chapter rather
+        // than "the Bible reading" whole. The syllabus's own count is a
+        // fallback for anything the parser cannot make sense of.
+        const units = bibleUnits(session.bible.ref);
+        const chapters = units.length || session.bible.chapters || 0;
+        const item = { unit: 'chapters', chapters };
         tasks.push({
           ...ctx,
           key,
@@ -1845,11 +1924,12 @@ function buildTasks(data) {
           title: 'Bible reading',
           detail: session.bible.ref,
           unit: 'chapters',
-          chapters: session.bible.chapters,
+          chapters,
+          units,
           raw: item,
           due: session.date,
           dueTime: classTimeFor(course),
-          pages: 0,
+          pages: chapters,
           minutes: minutesOf(item, key),
           estimated: false
         });
@@ -2015,9 +2095,15 @@ function planFor(tasks, deadline, opts = {}) {
   const chunkLabel = (task, ranges) =>
     task.synthetic ? `pages ${formatRanges(ranges)} of ${task.pages}` : `pp. ${formatRanges(ranges)}`;
 
+  // Bible reading is paced by the day rather than by the minute: a chapter a
+  // day is the point of it, not an even division of effort. It is placed
+  // directly onto days further down, so it stays out of the general packing.
+  const scripture = pending.filter((t) => t.kind === 'bible' && t.units?.length);
+
   // Chop anything much bigger than one day's share into page-accurate chunks.
   const atoms = [];
   for (const task of pending) {
+    if (scripture.includes(task)) continue;
     const splittable =
       task.unit === 'pages' && task.remainingRanges?.length && task.remaining > perDay * 1.2 && perDay > 0;
 
@@ -2076,6 +2162,31 @@ function planFor(tasks, deadline, opts = {}) {
     plan[i].minutes += atom.minutes;
   }
 
+  // A chapter a day, as far as it goes. With more chapters left than days the
+  // extra are clumped onto the earliest days and named together — "Gen 1, Gen
+  // 2" — rather than one day being handed the lot at the end.
+  for (const task of scripture) {
+    const left = task.units.slice(task.read);
+    const share = spread(left.length, days.length);
+    let taken = 0;
+    share.forEach((count, i) => {
+      if (!count) return;
+      const passages = left.slice(taken, taken + count);
+      plan[i].items.push({
+        task,
+        minutes: count * s.minsPerBibleChapter,
+        ranges: null,
+        label: passages.join(', '),
+        passages,
+        whole: task.read + taken + count >= task.pages && task.read + taken === 0,
+        from: task.read + taken,
+        through: task.read + taken + count
+      });
+      plan[i].minutes += count * s.minsPerBibleChapter;
+      taken += count;
+    });
+  }
+
   return { plan, totalMinutes, perDay, days: days.length, pending, deadline };
 }
 
@@ -2084,7 +2195,8 @@ function planFor(tasks, deadline, opts = {}) {
 /** How far into a single reading you are, 0–100. Pages-only; other units are all-or-nothing. */
 function itemPct(task) {
   if (task.complete) return 100;
-  if (task.unit !== 'pages' || !task.pages) return 0;
+  // Pages and chapters are both simply counted through.
+  if ((task.unit !== 'pages' && task.unit !== 'chapters') || !task.pages) return 0;
   return Math.min(100, Math.round((task.read / task.pages) * 100));
 }
 
@@ -2126,7 +2238,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, keyFor, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -2418,7 +2530,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v17 · 2026-08-12';
+const BUILD = 'v18 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -2583,7 +2695,7 @@ function materialButton(task) {
   return read + open;
 }
 
-function taskLine(task, { showCourse = false, chunk = null } = {}) {
+function taskLine(task, { showCourse = false, chunk = null, asPassage = false } = {}) {
   const done = task.complete;
   // A part-way chunk is ticked once you have read past its last page. A whole
   // item is ticked only when it is marked done — page arithmetic cannot answer
@@ -2592,7 +2704,10 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
   // reading permanently ticked, and impossible to untick.
   const ticked = chunk ? (chunk.whole ? done : task.read >= chunk.through) : done;
   const checked = ticked ? 'checked' : '';
-  const detail = chunk ? chunk.label : task.detail;
+  // Under a "Bible reading" heading the passage is the useful line, not the
+  // words "Bible reading" repeated down the page.
+  const title = asPassage && chunk?.label ? chunk.label : task.title;
+  const detail = asPassage ? '' : chunk ? chunk.label : task.detail;
   const amount = chunk
     ? S.formatMinutes(chunk.minutes)
     : task.unit === 'project'
@@ -2624,12 +2739,12 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
       </label>
       <div class="task-body">
         <div class="task-title">
-          ${showCourse ? dot(task.color) : ''}${esc(task.title)}
+          ${showCourse ? dot(task.color) : ''}${esc(title)}
         </div>
         ${detail ? `<div class="task-detail">${esc(detail)}</div>` : ''}
         ${
           partial
-            ? `<div class="task-detail muted">${task.read} of ${task.pages} pp. read</div>${progressBar(S.itemPct(task), { size: 'progress-sm' })}`
+            ? `<div class="task-detail muted">${task.read} of ${task.pages} ${task.unit === 'chapters' ? 'chapters' : 'pp.'} read</div>${progressBar(S.itemPct(task), { size: 'progress-sm' })}`
             : ''
         }
         ${task.flag ? `<div class="task-flag">⚠ ${esc(task.flag)}</div>` : ''}
@@ -2711,6 +2826,56 @@ function catchUpCard(plans, projects) {
     </section>`;
 }
 
+/**
+ * Today's reading, split up the way an evening actually goes.
+ *
+ * One undifferentiated list meant scanning past Greek to find whether there was
+ * theology, and the Bible reading sat somewhere in the middle of it. Each course
+ * gets its own block, in the order the classes meet — Greek at five, theology at
+ * seven — and the Bible reading stands on its own beneath the course that sets
+ * it, one passage a day rather than a week's worth on one line.
+ */
+function todaySections(bucket) {
+  if (!bucket.items.length) return '';
+
+  const groups = new Map();
+  for (const atom of bucket.items) {
+    const scripture = atom.task.kind === 'bible';
+    const key = `${atom.course.id}${scripture ? ':bible' : ''}`;
+    if (!groups.has(key)) groups.set(key, { course: atom.course, scripture, items: [] });
+    groups.get(key).items.push(atom);
+  }
+
+  // Earlier class first, and within a course its Bible reading comes after the
+  // books it belongs with.
+  const courses = [...new Set(bucket.items.map((a) => a.course))].sort((a, b) =>
+    S.classTimeFor(a).localeCompare(S.classTimeFor(b))
+  );
+  const ordered = [];
+  for (const course of courses) {
+    for (const suffix of ['', ':bible']) {
+      const group = groups.get(`${course.id}${suffix}`);
+      if (group) ordered.push(group);
+    }
+  }
+
+  return ordered
+    .map(({ course, scripture, items }) => {
+      const minutes = items.reduce((sum, a) => sum + a.minutes, 0);
+      return `
+      <section class="card today-group">
+        <div class="card-head">
+          <h2>${dot(course.color)}${scripture ? 'Bible reading' : esc(course.name)}</h2>
+          <span class="card-when">${scripture ? esc(course.short || course.name) + ' · ' : ''}${S.formatMinutes(minutes)}</span>
+        </div>
+        <ul class="tasks">
+          ${items.map((a) => taskLine({ ...a.task, color: course.color }, { chunk: a, asPassage: scripture })).join('')}
+        </ul>
+      </section>`;
+    })
+    .join('');
+}
+
 function viewToday() {
   const bucket = todayBucket();
   const upcoming = S.deadlines(TASKS, { withinDays: store.settings().leadDays });
@@ -2754,14 +2919,7 @@ function viewToday() {
         : ''
     }
 
-    ${
-      bucket.items.length
-        ? `<section class="card">
-             <h2>Read today</h2>
-             <ul class="tasks">${bucket.items.map((a) => taskLine({ ...a.task, color: a.course.color }, { chunk: a, showCourse: true })).join('')}</ul>
-           </section>`
-        : ''
-    }
+    ${todaySections(bucket)}
 
     ${
       bucket.projects.length

@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v17 · 2026-08-12';
+const BUILD = 'v18 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -170,7 +170,7 @@ function materialButton(task) {
   return read + open;
 }
 
-function taskLine(task, { showCourse = false, chunk = null } = {}) {
+function taskLine(task, { showCourse = false, chunk = null, asPassage = false } = {}) {
   const done = task.complete;
   // A part-way chunk is ticked once you have read past its last page. A whole
   // item is ticked only when it is marked done — page arithmetic cannot answer
@@ -179,7 +179,10 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
   // reading permanently ticked, and impossible to untick.
   const ticked = chunk ? (chunk.whole ? done : task.read >= chunk.through) : done;
   const checked = ticked ? 'checked' : '';
-  const detail = chunk ? chunk.label : task.detail;
+  // Under a "Bible reading" heading the passage is the useful line, not the
+  // words "Bible reading" repeated down the page.
+  const title = asPassage && chunk?.label ? chunk.label : task.title;
+  const detail = asPassage ? '' : chunk ? chunk.label : task.detail;
   const amount = chunk
     ? S.formatMinutes(chunk.minutes)
     : task.unit === 'project'
@@ -211,12 +214,12 @@ function taskLine(task, { showCourse = false, chunk = null } = {}) {
       </label>
       <div class="task-body">
         <div class="task-title">
-          ${showCourse ? dot(task.color) : ''}${esc(task.title)}
+          ${showCourse ? dot(task.color) : ''}${esc(title)}
         </div>
         ${detail ? `<div class="task-detail">${esc(detail)}</div>` : ''}
         ${
           partial
-            ? `<div class="task-detail muted">${task.read} of ${task.pages} pp. read</div>${progressBar(S.itemPct(task), { size: 'progress-sm' })}`
+            ? `<div class="task-detail muted">${task.read} of ${task.pages} ${task.unit === 'chapters' ? 'chapters' : 'pp.'} read</div>${progressBar(S.itemPct(task), { size: 'progress-sm' })}`
             : ''
         }
         ${task.flag ? `<div class="task-flag">⚠ ${esc(task.flag)}</div>` : ''}
@@ -298,6 +301,56 @@ function catchUpCard(plans, projects) {
     </section>`;
 }
 
+/**
+ * Today's reading, split up the way an evening actually goes.
+ *
+ * One undifferentiated list meant scanning past Greek to find whether there was
+ * theology, and the Bible reading sat somewhere in the middle of it. Each course
+ * gets its own block, in the order the classes meet — Greek at five, theology at
+ * seven — and the Bible reading stands on its own beneath the course that sets
+ * it, one passage a day rather than a week's worth on one line.
+ */
+function todaySections(bucket) {
+  if (!bucket.items.length) return '';
+
+  const groups = new Map();
+  for (const atom of bucket.items) {
+    const scripture = atom.task.kind === 'bible';
+    const key = `${atom.course.id}${scripture ? ':bible' : ''}`;
+    if (!groups.has(key)) groups.set(key, { course: atom.course, scripture, items: [] });
+    groups.get(key).items.push(atom);
+  }
+
+  // Earlier class first, and within a course its Bible reading comes after the
+  // books it belongs with.
+  const courses = [...new Set(bucket.items.map((a) => a.course))].sort((a, b) =>
+    S.classTimeFor(a).localeCompare(S.classTimeFor(b))
+  );
+  const ordered = [];
+  for (const course of courses) {
+    for (const suffix of ['', ':bible']) {
+      const group = groups.get(`${course.id}${suffix}`);
+      if (group) ordered.push(group);
+    }
+  }
+
+  return ordered
+    .map(({ course, scripture, items }) => {
+      const minutes = items.reduce((sum, a) => sum + a.minutes, 0);
+      return `
+      <section class="card today-group">
+        <div class="card-head">
+          <h2>${dot(course.color)}${scripture ? 'Bible reading' : esc(course.name)}</h2>
+          <span class="card-when">${scripture ? esc(course.short || course.name) + ' · ' : ''}${S.formatMinutes(minutes)}</span>
+        </div>
+        <ul class="tasks">
+          ${items.map((a) => taskLine({ ...a.task, color: course.color }, { chunk: a, asPassage: scripture })).join('')}
+        </ul>
+      </section>`;
+    })
+    .join('');
+}
+
 function viewToday() {
   const bucket = todayBucket();
   const upcoming = S.deadlines(TASKS, { withinDays: store.settings().leadDays });
@@ -341,14 +394,7 @@ function viewToday() {
         : ''
     }
 
-    ${
-      bucket.items.length
-        ? `<section class="card">
-             <h2>Read today</h2>
-             <ul class="tasks">${bucket.items.map((a) => taskLine({ ...a.task, color: a.course.color }, { chunk: a, showCourse: true })).join('')}</ul>
-           </section>`
-        : ''
-    }
+    ${todaySections(bucket)}
 
     ${
       bucket.projects.length

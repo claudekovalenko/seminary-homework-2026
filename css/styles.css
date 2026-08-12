@@ -1245,3 +1245,10 @@ summary {
   color: var(--warn);
   background: color-mix(in srgb, var(--warn) 10%, transparent);
 }
+
+/* Each course's reading in its own block, Bible reading beneath its course. */
+.today-group .card-head h2 {
+  color: var(--text);
+  text-transform: none;
+  font-size: 15px;
+}
