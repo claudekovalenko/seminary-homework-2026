@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v15 · 2026-08-10';
+const BUILD = 'v16 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -599,6 +599,66 @@ function redoRow(m, entry) {
 }
 
 /**
+ * The syllabi themselves, shipped with the app.
+ *
+ * Everything else in Files is something you attach; these are already here, on
+ * every device, offline, because the whole app is built out of them and the
+ * answer to "what did the syllabus actually say?" should never be a hunt
+ * through email. They read through the same machinery as anything else.
+ */
+function syllabusSection() {
+  const withSyllabus = DATA.courses.filter((c) => c.syllabus);
+  if (!withSyllabus.length) return '';
+
+  return `
+    <section class="card">
+      <h2>Syllabi</h2>
+      <p class="note">
+        Both syllabus PDFs travel with the app — no attaching, and they work offline.
+        Everything in Today, Plan and Schedule is taken from them.
+      </p>
+      ${withSyllabus
+        .map((c) => {
+          const id = `syllabus-${c.id}`;
+          const has = extractedIds.has(id);
+          return `
+        <div class="material" id="mat-${esc(id)}">
+          <div class="material-head">
+            <div class="material-title">${dot(c.color)}${esc(c.code || c.name)} — ${esc(c.name)}</div>
+            <div class="material-meta">
+              ${esc(c.instructor || '')}${c.credits ? ` · ${c.credits} credits` : ''}
+              ${c.classTime ? ` · ${esc(clockLabel(c.classTime))}–${esc(clockLabel(c.endTime))}` : ''}
+              ${c.location ? `<br>${esc(c.location)}` : ''}
+            </div>
+          </div>
+          <div class="material-actions">
+            ${
+              globalThis.__COURSES__
+                ? '<span class="note">The PDF itself lives with the hosted app.</span>'
+                : `<a class="btn small" href="${esc(c.syllabus)}" target="_blank" rel="noopener">Open PDF</a>
+                   ${
+                     has
+                       ? `<button class="btn small" data-action="read-text" data-mat="${esc(id)}">Read text</button>`
+                       : `<button class="btn small ghost" data-action="read-syllabus" data-course="${esc(c.id)}">Read it here</button>`
+                   }`
+            }
+          </div>
+          <div class="material-extract" id="extract-${esc(id)}"></div>
+        </div>`;
+        })
+        .join('')}
+    </section>`;
+}
+
+/** "7:00 pm" from "19:00". */
+function clockLabel(hhmm) {
+  if (!hhmm) return '';
+  return S.withTime(new Date(), hhmm)
+    .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    .toLowerCase();
+}
+
+/**
  * Every bookmark you have made, across every book, in one place.
  *
  * A bookmark buried inside the book it points at is only findable if you
@@ -670,6 +730,7 @@ function viewFiles() {
   const attached = list.filter((m) => store.libraryEntry(m.id)).length;
 
   return `
+    ${syllabusSection()}
     ${bookmarksSection()}
 
     <section class="card">
@@ -807,9 +868,10 @@ function viewSettings() {
     <section class="card">
       <h2>Class times</h2>
       <p class="note">
-        Not confirmed yet, so the app assumes <strong>6:00 pm</strong> and marks it as an assumption.
-        The time matters for two things: when a due-date reminder counts as passed, and whether class
-        day itself is still available to read in — for an evening class it is, so the plan uses it.
+        Taken from the syllabi: <strong>Greek at 5:00 pm</strong>, then <strong>Theology at 7:00 pm</strong>,
+        both Tuesdays at Aiea Heights Church. The time matters for two things: when a due-date reminder
+        counts as passed, and whether class day itself is still available to read in — for an evening
+        class it is, so the plan uses it. Override either here if a class moves.
       </p>
       ${DATA.courses
         .map(
@@ -1124,6 +1186,56 @@ function watchReadingPosition() {
   update();
 }
 
+/**
+ * Read one stored PDF's text layer and keep it, unless what came out cannot be
+ * trusted. Returns the result on success, or null having already explained why
+ * not — a scan to be OCR'd, or a text layer with pieces missing.
+ */
+async function extractAndStore(id, blob, { force = false, say }) {
+  const { extractText } = await import('./pdftext.js');
+  const result = await extractText(blob, ({ done, total }) => {
+    say(`<span class="note">Reading page ${done} of ${total}…</span>
+         ${progressBar(Math.round((done / total) * 100), { size: 'progress-sm' })}`);
+  });
+
+  if (result.looksScanned) {
+    say(
+      `<span class="note warn-note">This PDF is a photographed scan — pictures of pages,
+       not text, so there is nothing to pull straight out.</span>
+       <button class="btn small" data-action="run-ocr" data-mat="${esc(id)}">Read it with OCR</button>`
+    );
+    return null;
+  }
+
+  // Text came out, but not all of it. Storing it would leave a document that
+  // reads convincingly and is wrong in the places that matter most.
+  if (result.mangled && !force) {
+    say(
+      `<span class="note warn-note">This PDF's text layer is broken —
+       ${esc(result.mangled)}. OCR reads the picture of the page instead of the file's own
+       lettering, so it gets them right.</span>
+       <button class="btn small" data-action="run-ocr" data-mat="${esc(id)}">Read it with OCR</button>
+       <button class="btn small ghost" data-action="extract-anyway" data-mat="${esc(id)}">Use it as it is</button>`
+    );
+    return null;
+  }
+
+  await lib.putText(id, result);
+  extractedIds.add(id);
+  const entry = store.libraryEntry(id);
+  if (entry) {
+    store.setLibraryEntry(id, { ...entry, text: { chars: result.chars, pageCount: result.pageCount, ocr: false } });
+  }
+  const partial =
+    result.emptyPages > 0
+      ? ` ${result.emptyPages} of ${result.pageCount} pages had no text — probably images or plates.`
+      : '';
+  say(`<span class="note">Got ${Math.round(result.chars / 1000)}k characters from
+       ${result.pageCount - result.emptyPages} pages.${partial}</span>`);
+  refresh();
+  return result;
+}
+
 async function showStorageUsage() {
   const line = $('#storage-line');
   if (!line) return;
@@ -1264,8 +1376,11 @@ document.addEventListener('click', async (e) => {
     return go(`read:${el.dataset.mat}|${el.dataset.key}`);
   }
 
-  if (action === 'extract-text') {
+  if (action === 'extract-text' || action === 'extract-anyway') {
     const id = el.dataset.mat;
+    // "Use it as it is" — you have been told the text layer is broken and want
+    // the partial reading anyway.
+    const force = action === 'extract-anyway';
     const entry = store.libraryEntry(id);
     const status = $(`#extract-${CSS.escape(id)}`);
     if (!entry || entry.kind !== 'file') return;
@@ -1285,36 +1400,48 @@ document.addEventListener('click', async (e) => {
     try {
       const blob = await lib.getFile(id);
       if (!blob) throw new Error('That file is not stored on this device any more.');
-
-      const { extractText } = await import('./pdftext.js');
-      const result = await extractText(blob, ({ done, total }) => {
-        say(`<span class="note">Reading page ${done} of ${total}…</span>
-             ${progressBar(Math.round((done / total) * 100), { size: 'progress-sm' })}`);
-      });
-
-      if (result.looksScanned) {
-        say(
-          `<span class="note warn-note">This PDF is a photographed scan — pictures of pages,
-           not text, so there is nothing to pull straight out.</span>
-           <button class="btn small" data-action="run-ocr" data-mat="${esc(id)}">Read it with OCR</button>`
-        );
-        el.disabled = false;
-        return;
-      }
-
-      await lib.putText(id, result);
-      extractedIds.add(id);
-      store.setLibraryEntry(id, { ...entry, text: { chars: result.chars, pageCount: result.pageCount, ocr: false } });
-      const partial =
-        result.emptyPages > 0
-          ? ` ${result.emptyPages} of ${result.pageCount} pages had no text — probably images or plates.`
-          : '';
-      say(`<span class="note">Got ${Math.round(result.chars / 1000)}k characters from
-           ${result.pageCount - result.emptyPages} pages.${partial}</span>`);
-      refresh();
-      return go(`read:${id}`);
+      if (await extractAndStore(id, blob, { force, say })) return go(`read:${id}`);
+      el.disabled = false;
     } catch (err) {
       say(`<span class="note warn-note">Could not read that PDF: ${esc(err.message)}</span>`);
+      el.disabled = false;
+    }
+    return;
+  }
+
+  // The syllabi ship with the app rather than being attached. Bringing one into
+  // the library first means every later step — reading, OCR, re-reading — is
+  // the same code as for anything else you attach yourself.
+  if (action === 'read-syllabus') {
+    const course = DATA.courses.find((c) => c.id === el.dataset.course);
+    if (!course?.syllabus) return;
+    const id = `syllabus-${course.id}`;
+    const status = $(`#extract-${CSS.escape(id)}`);
+    const say = (html) => status && (status.innerHTML = html);
+
+    if (globalThis.__COURSES__) {
+      say(`<span class="note warn-note">Reading text out of a PDF needs the hosted app —
+           this is the standalone offline copy.</span>`);
+      return;
+    }
+
+    el.disabled = true;
+    say('<span class="note">Loading the syllabus…</span>');
+    try {
+      const res = await fetch(course.syllabus);
+      if (!res.ok) throw new Error(`the file would not load (${res.status})`);
+      const blob = await res.blob();
+      await lib.putFile(id, blob);
+      store.setLibraryEntry(id, {
+        title: `${course.code || course.short || course.name} syllabus`,
+        kind: 'file',
+        fileName: course.syllabus.split('/').pop(),
+        fileSize: blob.size
+      });
+      if (await extractAndStore(id, blob, { say })) return go(`read:${id}`);
+      el.disabled = false;
+    } catch (err) {
+      say(`<span class="note warn-note">Could not read the syllabus: ${esc(err.message)}</span>`);
       el.disabled = false;
     }
     return;

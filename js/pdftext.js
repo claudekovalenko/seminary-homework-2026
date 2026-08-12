@@ -28,6 +28,29 @@ export async function loadPdfjs() {
 const SCAN_THRESHOLD = 40;
 
 /**
+ * Some PDFs carry a text layer that is quietly incomplete.
+ *
+ * Found on a real syllabus: every digit and every "Th" ligature came back
+ * empty, because the font's character map has no entry for those glyphs. The
+ * page looks perfect on screen and extracts as "Fall  (Aug th – Oct th)" —
+ * plausible prose with the dates silently deleted. That is worse than failing,
+ * so it is checked for rather than trusted.
+ *
+ * Two signs, either of which is enough. A document of any length with not one
+ * digit in it has almost certainly lost them: page numbers alone would supply
+ * some. And a stray lone "e" between spaces is not a word in English — it is
+ * what "The" leaves behind when its ligature drops out.
+ */
+function looksMangled(text) {
+  if (text.length < 1500) return null;
+  const digits = (text.match(/\d/g) || []).length;
+  if (digits === 0) return 'every digit is missing — dates and page numbers included';
+  const orphans = (text.match(/ (?:e|is|at|ere|ese|ose|ough|rough)(?= )/g) || []).length;
+  if (orphans > text.length / 400) return 'letters are dropping out of common words';
+  return null;
+}
+
+/**
  * Rebuild readable text from one page's positioned runs.
  * `items` come from pdf.js getTextContent(); each carries a transform matrix
  * whose last two entries are the run's x and y on the page.
@@ -172,7 +195,10 @@ export async function extractText(blob, onProgress) {
     pageCount: pages.length,
     emptyPages,
     // Nothing worth reading came out: this is a scan, and needs OCR instead.
-    looksScanned: pages.length > 0 && emptyPages / pages.length > 0.8
+    looksScanned: pages.length > 0 && emptyPages / pages.length > 0.8,
+    // Something came out, but not all of it. OCR reads the picture instead of
+    // the broken character map, and gets the missing glyphs right.
+    mangled: looksMangled(pages.map((p) => p.text).join('\n'))
   };
 }
 

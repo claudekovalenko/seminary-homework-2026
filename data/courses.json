@@ -16,7 +16,7 @@
       "short": "Theo 1",
       "color": "#5b6ef5",
       "meetingDay": "Tuesday",
-      "classTime": null,
+      "classTime": "19:00",
       "classTimeNote": "Time not confirmed — likely Tuesday evening. Set it in Settings.",
       "sessions": [
         {
@@ -28,7 +28,12 @@
               "source": "John Webster, \"Biblical Reasoning\"",
               "ref": "128–132",
               "format": "pdf",
-              "ranges": [[128, 132]]
+              "ranges": [
+                [
+                  128,
+                  132
+                ]
+              ]
             },
             {
               "order": 2,
@@ -61,13 +66,31 @@
               "source": "Duby, Jesus and the God of Classical Theism",
               "ref": "22–32",
               "format": "pdf",
-              "ranges": [[22, 32]]
+              "ranges": [
+                [
+                  22,
+                  32
+                ]
+              ]
             },
             {
               "order": 2,
               "source": "Bavinck, Reformed Dogmatics",
               "ref": "29–41; 97–110; 149–177",
-              "ranges": [[29, 41], [97, 110], [149, 177]],
+              "ranges": [
+                [
+                  29,
+                  41
+                ],
+                [
+                  97,
+                  110
+                ],
+                [
+                  149,
+                  177
+                ]
+              ],
               "driver": true
             },
             {
@@ -82,7 +105,12 @@
               "source": "Aquinas, Summa theologiae",
               "ref": "Ia.2.3; Ia.3–4 (pp. 20–43)",
               "format": "pdf",
-              "ranges": [[20, 43]],
+              "ranges": [
+                [
+                  20,
+                  43
+                ]
+              ],
               "driver": true
             }
           ],
@@ -152,7 +180,16 @@
               "order": 1,
               "source": "Bavinck, Reformed Dogmatics",
               "ref": "341–347; 370–374",
-              "ranges": [[341, 347], [370, 374]]
+              "ranges": [
+                [
+                  341,
+                  347
+                ],
+                [
+                  370,
+                  374
+                ]
+              ]
             },
             {
               "order": 2,
@@ -191,14 +228,40 @@
               "order": 1,
               "source": "Bavinck, Reformed Dogmatics",
               "ref": "407–408; 416–420; 426–439; 591–598; 604–619",
-              "ranges": [[407, 408], [416, 420], [426, 439], [591, 598], [604, 619]]
+              "ranges": [
+                [
+                  407,
+                  408
+                ],
+                [
+                  416,
+                  420
+                ],
+                [
+                  426,
+                  439
+                ],
+                [
+                  591,
+                  598
+                ],
+                [
+                  604,
+                  619
+                ]
+              ]
             },
             {
               "order": 2,
               "source": "Davison, Participation in God",
               "ref": "42–52",
               "format": "pdf",
-              "ranges": [[42, 52]]
+              "ranges": [
+                [
+                  42,
+                  52
+                ]
+              ]
             },
             {
               "order": 3,
@@ -268,7 +331,12 @@
               "order": 1,
               "source": "Bavinck, Reformed Dogmatics",
               "ref": "530–580",
-              "ranges": [[530, 580]]
+              "ranges": [
+                [
+                  530,
+                  580
+                ]
+              ]
             },
             {
               "order": 2,
@@ -357,7 +425,13 @@
             }
           ]
         }
-      ]
+      ],
+      "code": "THEO 7003",
+      "endTime": "20:45",
+      "instructor": "David Larson",
+      "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
+      "syllabus": "./syllabi/theology-1-theo-7003-fall-2026.pdf",
+      "credits": 3
     },
     {
       "id": "greek",
@@ -365,7 +439,7 @@
       "short": "Greek",
       "color": "#1f9d78",
       "meetingDay": "Tuesday",
-      "classTime": null,
+      "classTime": "17:00",
       "classTimeNote": "Time not confirmed — likely Tuesday evening. Set it in Settings.",
       "sessions": [
         {
@@ -830,7 +904,13 @@
             }
           ]
         }
-      ]
+      ],
+      "code": "GREK 6003",
+      "endTime": "18:45",
+      "instructor": "David Larson, Chris Bruno",
+      "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
+      "syllabus": "./syllabi/intermediate-greek-grek-6003-fall-2026.pdf",
+      "credits": 3
     }
   ]
 }
