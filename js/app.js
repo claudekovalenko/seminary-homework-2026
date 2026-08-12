@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v16 · 2026-08-12';
+const BUILD = 'v17 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -635,10 +635,10 @@ function syllabusSection() {
             ${
               globalThis.__COURSES__
                 ? '<span class="note">The PDF itself lives with the hosted app.</span>'
-                : `<a class="btn small" href="${esc(c.syllabus)}" target="_blank" rel="noopener">Open PDF</a>
+                : `<button class="btn small" data-action="open-syllabus" data-course="${esc(c.id)}">Open PDF</button>
                    ${
                      has
-                       ? `<button class="btn small" data-action="read-text" data-mat="${esc(id)}">Read text</button>`
+                       ? `<button class="btn small ghost" data-action="read-text" data-mat="${esc(id)}">Read text</button>`
                        : `<button class="btn small ghost" data-action="read-syllabus" data-course="${esc(c.id)}">Read it here</button>`
                    }`
             }
@@ -935,6 +935,19 @@ function viewSettings() {
     </section>
 
     <section class="card">
+      <h2>If something goes wrong</h2>
+      <p class="note">
+        The app writes down anything that breaks while you are using it. If it misbehaves,
+        tap Copy and send it over — that turns "it glitched" into something fixable.
+      </p>
+      <p class="note" id="diagnostics">Checking…</p>
+      <div class="btn-row">
+        <button class="btn ghost" data-action="copy-diagnostics">Copy report</button>
+        <button class="btn ghost" data-action="clear-problems">Clear the list</button>
+      </div>
+    </section>
+
+    <section class="card">
       <h2>App version</h2>
       <p class="note">
         Running <strong>${esc(BUILD)}</strong>. The app updates itself in the background, but if a
@@ -979,11 +992,20 @@ function render() {
   document.title = name === 'today' ? 'Seminary — Today' : `Seminary — ${name}`;
 
   if (name === 'files') {
+    // Which materials have text is read from IndexedDB, which cannot be waited
+    // on while painting — so paint, then correct once if the answer changed.
+    //
+    // This used to compare storage against the buttons on screen, and redraw
+    // whenever they disagreed. Anything stored that the view has no button for
+    // — text left behind by a removed attachment, say — disagreed for ever, and
+    // every redraw started the check again: the app rebuilt this view hundreds
+    // of times a second and locked up. Comparing the set with its own previous
+    // value settles after one pass, whatever is in storage.
+    const before = new Set(extractedIds);
     loadExtractedIds().then(() => {
-      // Only redraw if the set actually changed the buttons we just painted.
-      const shown = new Set([...document.querySelectorAll('[data-action="read-text"]')].map((b) => b.dataset.mat));
-      const same = shown.size === extractedIds.size && [...extractedIds].every((id) => shown.has(id));
-      if (!same && parseView(view).name === 'files') render();
+      const changed =
+        before.size !== extractedIds.size || [...extractedIds].some((id) => !before.has(id));
+      if (changed && parseView(view).name === 'files') render();
     });
     if (focusMaterial) {
       $(`#mat-${CSS.escape(focusMaterial)}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -991,6 +1013,8 @@ function render() {
     }
     showStorageUsage();
   }
+
+  if (name === 'settings') showDiagnostics();
 }
 
 /**
@@ -1236,6 +1260,38 @@ async function extractAndStore(id, blob, { force = false, say }) {
   return result;
 }
 
+/** What the app knows about its own state, in one block you can send to me. */
+async function diagnosticReport() {
+  const lines = [`Seminary ${BUILD}`, `${navigator.userAgent}`];
+  lines.push(`display: ${matchMedia('(display-mode: standalone)').matches ? 'home screen' : 'browser'}`);
+  try {
+    const regs = (await navigator.serviceWorker?.getRegistrations?.()) || [];
+    const names = (await caches?.keys?.()) || [];
+    lines.push(`offline copy: ${regs.length} worker(s), caches [${names.join(', ')}]`);
+  } catch (err) {
+    lines.push(`offline copy: could not be read (${err.message})`);
+  }
+  try {
+    const est = await lib.usage();
+    if (est) lines.push(`storage: ${lib.formatBytes(est.used)} of ${lib.formatBytes(est.quota)}`);
+    lines.push(`files: ${(await lib.listFileIds()).length}, extracted: ${(await lib.listTextIds()).length}`);
+  } catch (err) {
+    lines.push(`storage: unreadable (${err.message})`);
+  }
+  const list = store.problems();
+  lines.push(list.length ? `${list.length} problem(s) recorded:` : 'no problems recorded');
+  for (const p of list) {
+    lines.push(`  ${p.at.slice(0, 16).replace('T', ' ')} ${p.what}${p.count > 1 ? ` (×${p.count})` : ''} — ${p.where}`);
+  }
+  return lines.join('\n');
+}
+
+async function showDiagnostics() {
+  const line = $('#diagnostics');
+  if (!line) return;
+  line.textContent = await diagnosticReport();
+}
+
 async function showStorageUsage() {
   const line = $('#storage-line');
   if (!line) return;
@@ -1405,6 +1461,24 @@ document.addEventListener('click', async (e) => {
     } catch (err) {
       say(`<span class="note warn-note">Could not read that PDF: ${esc(err.message)}</span>`);
       el.disabled = false;
+    }
+    return;
+  }
+
+  if (action === 'open-syllabus') {
+    const course = DATA.courses.find((c) => c.id === el.dataset.course);
+    if (!course?.syllabus) return;
+    const status = $(`#extract-${CSS.escape(`syllabus-${course.id}`)}`);
+    const say = (html) => status && (status.innerHTML = html);
+    try {
+      // The service worker keeps these, so this works with no signal too.
+      const res = await fetch(course.syllabus);
+      if (!res.ok) throw new Error(`the file would not load (${res.status})`);
+      lib.openBlob(await res.blob(), course.syllabus.split('/').pop());
+      say('');
+    } catch (err) {
+      say(`<span class="note warn-note">Could not open the PDF: ${esc(err.message)}.
+           "Read it here" shows the same syllabus inside the app.</span>`);
     }
     return;
   }
@@ -1718,6 +1792,25 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'copy-diagnostics') {
+    const report = await diagnosticReport();
+    try {
+      await navigator.clipboard.writeText(report);
+      el.textContent = 'Copied';
+      setTimeout(() => (el.textContent = 'Copy report'), 1500);
+    } catch {
+      // Clipboard refused — show it instead so it can still be selected.
+      $('#diagnostics').textContent = report;
+      alert('This browser would not let the app copy. The report is on screen — select and copy it.');
+    }
+    return;
+  }
+
+  if (action === 'clear-problems') {
+    store.clearProblems();
+    return showDiagnostics();
+  }
+
   if (action === 'clear-times') {
     store.updateSettings({ classTimes: {} });
     return refresh();
@@ -1767,6 +1860,14 @@ async function checkReminders() {
 }
 
 async function boot() {
+  // Before anything else, so a failure during start-up is recorded too.
+  addEventListener('error', (e) =>
+    store.logProblem(e.message || 'script error', `${e.filename || '?'}:${e.lineno || 0}`)
+  );
+  addEventListener('unhandledrejection', (e) =>
+    store.logProblem(e.reason?.message || String(e.reason), 'a task that never finished')
+  );
+
   try {
     DATA = await loadData();
   } catch (err) {

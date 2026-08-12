@@ -5,7 +5,7 @@
 // that had once loaded the app kept serving that version forever, and new
 // features silently never arrived. Now every load paints instantly from cache
 // *and* refreshes the cache in the background, so the next load is current.
-const CACHE = 'seminary-v16';
+const CACHE = 'seminary-v17';
 
 const SHELL = [
   './',
@@ -18,19 +18,26 @@ const SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-180.png',
-  './icons/badge.png',
-  // The syllabi are the source of everything else in the app, so they are kept
-  // offline with it rather than fetched when you happen to have signal.
+  './icons/badge.png'
+];
+
+// Wanted offline, but not worth failing an install over: nearly a megabyte of
+// PDF on a phone with one bar. addAll() is all-or-nothing, so these are fetched
+// separately and allowed to fail — the fetch handler will cache them on first
+// use instead.
+const EXTRAS = [
   './syllabi/theology-1-theo-7003-fall-2026.pdf',
   './syllabi/intermediate-greek-grek-6003-fall-2026.pdf'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(SHELL))
-      .then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE);
+      await cache.addAll(SHELL);
+      await Promise.all(EXTRAS.map((url) => cache.add(url).catch(() => {})));
+      await self.skipWaiting();
+    })()
   );
 });
 

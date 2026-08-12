@@ -183,6 +183,51 @@ export function setOverride(key, pages) {
   persist();
 }
 
+/* ---------- a record of things going wrong ---------- */
+
+const PROBLEM_KEY = 'seminary.problems';
+const PROBLEM_LIMIT = 20;
+
+/**
+ * Keep the last few errors, so "it keeps glitching" can be answered with what
+ * actually happened. Stored separately from everything else and capped, because
+ * whatever is failing must not be able to fill the disk by failing repeatedly.
+ * A repeat of the same fault bumps a counter rather than adding a line.
+ */
+export function logProblem(what, where) {
+  try {
+    const list = problems();
+    const last = list[list.length - 1];
+    if (last && last.what === what && last.where === where) {
+      last.count = (last.count || 1) + 1;
+      last.at = new Date().toISOString();
+    } else {
+      list.push({ what: String(what).slice(0, 300), where: String(where || '').slice(0, 200), at: new Date().toISOString(), count: 1 });
+    }
+    localStorage.setItem(PROBLEM_KEY, JSON.stringify(list.slice(-PROBLEM_LIMIT)));
+  } catch {
+    /* if even this fails, there is nothing useful left to do */
+  }
+}
+
+export function problems() {
+  try {
+    const raw = localStorage.getItem(PROBLEM_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function clearProblems() {
+  try {
+    localStorage.removeItem(PROBLEM_KEY);
+  } catch {
+    /* nothing to do */
+  }
+}
+
 export const hasFired = (key) => Boolean(state.fired[key]);
 
 export function markFired(key, when) {

@@ -89,6 +89,29 @@ export function openLink(url) {
 }
 
 /** Open a stored file in a new tab, falling back to a download. */
+/**
+ * Hand a file to the browser to display or save.
+ *
+ * Deliberately not a plain link to the file's address. Added to the home
+ * screen, the app runs without browser chrome, and following a link to a PDF
+ * from there either does nothing or navigates the app itself away to a document
+ * it has no back button from. Handing over a blob keeps the app where it is.
+ */
+export function openBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (!win) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || 'material';
+    a.rel = 'noopener';
+    a.click();
+  }
+  // Give the new tab time to load before the URL stops resolving.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return true;
+}
+
 export async function openStoredFile(id, fileName) {
   let blob;
   try {
@@ -97,18 +120,7 @@ export async function openStoredFile(id, fileName) {
     return false;
   }
   if (!blob) return false;
-
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank');
-  if (!win) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName || 'material';
-    a.click();
-  }
-  // Give the new tab time to load before the URL stops resolving.
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  return true;
+  return openBlob(blob, fileName);
 }
 
 /** Ask the browser not to evict our files when storage runs low. */
