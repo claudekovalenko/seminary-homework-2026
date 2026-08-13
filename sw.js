@@ -5,7 +5,7 @@
 // that had once loaded the app kept serving that version forever, and new
 // features silently never arrived. Now every load paints instantly from cache
 // *and* refreshes the cache in the background, so the next load is current.
-const CACHE = 'seminary-v18';
+const CACHE = 'seminary-v19';
 
 const SHELL = [
   './',
@@ -27,7 +27,8 @@ const SHELL = [
 // use instead.
 const EXTRAS = [
   './syllabi/theology-1-theo-7003-fall-2026.pdf',
-  './syllabi/intermediate-greek-grek-6003-fall-2026.pdf'
+  './syllabi/intermediate-greek-grek-6003-fall-2026.pdf',
+  './syllabi/applied-theology-iii-fall-2026.pdf'
 ];
 
 self.addEventListener('install', (event) => {
@@ -109,6 +110,9 @@ self.addEventListener('periodicsync', (event) => {
       const soon = [];
       for (const course of data.courses) {
         for (const session of course.sessions) {
+          // Meetings you arrange yourself have no date here, and the app holds
+          // any you have set — nothing for a background check to work from.
+          if (!session.date) continue;
           const [y, m, d] = session.date.split('-').map(Number);
           const when = new Date(y, m - 1, d);
           const days = Math.round((when - today) / 86400000);

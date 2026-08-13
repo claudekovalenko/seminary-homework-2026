@@ -1267,6 +1267,45 @@ summary {
   font-size: 15px;
 }
 
+/* Meetings you arrange yourself, waiting for a date. */
+.unscheduled + .unscheduled {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.unscheduled-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.unscheduled-topic {
+  font-size: 14.5px;
+}
+
+.unscheduled-head input[type='date'] {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 </style>
   </head>
   <body>
@@ -1308,7 +1347,7 @@ summary {
     </nav>
 
     <script type="module">
-globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2","estPages":30,"estimated":true},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3}]};
+globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2","estPages":30,"estimated":true},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3},{"id":"applied3","name":"Applied Theology III","short":"Applied 3","color":"#d98b3f","credits":1,"instructor":"Todd Morikawa","location":"Various — arranged with the professor and your pastor","syllabus":"./syllabi/applied-theology-iii-fall-2026.pdf","datesUnknown":true,"meetingDay":null,"classTime":null,"sessions":[{"id":"discussion-1","date":null,"topic":"Book discussion 1","when":"Schedule within the first half of term","readings":[{"source":"Perkins, The Art of Prophesying","ref":"Preface, Introduction, chs. 1–6","material":"Perkins, The Art of Prophesying","estPages":60,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-2","date":null,"topic":"Book discussion 2","when":"Schedule within the first half of term","readings":[{"source":"Perkins, The Art of Prophesying","ref":"chs. 7–11 and summary","material":"Perkins, The Art of Prophesying","estPages":55,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-3","date":null,"topic":"Book discussion 3","when":"Schedule as close to the end of term as possible","readings":[{"source":"Perkins, The Calling of the Ministry","ref":"the whole work","material":"Perkins, The Calling of the Ministry","estPages":90,"driver":true,"flag":"The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"ministry","date":null,"topic":"Preaching opportunity","when":"Arrange with your pastor as soon as you can","assignments":[{"title":"Preach to or on behalf of your church","type":"ministry","note":"Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."},{"title":"Reflection paper on preaching (~500 words)","type":"paper","note":"What text and venue, how your studies shaped the sermon, what you would do differently.","effortMinutes":180}]},{"id":"pastoral","date":null,"topic":"Pastoral meetings","when":"Three times across the term, whenever suits","assignments":[{"title":"Meet your pastor (1 of 3)","type":"meeting"},{"title":"Meet your pastor (2 of 3)","type":"meeting"},{"title":"Meet your pastor (3 of 3)","type":"meeting","note":"Drop the professor a note once all three are done."}]},{"id":"final-paper","date":null,"topic":"Final reflection paper","when":"Due within a week of the last day of term","assignments":[{"title":"Final reflection paper (~750 words)","type":"paper","note":"On the Perkins readings, especially his biblical exegesis.","effortMinutes":300}]}]}]};
 // Generated by tools/build.mjs — edit js/*.js, not this file.
 const __mod_store = (() => {
 // Local persistence: settings, per-item completion, page-count overrides,
@@ -1344,7 +1383,8 @@ const EMPTY = {
   overrides: {}, // itemKey -> page count (number)
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
-  bookmarks: {} // materialId -> [{ page, para, text, at }]
+  bookmarks: {}, // materialId -> [{ page, para, text, at }]
+  sessionDates: {} // "courseId|sessionId" -> ISO date, for meetings you arrange
 };
 
 function read() {
@@ -1360,7 +1400,8 @@ function read() {
       overrides: parsed.overrides || {},
       fired: parsed.fired || {},
       reading: parsed.reading || {},
-      bookmarks: parsed.bookmarks || {}
+      bookmarks: parsed.bookmarks || {},
+      sessionDates: parsed.sessionDates || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -1456,6 +1497,17 @@ function flush() {
 const bookmarksFor = (id) => state.bookmarks[id] || [];
 
 const bookmarksAll = () => state.bookmarks;
+
+/* ---------- dates you have arranged yourself ---------- */
+
+const sessionDates = () => state.sessionDates;
+
+function setSessionDate(courseId, sessionId, iso) {
+  const key = `${courseId}|${sessionId}`;
+  if (iso) state.sessionDates[key] = iso;
+  else delete state.sessionDates[key];
+  persist();
+}
 
 const readingAll = () => state.reading;
 
@@ -1562,7 +1614,8 @@ function importData(json) {
     overrides: parsed.overrides || {},
     fired: parsed.fired || {},
     reading: parsed.reading || {},
-    bookmarks: parsed.bookmarks || {}
+    bookmarks: parsed.bookmarks || {},
+    sessionDates: parsed.sessionDates || {}
   };
   persist();
 }
@@ -1578,10 +1631,10 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
-const {settings, overrideFor, isDone, progressFor} = __mod_store;
+const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
 // Turns the raw syllabus JSON into dated, measurable work:
 // page counts, effort estimates, deadlines, and a day-by-day reading plan.
 
@@ -1815,6 +1868,21 @@ function spread(count, days) {
 
 const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind}|${idx}`;
 
+/**
+ * When a session actually happens.
+ *
+ * Applied Theology is arranged between the student, the professor and a pastor,
+ * so its meetings have no date in the syllabus at all. They keep a stable id
+ * instead, and a date once you have set one in the app. Until then the work is
+ * real and tickable but has no deadline, and nothing may pretend otherwise.
+ */
+function sessionDate(course, session) {
+  return session.date || sessionDates()[`${course.id}|${session.id}`] || null;
+}
+
+/** The part of a task's key that identifies its session, dated or not. */
+const sessionKey = (session) => session.date || session.id;
+
 // How much of a task is left once completion and part-way progress are applied.
 function applyProgress(task) {
   const s = settings();
@@ -1860,6 +1928,7 @@ function projectPace(task, from = startOfToday()) {
   const start = task.startPlanning ? parseDate(task.startPlanning) : from;
   if (parseDay(from) < parseDay(start)) return null;
   const deadline = dueAt(task);
+  if (!deadline) return null;
   const days = studyDaysBetween(from, lastStudyDay(deadline, from), s.studyDays);
   const perDay = task.remaining / days.length;
   const todayIsStudyDay = days.some((d) => daysBetween(d, from) === 0);
@@ -1871,19 +1940,26 @@ function buildTasks(data) {
   const tasks = [];
   for (const course of data.courses) {
     for (const session of course.sessions) {
+      // A session you arrange yourself has no date until you set one. Its work
+      // still exists; it simply has nothing to be due by.
+      const when = sessionDate(course, session);
+      const slot = sessionKey(session);
       const ctx = {
         courseId: course.id,
         course: course.short || course.name,
         courseName: course.name,
         color: course.color,
-        sessionDate: session.date,
+        sessionDate: slot,
+        sessionId: session.id || session.date,
+        undated: !when,
+        arrangeBy: session.when || null,
         topic: session.topic,
         classTime: classTimeFor(course),
         classTimeAssumed: classTimeIsAssumed(course)
       };
 
       (session.readings || []).forEach((item, i) => {
-        const key = keyFor(course.id, session.date, 'r', i);
+        const key = keyFor(course.id, slot, 'r', i);
         tasks.push({
           ...ctx,
           key,
@@ -1900,7 +1976,7 @@ function buildTasks(data) {
           ranges: item.ranges || null,
           verses: item.verses,
           raw: item,
-          due: session.date,
+          due: when,
           dueTime: classTimeFor(course),
           pages: pagesOf(item, key),
           minutes: minutesOf(item, key),
@@ -1909,7 +1985,7 @@ function buildTasks(data) {
       });
 
       if (session.bible) {
-        const key = keyFor(course.id, session.date, 'b', 0);
+        const key = keyFor(course.id, slot, 'b', 0);
         // The passages themselves, so a day can be given one chapter rather
         // than "the Bible reading" whole. The syllabus's own count is a
         // fallback for anything the parser cannot make sense of.
@@ -1927,7 +2003,7 @@ function buildTasks(data) {
           chapters,
           units,
           raw: item,
-          due: session.date,
+          due: when,
           dueTime: classTimeFor(course),
           pages: chapters,
           minutes: minutesOf(item, key),
@@ -1936,7 +2012,7 @@ function buildTasks(data) {
       }
 
       (session.assignments || []).forEach((a, i) => {
-        const key = keyFor(course.id, session.date, 'a', i);
+        const key = keyFor(course.id, slot, 'a', i);
         // Papers and projects are long-run work: they get their own planning
         // window rather than being crammed into the week they are due.
         const isProject = typeof a.effortMinutes === 'number';
@@ -1953,7 +2029,7 @@ function buildTasks(data) {
           atClass: Boolean(a.atClass),
           startPlanning: a.startPlanning || null,
           raw: a,
-          due: a.due || session.date,
+          due: a.due || when,
           dueTime: a.dueTime || classTimeFor(course),
           pages: 0,
           minutes: isProject ? a.effortMinutes : sitting,
@@ -1963,12 +2039,16 @@ function buildTasks(data) {
       });
     }
   }
+  // Dated work first, in date order; anything you have yet to arrange sorts to
+  // the end, where it waits rather than pretending to be imminent.
+  const when = (t) => (t.due ? parseDate(t.due).getTime() : Infinity);
   return tasks
     .map(applyProgress)
-    .sort((a, b) => parseDate(a.due) - parseDate(b.due) || a.courseId.localeCompare(b.courseId) || a.order - b.order);
+    .sort((a, b) => when(a) - when(b) || a.courseId.localeCompare(b.courseId) || a.order - b.order);
 }
 
-const dueAt = (task) => withTime(parseDate(task.due), task.dueTime);
+/** When a task is due, or null for work you have not put a date on yet. */
+const dueAt = (task) => (task.due ? withTime(parseDate(task.due), task.dueTime) : null);
 
 /* ---------- the week you are currently working toward ---------- */
 
@@ -1977,7 +2057,10 @@ function upcomingSessions(data, from = startOfToday()) {
   const out = [];
   for (const course of data.courses) {
     for (const session of course.sessions) {
-      const d = parseDate(session.date);
+      const when = sessionDate(course, session);
+      // Nothing to plan toward until a date exists.
+      if (!when) continue;
+      const d = parseDate(when);
       if (d < from) continue;
       out.push({ course, session, date: d });
     }
@@ -2002,10 +2085,14 @@ function nextSessionPerCourse(data, from = startOfToday()) {
  * without it "behind" has nothing to be behind of.
  */
 function windowStartFor(course, session) {
-  const here = parseDate(session.date);
+  const start = sessionDate(course, session);
+  if (!start) return null;
+  const here = parseDate(start);
   let prev = null;
-  for (const s of course.sessions) {
-    const d = parseDate(s.date);
+  for (const other of course.sessions) {
+    const when = sessionDate(course, other);
+    if (!when) continue;
+    const d = parseDate(when);
     if (d < here && (!prev || d > prev)) prev = d;
   }
   return prev ? addDays(prev, 1) : addDays(here, -7);
@@ -2055,7 +2142,12 @@ function pace(tasks, deadline, { from = startOfToday(), windowStart = null } = {
  * for it again.
  */
 function overdue(tasks, { from = new Date() } = {}) {
-  return tasks.filter((t) => !t.complete && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+  return tasks.filter((t) => !t.complete && t.due && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+}
+
+/** Work that exists but has no date yet, because you arrange it yourself. */
+function unscheduled(tasks) {
+  return tasks.filter((t) => t.undated && !t.complete);
 }
 
 /* ---------- the day-by-day plan ---------- */
@@ -2215,6 +2307,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   for (const t of tasks) {
     if (!includeDone && t.complete) continue;
     const when = dueAt(t);
+    if (!when) continue;
     const delta = daysBetween(from, when);
     if (delta < 0 || delta > withinDays) continue;
     const gkey = `${t.courseId}|${t.due}`;
@@ -2238,7 +2331,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, unscheduled, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -2530,7 +2623,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v18 · 2026-08-12';
+const BUILD = 'v19 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -2580,7 +2673,8 @@ function lateWork(from = new Date()) {
 function currentPlans() {
   const late = lateWork();
   return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
-    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+    const slot = session.date || session.id;
+    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
     const owed = late.filter((t) => t.courseId === course.id);
     // Pass the deadline with its hour attached: an evening class leaves the
     // class day itself available to read in.
@@ -2604,7 +2698,7 @@ function currentPlans() {
 
 function activeProjects(from = S.startOfToday()) {
   return TASKS.filter((t) => t.unit === 'project' && !t.complete)
-    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: S.dueAt(t) < new Date() }))
+    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: Boolean(t.due) && S.dueAt(t) < new Date() }))
     .filter((p) => p.pace);
 }
 
@@ -2920,6 +3014,7 @@ function viewToday() {
     }
 
     ${todaySections(bucket)}
+    ${unscheduledSection()}
 
     ${
       bucket.projects.length
@@ -3061,7 +3156,9 @@ function viewSchedule() {
   const rows = [];
   for (const course of DATA.courses) {
     for (const session of course.sessions) {
-      rows.push({ course, session, date: S.parseDate(session.date) });
+      const when = S.sessionDate(course, session);
+      if (!when) continue;
+      rows.push({ course, session, date: S.parseDate(when) });
     }
   }
   rows.sort((a, b) => a.date - b.date || a.course.id.localeCompare(b.course.id));
@@ -3073,7 +3170,7 @@ function viewSchedule() {
         ${rows
           .map(({ course, session, date }) => {
             const past = date < today;
-            const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+            const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === (session.date || session.id));
             const w = S.workload(tasks);
             const pages = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
             return `
@@ -3090,7 +3187,8 @@ function viewSchedule() {
           })
           .join('')}
       </div>
-    </section>`;
+    </section>
+    ${unscheduledSection()}`;
 }
 
 /** Every distinct work assigned this term, with where it is used. */
@@ -3107,8 +3205,9 @@ function materials() {
     m.courses.add(t.course);
     m.uses += 1;
     if (t.format === 'pdf') m.isPdf = true;
-    const due = S.parseDate(t.due);
-    if (!t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
+    // Undated work has no "next" — it stays out of this ordering entirely.
+    const due = t.due ? S.parseDate(t.due) : null;
+    if (due && !t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
   }
   return [...map.values()].sort((a, b) => {
     if (a.nextDue && b.nextDue && +a.nextDue !== +b.nextDue) return a.nextDue - b.nextDue;
@@ -3167,6 +3266,68 @@ function redoRow(m, entry) {
       <button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Extract</button>
       <button class="btn small ghost" data-action="run-ocr" data-mat="${esc(m.id)}">OCR</button>
     </div>`;
+}
+
+/**
+ * Work with no date on it yet.
+ *
+ * Applied Theology is arranged between you, the professor and your pastor, so
+ * its syllabus names no dates at all. The homework is still real and still has
+ * to be done, so it is listed and tickable — but it is kept out of the day plan
+ * and the deadline list, which would otherwise have to invent a date for it.
+ * Put a date on a meeting here and it joins the rest of the app at once.
+ */
+function unscheduledSection() {
+  const waiting = S.unscheduled(TASKS);
+  if (!waiting.length) return '';
+
+  // Walk the syllabus rather than the task list. Tasks are sorted by when they
+  // are due and how big they are, so grouping by that order made the meetings
+  // rearrange themselves under your finger as soon as you ticked something off.
+  const byCourse = new Map();
+  for (const course of DATA.courses) {
+    const list = [];
+    for (const session of course.sessions || []) {
+      const items = waiting.filter((t) => t.courseId === course.id && t.sessionId === (session.id || session.date));
+      if (items.length) list.push({ courseId: course.id, sessionId: session.id, task: items[0], items });
+    }
+    if (list.length) byCourse.set(course.id, list);
+  }
+
+  return [...byCourse.entries()]
+    .map(([courseId, list]) => {
+      const course = DATA.courses.find((c) => c.id === courseId);
+      return `
+      <section class="card">
+        <div class="card-head">
+          <h2>${dot(course.color)}${esc(course.name)}</h2>
+          <span class="card-when">nothing dated yet</span>
+        </div>
+        <p class="note">
+          You arrange these yourself with ${esc(course.instructor || 'the professor')} and your pastor.
+          Set a date on one and it joins the day plan, the reminders and everything else.
+        </p>
+        ${list
+          .map(
+            (group) => `
+          <div class="unscheduled">
+            <div class="unscheduled-head">
+              <div>
+                <div class="unscheduled-topic">${esc(group.task.topic)}</div>
+                ${group.task.arrangeBy ? `<div class="task-detail">${esc(group.task.arrangeBy)}</div>` : ''}
+              </div>
+              <label class="visually-hidden" for="date-${esc(group.courseId)}-${esc(group.sessionId)}">Date</label>
+              <input type="date" id="date-${esc(group.courseId)}-${esc(group.sessionId)}"
+                     aria-label="Date for ${esc(group.task.topic)}"
+                     data-sessiondate="${esc(group.courseId)}|${esc(group.sessionId)}">
+            </div>
+            <ul class="tasks">${group.items.map((t) => taskLine(t)).join('')}</ul>
+          </div>`
+          )
+          .join('')}
+      </section>`;
+    })
+    .join('');
 }
 
 /**
@@ -3596,7 +3757,7 @@ function render() {
 function assignedNote(taskKey) {
   const task = taskKey && TASKS.find((t) => t.key === taskKey);
   if (!task) return '';
-  const due = `${S.relativeDay(S.dueAt(task))} · ${esc(task.courseName)}`;
+  const due = `${task.due ? S.relativeDay(S.dueAt(task)) : 'not yet scheduled'} · ${esc(task.courseName)}`;
   return `<p class="note assigned">Assigned this week: <strong>${esc(task.detail)}</strong> — due ${due}</p>`;
 }
 
@@ -4396,6 +4557,13 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  const when = e.target.closest('[data-sessiondate]');
+  if (when) {
+    const [courseId, sessionId] = when.dataset.sessiondate.split('|');
+    store.setSessionDate(courseId, sessionId, when.value || null);
+    return refresh();
+  }
+
   const time = e.target.closest('[data-classtime]');
   if (time) {
     const next = { ...store.settings().classTimes };

@@ -1252,3 +1252,42 @@ summary {
   text-transform: none;
   font-size: 15px;
 }
+
+/* Meetings you arrange yourself, waiting for a date. */
+.unscheduled + .unscheduled {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.unscheduled-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.unscheduled-topic {
+  font-size: 14.5px;
+}
+
+.unscheduled-head input[type='date'] {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

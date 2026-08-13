@@ -1,7 +1,7 @@
 // Turns the raw syllabus JSON into dated, measurable work:
 // page counts, effort estimates, deadlines, and a day-by-day reading plan.
 
-import { settings, overrideFor, isDone, progressFor } from './store.js';
+import { settings, overrideFor, isDone, progressFor, sessionDates } from './store.js';
 
 /* ---------- dates ---------- */
 
@@ -231,6 +231,21 @@ export function spread(count, days) {
 
 export const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind}|${idx}`;
 
+/**
+ * When a session actually happens.
+ *
+ * Applied Theology is arranged between the student, the professor and a pastor,
+ * so its meetings have no date in the syllabus at all. They keep a stable id
+ * instead, and a date once you have set one in the app. Until then the work is
+ * real and tickable but has no deadline, and nothing may pretend otherwise.
+ */
+export function sessionDate(course, session) {
+  return session.date || sessionDates()[`${course.id}|${session.id}`] || null;
+}
+
+/** The part of a task's key that identifies its session, dated or not. */
+const sessionKey = (session) => session.date || session.id;
+
 // How much of a task is left once completion and part-way progress are applied.
 function applyProgress(task) {
   const s = settings();
@@ -276,6 +291,7 @@ export function projectPace(task, from = startOfToday()) {
   const start = task.startPlanning ? parseDate(task.startPlanning) : from;
   if (parseDay(from) < parseDay(start)) return null;
   const deadline = dueAt(task);
+  if (!deadline) return null;
   const days = studyDaysBetween(from, lastStudyDay(deadline, from), s.studyDays);
   const perDay = task.remaining / days.length;
   const todayIsStudyDay = days.some((d) => daysBetween(d, from) === 0);
@@ -287,19 +303,26 @@ export function buildTasks(data) {
   const tasks = [];
   for (const course of data.courses) {
     for (const session of course.sessions) {
+      // A session you arrange yourself has no date until you set one. Its work
+      // still exists; it simply has nothing to be due by.
+      const when = sessionDate(course, session);
+      const slot = sessionKey(session);
       const ctx = {
         courseId: course.id,
         course: course.short || course.name,
         courseName: course.name,
         color: course.color,
-        sessionDate: session.date,
+        sessionDate: slot,
+        sessionId: session.id || session.date,
+        undated: !when,
+        arrangeBy: session.when || null,
         topic: session.topic,
         classTime: classTimeFor(course),
         classTimeAssumed: classTimeIsAssumed(course)
       };
 
       (session.readings || []).forEach((item, i) => {
-        const key = keyFor(course.id, session.date, 'r', i);
+        const key = keyFor(course.id, slot, 'r', i);
         tasks.push({
           ...ctx,
           key,
@@ -316,7 +339,7 @@ export function buildTasks(data) {
           ranges: item.ranges || null,
           verses: item.verses,
           raw: item,
-          due: session.date,
+          due: when,
           dueTime: classTimeFor(course),
           pages: pagesOf(item, key),
           minutes: minutesOf(item, key),
@@ -325,7 +348,7 @@ export function buildTasks(data) {
       });
 
       if (session.bible) {
-        const key = keyFor(course.id, session.date, 'b', 0);
+        const key = keyFor(course.id, slot, 'b', 0);
         // The passages themselves, so a day can be given one chapter rather
         // than "the Bible reading" whole. The syllabus's own count is a
         // fallback for anything the parser cannot make sense of.
@@ -343,7 +366,7 @@ export function buildTasks(data) {
           chapters,
           units,
           raw: item,
-          due: session.date,
+          due: when,
           dueTime: classTimeFor(course),
           pages: chapters,
           minutes: minutesOf(item, key),
@@ -352,7 +375,7 @@ export function buildTasks(data) {
       }
 
       (session.assignments || []).forEach((a, i) => {
-        const key = keyFor(course.id, session.date, 'a', i);
+        const key = keyFor(course.id, slot, 'a', i);
         // Papers and projects are long-run work: they get their own planning
         // window rather than being crammed into the week they are due.
         const isProject = typeof a.effortMinutes === 'number';
@@ -369,7 +392,7 @@ export function buildTasks(data) {
           atClass: Boolean(a.atClass),
           startPlanning: a.startPlanning || null,
           raw: a,
-          due: a.due || session.date,
+          due: a.due || when,
           dueTime: a.dueTime || classTimeFor(course),
           pages: 0,
           minutes: isProject ? a.effortMinutes : sitting,
@@ -379,12 +402,16 @@ export function buildTasks(data) {
       });
     }
   }
+  // Dated work first, in date order; anything you have yet to arrange sorts to
+  // the end, where it waits rather than pretending to be imminent.
+  const when = (t) => (t.due ? parseDate(t.due).getTime() : Infinity);
   return tasks
     .map(applyProgress)
-    .sort((a, b) => parseDate(a.due) - parseDate(b.due) || a.courseId.localeCompare(b.courseId) || a.order - b.order);
+    .sort((a, b) => when(a) - when(b) || a.courseId.localeCompare(b.courseId) || a.order - b.order);
 }
 
-export const dueAt = (task) => withTime(parseDate(task.due), task.dueTime);
+/** When a task is due, or null for work you have not put a date on yet. */
+export const dueAt = (task) => (task.due ? withTime(parseDate(task.due), task.dueTime) : null);
 
 /* ---------- the week you are currently working toward ---------- */
 
@@ -393,7 +420,10 @@ export function upcomingSessions(data, from = startOfToday()) {
   const out = [];
   for (const course of data.courses) {
     for (const session of course.sessions) {
-      const d = parseDate(session.date);
+      const when = sessionDate(course, session);
+      // Nothing to plan toward until a date exists.
+      if (!when) continue;
+      const d = parseDate(when);
       if (d < from) continue;
       out.push({ course, session, date: d });
     }
@@ -418,10 +448,14 @@ export function nextSessionPerCourse(data, from = startOfToday()) {
  * without it "behind" has nothing to be behind of.
  */
 export function windowStartFor(course, session) {
-  const here = parseDate(session.date);
+  const start = sessionDate(course, session);
+  if (!start) return null;
+  const here = parseDate(start);
   let prev = null;
-  for (const s of course.sessions) {
-    const d = parseDate(s.date);
+  for (const other of course.sessions) {
+    const when = sessionDate(course, other);
+    if (!when) continue;
+    const d = parseDate(when);
     if (d < here && (!prev || d > prev)) prev = d;
   }
   return prev ? addDays(prev, 1) : addDays(here, -7);
@@ -471,7 +505,12 @@ export function pace(tasks, deadline, { from = startOfToday(), windowStart = nul
  * for it again.
  */
 export function overdue(tasks, { from = new Date() } = {}) {
-  return tasks.filter((t) => !t.complete && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+  return tasks.filter((t) => !t.complete && t.due && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+}
+
+/** Work that exists but has no date yet, because you arrange it yourself. */
+export function unscheduled(tasks) {
+  return tasks.filter((t) => t.undated && !t.complete);
 }
 
 /* ---------- the day-by-day plan ---------- */
@@ -631,6 +670,7 @@ export function deadlines(tasks, { from = startOfToday(), withinDays = 21, inclu
   for (const t of tasks) {
     if (!includeDone && t.complete) continue;
     const when = dueAt(t);
+    if (!when) continue;
     const delta = daysBetween(from, when);
     if (delta < 0 || delta > withinDays) continue;
     const gkey = `${t.courseId}|${t.due}`;

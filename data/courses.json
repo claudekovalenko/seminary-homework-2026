@@ -911,6 +911,142 @@
       "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
       "syllabus": "./syllabi/intermediate-greek-grek-6003-fall-2026.pdf",
       "credits": 3
+    },
+    {
+      "id": "applied3",
+      "name": "Applied Theology III",
+      "short": "Applied 3",
+      "color": "#d98b3f",
+      "credits": 1,
+      "instructor": "Todd Morikawa",
+      "location": "Various — arranged with the professor and your pastor",
+      "syllabus": "./syllabi/applied-theology-iii-fall-2026.pdf",
+      "datesUnknown": true,
+      "meetingDay": null,
+      "classTime": null,
+      "sessions": [
+        {
+          "id": "discussion-1",
+          "date": null,
+          "topic": "Book discussion 1",
+          "when": "Schedule within the first half of term",
+          "readings": [
+            {
+              "source": "Perkins, The Art of Prophesying",
+              "ref": "Preface, Introduction, chs. 1–6",
+              "material": "Perkins, The Art of Prophesying",
+              "estPages": 60,
+              "driver": true
+            }
+          ],
+          "assignments": [
+            {
+              "title": "Meet to discuss (bring notes: insights, questions, how to apply it)",
+              "type": "discussion",
+              "atClass": true
+            }
+          ]
+        },
+        {
+          "id": "discussion-2",
+          "date": null,
+          "topic": "Book discussion 2",
+          "when": "Schedule within the first half of term",
+          "readings": [
+            {
+              "source": "Perkins, The Art of Prophesying",
+              "ref": "chs. 7–11 and summary",
+              "material": "Perkins, The Art of Prophesying",
+              "estPages": 55,
+              "driver": true
+            }
+          ],
+          "assignments": [
+            {
+              "title": "Meet to discuss (bring notes: insights, questions, how to apply it)",
+              "type": "discussion",
+              "atClass": true
+            }
+          ]
+        },
+        {
+          "id": "discussion-3",
+          "date": null,
+          "topic": "Book discussion 3",
+          "when": "Schedule as close to the end of term as possible",
+          "readings": [
+            {
+              "source": "Perkins, The Calling of the Ministry",
+              "ref": "the whole work",
+              "material": "Perkins, The Calling of the Ministry",
+              "estPages": 90,
+              "driver": true,
+              "flag": "The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."
+            }
+          ],
+          "assignments": [
+            {
+              "title": "Meet to discuss (bring notes: insights, questions, how to apply it)",
+              "type": "discussion",
+              "atClass": true
+            }
+          ]
+        },
+        {
+          "id": "ministry",
+          "date": null,
+          "topic": "Preaching opportunity",
+          "when": "Arrange with your pastor as soon as you can",
+          "assignments": [
+            {
+              "title": "Preach to or on behalf of your church",
+              "type": "ministry",
+              "note": "Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."
+            },
+            {
+              "title": "Reflection paper on preaching (~500 words)",
+              "type": "paper",
+              "note": "What text and venue, how your studies shaped the sermon, what you would do differently.",
+              "effortMinutes": 180
+            }
+          ]
+        },
+        {
+          "id": "pastoral",
+          "date": null,
+          "topic": "Pastoral meetings",
+          "when": "Three times across the term, whenever suits",
+          "assignments": [
+            {
+              "title": "Meet your pastor (1 of 3)",
+              "type": "meeting"
+            },
+            {
+              "title": "Meet your pastor (2 of 3)",
+              "type": "meeting"
+            },
+            {
+              "title": "Meet your pastor (3 of 3)",
+              "type": "meeting",
+              "note": "Drop the professor a note once all three are done."
+            }
+          ]
+        },
+        {
+          "id": "final-paper",
+          "date": null,
+          "topic": "Final reflection paper",
+          "when": "Due within a week of the last day of term",
+          "assignments": [
+            {
+              "title": "Final reflection paper (~750 words)",
+              "type": "paper",
+              "note": "On the Perkins readings, especially his biblical exegesis.",
+              "effortMinutes": 300
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -33,7 +33,8 @@ const EMPTY = {
   overrides: {}, // itemKey -> page count (number)
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
-  bookmarks: {} // materialId -> [{ page, para, text, at }]
+  bookmarks: {}, // materialId -> [{ page, para, text, at }]
+  sessionDates: {} // "courseId|sessionId" -> ISO date, for meetings you arrange
 };
 
 function read() {
@@ -49,7 +50,8 @@ function read() {
       overrides: parsed.overrides || {},
       fired: parsed.fired || {},
       reading: parsed.reading || {},
-      bookmarks: parsed.bookmarks || {}
+      bookmarks: parsed.bookmarks || {},
+      sessionDates: parsed.sessionDates || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -145,6 +147,17 @@ function flush() {
 const bookmarksFor = (id) => state.bookmarks[id] || [];
 
 const bookmarksAll = () => state.bookmarks;
+
+/* ---------- dates you have arranged yourself ---------- */
+
+const sessionDates = () => state.sessionDates;
+
+function setSessionDate(courseId, sessionId, iso) {
+  const key = `${courseId}|${sessionId}`;
+  if (iso) state.sessionDates[key] = iso;
+  else delete state.sessionDates[key];
+  persist();
+}
 
 const readingAll = () => state.reading;
 
@@ -251,7 +264,8 @@ function importData(json) {
     overrides: parsed.overrides || {},
     fired: parsed.fired || {},
     reading: parsed.reading || {},
-    bookmarks: parsed.bookmarks || {}
+    bookmarks: parsed.bookmarks || {},
+    sessionDates: parsed.sessionDates || {}
   };
   persist();
 }
@@ -267,10 +281,10 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
-const {settings, overrideFor, isDone, progressFor} = __mod_store;
+const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
 // Turns the raw syllabus JSON into dated, measurable work:
 // page counts, effort estimates, deadlines, and a day-by-day reading plan.
 
@@ -504,6 +518,21 @@ function spread(count, days) {
 
 const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind}|${idx}`;
 
+/**
+ * When a session actually happens.
+ *
+ * Applied Theology is arranged between the student, the professor and a pastor,
+ * so its meetings have no date in the syllabus at all. They keep a stable id
+ * instead, and a date once you have set one in the app. Until then the work is
+ * real and tickable but has no deadline, and nothing may pretend otherwise.
+ */
+function sessionDate(course, session) {
+  return session.date || sessionDates()[`${course.id}|${session.id}`] || null;
+}
+
+/** The part of a task's key that identifies its session, dated or not. */
+const sessionKey = (session) => session.date || session.id;
+
 // How much of a task is left once completion and part-way progress are applied.
 function applyProgress(task) {
   const s = settings();
@@ -549,6 +578,7 @@ function projectPace(task, from = startOfToday()) {
   const start = task.startPlanning ? parseDate(task.startPlanning) : from;
   if (parseDay(from) < parseDay(start)) return null;
   const deadline = dueAt(task);
+  if (!deadline) return null;
   const days = studyDaysBetween(from, lastStudyDay(deadline, from), s.studyDays);
   const perDay = task.remaining / days.length;
   const todayIsStudyDay = days.some((d) => daysBetween(d, from) === 0);
@@ -560,19 +590,26 @@ function buildTasks(data) {
   const tasks = [];
   for (const course of data.courses) {
     for (const session of course.sessions) {
+      // A session you arrange yourself has no date until you set one. Its work
+      // still exists; it simply has nothing to be due by.
+      const when = sessionDate(course, session);
+      const slot = sessionKey(session);
       const ctx = {
         courseId: course.id,
         course: course.short || course.name,
         courseName: course.name,
         color: course.color,
-        sessionDate: session.date,
+        sessionDate: slot,
+        sessionId: session.id || session.date,
+        undated: !when,
+        arrangeBy: session.when || null,
         topic: session.topic,
         classTime: classTimeFor(course),
         classTimeAssumed: classTimeIsAssumed(course)
       };
 
       (session.readings || []).forEach((item, i) => {
-        const key = keyFor(course.id, session.date, 'r', i);
+        const key = keyFor(course.id, slot, 'r', i);
         tasks.push({
           ...ctx,
           key,
@@ -589,7 +626,7 @@ function buildTasks(data) {
           ranges: item.ranges || null,
           verses: item.verses,
           raw: item,
-          due: session.date,
+          due: when,
           dueTime: classTimeFor(course),
           pages: pagesOf(item, key),
           minutes: minutesOf(item, key),
@@ -598,7 +635,7 @@ function buildTasks(data) {
       });
 
       if (session.bible) {
-        const key = keyFor(course.id, session.date, 'b', 0);
+        const key = keyFor(course.id, slot, 'b', 0);
         // The passages themselves, so a day can be given one chapter rather
         // than "the Bible reading" whole. The syllabus's own count is a
         // fallback for anything the parser cannot make sense of.
@@ -616,7 +653,7 @@ function buildTasks(data) {
           chapters,
           units,
           raw: item,
-          due: session.date,
+          due: when,
           dueTime: classTimeFor(course),
           pages: chapters,
           minutes: minutesOf(item, key),
@@ -625,7 +662,7 @@ function buildTasks(data) {
       }
 
       (session.assignments || []).forEach((a, i) => {
-        const key = keyFor(course.id, session.date, 'a', i);
+        const key = keyFor(course.id, slot, 'a', i);
         // Papers and projects are long-run work: they get their own planning
         // window rather than being crammed into the week they are due.
         const isProject = typeof a.effortMinutes === 'number';
@@ -642,7 +679,7 @@ function buildTasks(data) {
           atClass: Boolean(a.atClass),
           startPlanning: a.startPlanning || null,
           raw: a,
-          due: a.due || session.date,
+          due: a.due || when,
           dueTime: a.dueTime || classTimeFor(course),
           pages: 0,
           minutes: isProject ? a.effortMinutes : sitting,
@@ -652,12 +689,16 @@ function buildTasks(data) {
       });
     }
   }
+  // Dated work first, in date order; anything you have yet to arrange sorts to
+  // the end, where it waits rather than pretending to be imminent.
+  const when = (t) => (t.due ? parseDate(t.due).getTime() : Infinity);
   return tasks
     .map(applyProgress)
-    .sort((a, b) => parseDate(a.due) - parseDate(b.due) || a.courseId.localeCompare(b.courseId) || a.order - b.order);
+    .sort((a, b) => when(a) - when(b) || a.courseId.localeCompare(b.courseId) || a.order - b.order);
 }
 
-const dueAt = (task) => withTime(parseDate(task.due), task.dueTime);
+/** When a task is due, or null for work you have not put a date on yet. */
+const dueAt = (task) => (task.due ? withTime(parseDate(task.due), task.dueTime) : null);
 
 /* ---------- the week you are currently working toward ---------- */
 
@@ -666,7 +707,10 @@ function upcomingSessions(data, from = startOfToday()) {
   const out = [];
   for (const course of data.courses) {
     for (const session of course.sessions) {
-      const d = parseDate(session.date);
+      const when = sessionDate(course, session);
+      // Nothing to plan toward until a date exists.
+      if (!when) continue;
+      const d = parseDate(when);
       if (d < from) continue;
       out.push({ course, session, date: d });
     }
@@ -691,10 +735,14 @@ function nextSessionPerCourse(data, from = startOfToday()) {
  * without it "behind" has nothing to be behind of.
  */
 function windowStartFor(course, session) {
-  const here = parseDate(session.date);
+  const start = sessionDate(course, session);
+  if (!start) return null;
+  const here = parseDate(start);
   let prev = null;
-  for (const s of course.sessions) {
-    const d = parseDate(s.date);
+  for (const other of course.sessions) {
+    const when = sessionDate(course, other);
+    if (!when) continue;
+    const d = parseDate(when);
     if (d < here && (!prev || d > prev)) prev = d;
   }
   return prev ? addDays(prev, 1) : addDays(here, -7);
@@ -744,7 +792,12 @@ function pace(tasks, deadline, { from = startOfToday(), windowStart = null } = {
  * for it again.
  */
 function overdue(tasks, { from = new Date() } = {}) {
-  return tasks.filter((t) => !t.complete && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+  return tasks.filter((t) => !t.complete && t.due && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
+}
+
+/** Work that exists but has no date yet, because you arrange it yourself. */
+function unscheduled(tasks) {
+  return tasks.filter((t) => t.undated && !t.complete);
 }
 
 /* ---------- the day-by-day plan ---------- */
@@ -904,6 +957,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   for (const t of tasks) {
     if (!includeDone && t.complete) continue;
     const when = dueAt(t);
+    if (!when) continue;
     const delta = daysBetween(from, when);
     if (delta < 0 || delta > withinDays) continue;
     const gkey = `${t.courseId}|${t.due}`;
@@ -927,7 +981,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, unscheduled, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -1219,7 +1273,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v18 · 2026-08-12';
+const BUILD = 'v19 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -1269,7 +1323,8 @@ function lateWork(from = new Date()) {
 function currentPlans() {
   const late = lateWork();
   return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
-    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+    const slot = session.date || session.id;
+    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
     const owed = late.filter((t) => t.courseId === course.id);
     // Pass the deadline with its hour attached: an evening class leaves the
     // class day itself available to read in.
@@ -1293,7 +1348,7 @@ function currentPlans() {
 
 function activeProjects(from = S.startOfToday()) {
   return TASKS.filter((t) => t.unit === 'project' && !t.complete)
-    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: S.dueAt(t) < new Date() }))
+    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: Boolean(t.due) && S.dueAt(t) < new Date() }))
     .filter((p) => p.pace);
 }
 
@@ -1609,6 +1664,7 @@ function viewToday() {
     }
 
     ${todaySections(bucket)}
+    ${unscheduledSection()}
 
     ${
       bucket.projects.length
@@ -1750,7 +1806,9 @@ function viewSchedule() {
   const rows = [];
   for (const course of DATA.courses) {
     for (const session of course.sessions) {
-      rows.push({ course, session, date: S.parseDate(session.date) });
+      const when = S.sessionDate(course, session);
+      if (!when) continue;
+      rows.push({ course, session, date: S.parseDate(when) });
     }
   }
   rows.sort((a, b) => a.date - b.date || a.course.id.localeCompare(b.course.id));
@@ -1762,7 +1820,7 @@ function viewSchedule() {
         ${rows
           .map(({ course, session, date }) => {
             const past = date < today;
-            const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+            const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === (session.date || session.id));
             const w = S.workload(tasks);
             const pages = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
             return `
@@ -1779,7 +1837,8 @@ function viewSchedule() {
           })
           .join('')}
       </div>
-    </section>`;
+    </section>
+    ${unscheduledSection()}`;
 }
 
 /** Every distinct work assigned this term, with where it is used. */
@@ -1796,8 +1855,9 @@ function materials() {
     m.courses.add(t.course);
     m.uses += 1;
     if (t.format === 'pdf') m.isPdf = true;
-    const due = S.parseDate(t.due);
-    if (!t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
+    // Undated work has no "next" — it stays out of this ordering entirely.
+    const due = t.due ? S.parseDate(t.due) : null;
+    if (due && !t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
   }
   return [...map.values()].sort((a, b) => {
     if (a.nextDue && b.nextDue && +a.nextDue !== +b.nextDue) return a.nextDue - b.nextDue;
@@ -1856,6 +1916,68 @@ function redoRow(m, entry) {
       <button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Extract</button>
       <button class="btn small ghost" data-action="run-ocr" data-mat="${esc(m.id)}">OCR</button>
     </div>`;
+}
+
+/**
+ * Work with no date on it yet.
+ *
+ * Applied Theology is arranged between you, the professor and your pastor, so
+ * its syllabus names no dates at all. The homework is still real and still has
+ * to be done, so it is listed and tickable — but it is kept out of the day plan
+ * and the deadline list, which would otherwise have to invent a date for it.
+ * Put a date on a meeting here and it joins the rest of the app at once.
+ */
+function unscheduledSection() {
+  const waiting = S.unscheduled(TASKS);
+  if (!waiting.length) return '';
+
+  // Walk the syllabus rather than the task list. Tasks are sorted by when they
+  // are due and how big they are, so grouping by that order made the meetings
+  // rearrange themselves under your finger as soon as you ticked something off.
+  const byCourse = new Map();
+  for (const course of DATA.courses) {
+    const list = [];
+    for (const session of course.sessions || []) {
+      const items = waiting.filter((t) => t.courseId === course.id && t.sessionId === (session.id || session.date));
+      if (items.length) list.push({ courseId: course.id, sessionId: session.id, task: items[0], items });
+    }
+    if (list.length) byCourse.set(course.id, list);
+  }
+
+  return [...byCourse.entries()]
+    .map(([courseId, list]) => {
+      const course = DATA.courses.find((c) => c.id === courseId);
+      return `
+      <section class="card">
+        <div class="card-head">
+          <h2>${dot(course.color)}${esc(course.name)}</h2>
+          <span class="card-when">nothing dated yet</span>
+        </div>
+        <p class="note">
+          You arrange these yourself with ${esc(course.instructor || 'the professor')} and your pastor.
+          Set a date on one and it joins the day plan, the reminders and everything else.
+        </p>
+        ${list
+          .map(
+            (group) => `
+          <div class="unscheduled">
+            <div class="unscheduled-head">
+              <div>
+                <div class="unscheduled-topic">${esc(group.task.topic)}</div>
+                ${group.task.arrangeBy ? `<div class="task-detail">${esc(group.task.arrangeBy)}</div>` : ''}
+              </div>
+              <label class="visually-hidden" for="date-${esc(group.courseId)}-${esc(group.sessionId)}">Date</label>
+              <input type="date" id="date-${esc(group.courseId)}-${esc(group.sessionId)}"
+                     aria-label="Date for ${esc(group.task.topic)}"
+                     data-sessiondate="${esc(group.courseId)}|${esc(group.sessionId)}">
+            </div>
+            <ul class="tasks">${group.items.map((t) => taskLine(t)).join('')}</ul>
+          </div>`
+          )
+          .join('')}
+      </section>`;
+    })
+    .join('');
 }
 
 /**
@@ -2285,7 +2407,7 @@ function render() {
 function assignedNote(taskKey) {
   const task = taskKey && TASKS.find((t) => t.key === taskKey);
   if (!task) return '';
-  const due = `${S.relativeDay(S.dueAt(task))} · ${esc(task.courseName)}`;
+  const due = `${task.due ? S.relativeDay(S.dueAt(task)) : 'not yet scheduled'} · ${esc(task.courseName)}`;
   return `<p class="note assigned">Assigned this week: <strong>${esc(task.detail)}</strong> — due ${due}</p>`;
 }
 
@@ -3085,6 +3207,13 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  const when = e.target.closest('[data-sessiondate]');
+  if (when) {
+    const [courseId, sessionId] = when.dataset.sessiondate.split('|');
+    store.setSessionDate(courseId, sessionId, when.value || null);
+    return refresh();
+  }
+
   const time = e.target.closest('[data-classtime]');
   if (time) {
     const next = { ...store.settings().classTimes };

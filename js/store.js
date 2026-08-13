@@ -31,7 +31,8 @@ const EMPTY = {
   overrides: {}, // itemKey -> page count (number)
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
-  bookmarks: {} // materialId -> [{ page, para, text, at }]
+  bookmarks: {}, // materialId -> [{ page, para, text, at }]
+  sessionDates: {} // "courseId|sessionId" -> ISO date, for meetings you arrange
 };
 
 function read() {
@@ -47,7 +48,8 @@ function read() {
       overrides: parsed.overrides || {},
       fired: parsed.fired || {},
       reading: parsed.reading || {},
-      bookmarks: parsed.bookmarks || {}
+      bookmarks: parsed.bookmarks || {},
+      sessionDates: parsed.sessionDates || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -143,6 +145,17 @@ export function flush() {
 export const bookmarksFor = (id) => state.bookmarks[id] || [];
 
 export const bookmarksAll = () => state.bookmarks;
+
+/* ---------- dates you have arranged yourself ---------- */
+
+export const sessionDates = () => state.sessionDates;
+
+export function setSessionDate(courseId, sessionId, iso) {
+  const key = `${courseId}|${sessionId}`;
+  if (iso) state.sessionDates[key] = iso;
+  else delete state.sessionDates[key];
+  persist();
+}
 
 export const readingAll = () => state.reading;
 
@@ -249,7 +262,8 @@ export function importData(json) {
     overrides: parsed.overrides || {},
     fired: parsed.fired || {},
     reading: parsed.reading || {},
-    bookmarks: parsed.bookmarks || {}
+    bookmarks: parsed.bookmarks || {},
+    sessionDates: parsed.sessionDates || {}
   };
   persist();
 }

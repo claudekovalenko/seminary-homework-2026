@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v18 · 2026-08-12';
+const BUILD = 'v19 · 2026-08-12';
 
 let DATA = null;
 let TASKS = [];
@@ -55,7 +55,8 @@ function lateWork(from = new Date()) {
 function currentPlans() {
   const late = lateWork();
   return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
-    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+    const slot = session.date || session.id;
+    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
     const owed = late.filter((t) => t.courseId === course.id);
     // Pass the deadline with its hour attached: an evening class leaves the
     // class day itself available to read in.
@@ -79,7 +80,7 @@ function currentPlans() {
 
 function activeProjects(from = S.startOfToday()) {
   return TASKS.filter((t) => t.unit === 'project' && !t.complete)
-    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: S.dueAt(t) < new Date() }))
+    .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: Boolean(t.due) && S.dueAt(t) < new Date() }))
     .filter((p) => p.pace);
 }
 
@@ -395,6 +396,7 @@ function viewToday() {
     }
 
     ${todaySections(bucket)}
+    ${unscheduledSection()}
 
     ${
       bucket.projects.length
@@ -536,7 +538,9 @@ function viewSchedule() {
   const rows = [];
   for (const course of DATA.courses) {
     for (const session of course.sessions) {
-      rows.push({ course, session, date: S.parseDate(session.date) });
+      const when = S.sessionDate(course, session);
+      if (!when) continue;
+      rows.push({ course, session, date: S.parseDate(when) });
     }
   }
   rows.sort((a, b) => a.date - b.date || a.course.id.localeCompare(b.course.id));
@@ -548,7 +552,7 @@ function viewSchedule() {
         ${rows
           .map(({ course, session, date }) => {
             const past = date < today;
-            const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === session.date);
+            const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === (session.date || session.id));
             const w = S.workload(tasks);
             const pages = tasks.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
             return `
@@ -565,7 +569,8 @@ function viewSchedule() {
           })
           .join('')}
       </div>
-    </section>`;
+    </section>
+    ${unscheduledSection()}`;
 }
 
 /** Every distinct work assigned this term, with where it is used. */
@@ -582,8 +587,9 @@ function materials() {
     m.courses.add(t.course);
     m.uses += 1;
     if (t.format === 'pdf') m.isPdf = true;
-    const due = S.parseDate(t.due);
-    if (!t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
+    // Undated work has no "next" — it stays out of this ordering entirely.
+    const due = t.due ? S.parseDate(t.due) : null;
+    if (due && !t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
   }
   return [...map.values()].sort((a, b) => {
     if (a.nextDue && b.nextDue && +a.nextDue !== +b.nextDue) return a.nextDue - b.nextDue;
@@ -642,6 +648,68 @@ function redoRow(m, entry) {
       <button class="btn small ghost" data-action="extract-text" data-mat="${esc(m.id)}">Extract</button>
       <button class="btn small ghost" data-action="run-ocr" data-mat="${esc(m.id)}">OCR</button>
     </div>`;
+}
+
+/**
+ * Work with no date on it yet.
+ *
+ * Applied Theology is arranged between you, the professor and your pastor, so
+ * its syllabus names no dates at all. The homework is still real and still has
+ * to be done, so it is listed and tickable — but it is kept out of the day plan
+ * and the deadline list, which would otherwise have to invent a date for it.
+ * Put a date on a meeting here and it joins the rest of the app at once.
+ */
+function unscheduledSection() {
+  const waiting = S.unscheduled(TASKS);
+  if (!waiting.length) return '';
+
+  // Walk the syllabus rather than the task list. Tasks are sorted by when they
+  // are due and how big they are, so grouping by that order made the meetings
+  // rearrange themselves under your finger as soon as you ticked something off.
+  const byCourse = new Map();
+  for (const course of DATA.courses) {
+    const list = [];
+    for (const session of course.sessions || []) {
+      const items = waiting.filter((t) => t.courseId === course.id && t.sessionId === (session.id || session.date));
+      if (items.length) list.push({ courseId: course.id, sessionId: session.id, task: items[0], items });
+    }
+    if (list.length) byCourse.set(course.id, list);
+  }
+
+  return [...byCourse.entries()]
+    .map(([courseId, list]) => {
+      const course = DATA.courses.find((c) => c.id === courseId);
+      return `
+      <section class="card">
+        <div class="card-head">
+          <h2>${dot(course.color)}${esc(course.name)}</h2>
+          <span class="card-when">nothing dated yet</span>
+        </div>
+        <p class="note">
+          You arrange these yourself with ${esc(course.instructor || 'the professor')} and your pastor.
+          Set a date on one and it joins the day plan, the reminders and everything else.
+        </p>
+        ${list
+          .map(
+            (group) => `
+          <div class="unscheduled">
+            <div class="unscheduled-head">
+              <div>
+                <div class="unscheduled-topic">${esc(group.task.topic)}</div>
+                ${group.task.arrangeBy ? `<div class="task-detail">${esc(group.task.arrangeBy)}</div>` : ''}
+              </div>
+              <label class="visually-hidden" for="date-${esc(group.courseId)}-${esc(group.sessionId)}">Date</label>
+              <input type="date" id="date-${esc(group.courseId)}-${esc(group.sessionId)}"
+                     aria-label="Date for ${esc(group.task.topic)}"
+                     data-sessiondate="${esc(group.courseId)}|${esc(group.sessionId)}">
+            </div>
+            <ul class="tasks">${group.items.map((t) => taskLine(t)).join('')}</ul>
+          </div>`
+          )
+          .join('')}
+      </section>`;
+    })
+    .join('');
 }
 
 /**
@@ -1071,7 +1139,7 @@ function render() {
 function assignedNote(taskKey) {
   const task = taskKey && TASKS.find((t) => t.key === taskKey);
   if (!task) return '';
-  const due = `${S.relativeDay(S.dueAt(task))} · ${esc(task.courseName)}`;
+  const due = `${task.due ? S.relativeDay(S.dueAt(task)) : 'not yet scheduled'} · ${esc(task.courseName)}`;
   return `<p class="note assigned">Assigned this week: <strong>${esc(task.detail)}</strong> — due ${due}</p>`;
 }
 
@@ -1871,6 +1939,13 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  const when = e.target.closest('[data-sessiondate]');
+  if (when) {
+    const [courseId, sessionId] = when.dataset.sessiondate.split('|');
+    store.setSessionDate(courseId, sessionId, when.value || null);
+    return refresh();
+  }
+
   const time = e.target.closest('[data-classtime]');
   if (time) {
     const next = { ...store.settings().classTimes };
