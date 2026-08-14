@@ -1291,3 +1291,46 @@ summary {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* A card that folds away — used for work with no dates on it yet. */
+.card.fold > summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  cursor: pointer;
+  list-style: none;
+}
+
+.card.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+}
+
+/* A chevron that turns, so it is obvious the card opens. */
+.card.fold > summary::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+  margin-left: auto;
+  flex: none;
+}
+
+.card.fold[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.card.fold[open] > summary {
+  margin-bottom: 10px;
+}

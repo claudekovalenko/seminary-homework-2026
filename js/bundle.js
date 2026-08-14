@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS = {
   // Confirmed class times, keyed by course id — overrides whatever the
   // syllabus data says. Empty until you know when a class actually meets.
   classTimes: {},
+  // Sections you have folded away, by id. Kept in settings so a section stays
+  // shut across the re-renders that happen every time you tick something off.
+  collapsed: {},
   readerFontSize: 17,
   notificationsEnabled: false,
   reminderHour: 8,
@@ -80,6 +83,15 @@ const settings = () => state.settings;
 function updateSettings(patch) {
   state.settings = { ...state.settings, ...patch };
   persist();
+}
+
+const isCollapsed = (id) => Boolean(state.settings.collapsed?.[id]);
+
+function setCollapsed(id, value) {
+  const collapsed = { ...(state.settings.collapsed || {}) };
+  if (value) collapsed[id] = true;
+  else delete collapsed[id];
+  updateSettings({ collapsed });
 }
 
 const isDone = (key) => Boolean(state.done[key]);
@@ -281,7 +293,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -1273,7 +1285,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v19 · 2026-08-12';
+const BUILD = 'v20 · 2026-08-13';
 
 let DATA = null;
 let TASKS = [];
@@ -1664,7 +1676,7 @@ function viewToday() {
     }
 
     ${todaySections(bucket)}
-    ${unscheduledSection()}
+    ${unscheduledSection({ collapsible: true })}
 
     ${
       bucket.projects.length
@@ -1927,7 +1939,7 @@ function redoRow(m, entry) {
  * and the deadline list, which would otherwise have to invent a date for it.
  * Put a date on a meeting here and it joins the rest of the app at once.
  */
-function unscheduledSection() {
+function unscheduledSection({ collapsible = false } = {}) {
   const waiting = S.unscheduled(TASKS);
   if (!waiting.length) return '';
 
@@ -1947,12 +1959,15 @@ function unscheduledSection() {
   return [...byCourse.entries()]
     .map(([courseId, list]) => {
       const course = DATA.courses.find((c) => c.id === courseId);
-      return `
-      <section class="card">
-        <div class="card-head">
-          <h2>${dot(course.color)}${esc(course.name)}</h2>
-          <span class="card-when">nothing dated yet</span>
-        </div>
+      const count = list.reduce((sum, g) => sum + g.items.length, 0);
+      const id = `unscheduled:${course.id}`;
+      // On the home page this folds away: it is a term's worth of work with no
+      // date on it, and it should not sit above what you are reading tonight.
+      const shut = store.isCollapsed(id);
+      const head = `
+        <span class="fold-title">${dot(course.color)}${esc(course.name)}</span>
+        <span class="card-when">${count} to arrange${collapsible && shut ? '' : ' · nothing dated yet'}</span>`;
+      const body = `
         <p class="note">
           You arrange these yourself with ${esc(course.instructor || 'the professor')} and your pastor.
           Set a date on one and it joins the day plan, the reminders and everything else.
@@ -1974,8 +1989,17 @@ function unscheduledSection() {
             <ul class="tasks">${group.items.map((t) => taskLine(t)).join('')}</ul>
           </div>`
           )
-          .join('')}
-      </section>`;
+          .join('')}`;
+
+      return collapsible
+        ? `<details class="card fold" ${shut ? '' : 'open'}>
+             <summary data-collapse="${esc(id)}">${head}</summary>
+             ${body}
+           </details>`
+        : `<section class="card">
+             <div class="card-head">${head}</div>
+             ${body}
+           </section>`;
     })
     .join('');
 }
@@ -2698,6 +2722,16 @@ function go(next) {
 document.addEventListener('click', async (e) => {
   const tab = e.target.closest('.tab');
   if (tab) return go(tab.dataset.view);
+
+  // Remember whether a section is folded. Today redraws every time you tick
+  // something off, and without this it would spring shut again each time. The
+  // click lands before <details> flips, so the state being saved is the one it
+  // is about to be in.
+  const fold = e.target.closest('[data-collapse]');
+  if (fold) {
+    store.setCollapsed(fold.dataset.collapse, Boolean(fold.closest('details')?.open));
+    return;
+  }
 
   const el = e.target.closest('[data-action]');
   if (!el) return;

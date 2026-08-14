@@ -17,6 +17,9 @@ export const DEFAULT_SETTINGS = {
   // Confirmed class times, keyed by course id — overrides whatever the
   // syllabus data says. Empty until you know when a class actually meets.
   classTimes: {},
+  // Sections you have folded away, by id. Kept in settings so a section stays
+  // shut across the re-renders that happen every time you tick something off.
+  collapsed: {},
   readerFontSize: 17,
   notificationsEnabled: false,
   reminderHour: 8,
@@ -78,6 +81,15 @@ export const settings = () => state.settings;
 export function updateSettings(patch) {
   state.settings = { ...state.settings, ...patch };
   persist();
+}
+
+export const isCollapsed = (id) => Boolean(state.settings.collapsed?.[id]);
+
+export function setCollapsed(id, value) {
+  const collapsed = { ...(state.settings.collapsed || {}) };
+  if (value) collapsed[id] = true;
+  else delete collapsed[id];
+  updateSettings({ collapsed });
 }
 
 export const isDone = (key) => Boolean(state.done[key]);
