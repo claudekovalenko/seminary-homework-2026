@@ -13,9 +13,14 @@ export const DEFAULT_RHYTHM = [
     title: 'Greek vocabulary',
     detail: 'A few minutes on the current chapter’s words. Stop while it is still easy.',
     courseId: 'greek',
+    // What one burst is meant to be. Short on purpose: the number you will
+    // actually do three times before bed, not the number that sounds diligent.
+    minutes: 10,
     slots: ['morning', 'afternoon', 'evening']
   }
 ];
+
+export const DEFAULT_BURST = 10;
 
 export const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
 export const SLOT_ORDER = ['morning', 'afternoon', 'evening'];
@@ -315,7 +320,21 @@ export function setRhythm(list) {
 
 export const rhythmKey = (iso, habitId, slot) => `${iso}|${habitId}|${slot}`;
 
+// A burst is timed with the same stopwatch as everything else, so its key has
+// to be tellable apart from a reading's — those are `courseId|date|kind|idx`.
+const RHYTHM_KEY = /^\d{4}-\d{2}-\d{2}\|[^|]+\|(?:morning|afternoon|evening)$/;
+
+export const isRhythmKey = (key) => RHYTHM_KEY.test(String(key || ''));
+
 export const rhythmDone = (key) => Boolean(state.rhythmLog[key]);
+
+/** Used when a timed burst ends: the work is done, so the box ticks itself. */
+export function setRhythmDone(key, value) {
+  if (value) state.rhythmLog[key] = true;
+  else delete state.rhythmLog[key];
+  pruneRhythm(key.slice(0, 10));
+  persist();
+}
 
 export const rhythmLog = () => state.rhythmLog;
 

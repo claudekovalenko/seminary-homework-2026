@@ -570,10 +570,17 @@ export function timeOn(log, key) {
  * and today never breaks a streak: an untouched morning is a morning, not a
  * failure. Nothing here feeds the plan or the deadlines.
  */
-export function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } = {}) {
+export function rhythmProgress(log, habits, { from = startOfToday(), days = 7, timeLog = [] } = {}) {
   const ticks = log || {};
   const list = habits || [];
   const slotsOf = (habit) => (habit.slots?.length ? habit.slots : ['morning', 'afternoon', 'evening']);
+
+  // One pass over the sittings, so a card with nine slots on it does not walk
+  // the whole log nine times.
+  const minutesByKey = new Map();
+  for (const entry of timeLog || []) {
+    minutesByKey.set(entry.key, (minutesByKey.get(entry.key) || 0) + entry.minutes);
+  }
 
   const countFor = (date) => {
     let done = 0;
@@ -588,11 +595,21 @@ export function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } 
   };
 
   const today = list.map((habit) => {
+    const burst = habit.minutes > 0 ? habit.minutes : 0;
     const slots = slotsOf(habit).map((slot) => {
       const key = `${toISO(from)}|${habit.id}|${slot}`;
-      return { slot, key, done: Boolean(ticks[key]) };
+      const minutes = minutesByKey.get(key) || 0;
+      return { slot, key, minutes, done: Boolean(ticks[key]), met: burst > 0 && minutes >= burst };
     });
-    return { habit, slots, done: slots.filter((s) => s.done).length, total: slots.length };
+    return {
+      habit,
+      slots,
+      burst,
+      done: slots.filter((s) => s.done).length,
+      total: slots.length,
+      minutes: slots.reduce((sum, s) => sum + s.minutes, 0),
+      target: burst * slots.length
+    };
   });
 
   const week = [];
@@ -613,7 +630,9 @@ export function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } 
 
   const todayDone = today.reduce((sum, h) => sum + h.done, 0);
   const todayTotal = today.reduce((sum, h) => sum + h.total, 0);
-  return { today, todayDone, todayTotal, week, streak };
+  const todayMinutes = today.reduce((sum, h) => sum + h.minutes, 0);
+  const todayTarget = today.reduce((sum, h) => sum + h.target, 0);
+  return { today, todayDone, todayTotal, todayMinutes, todayTarget, week, streak };
 }
 
 /** Work that exists but has no date yet, because you arrange it yourself. */

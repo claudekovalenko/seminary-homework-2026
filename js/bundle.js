@@ -15,9 +15,14 @@ const DEFAULT_RHYTHM = [
     title: 'Greek vocabulary',
     detail: 'A few minutes on the current chapter’s words. Stop while it is still easy.',
     courseId: 'greek',
+    // What one burst is meant to be. Short on purpose: the number you will
+    // actually do three times before bed, not the number that sounds diligent.
+    minutes: 10,
     slots: ['morning', 'afternoon', 'evening']
   }
 ];
+
+const DEFAULT_BURST = 10;
 
 const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
 const SLOT_ORDER = ['morning', 'afternoon', 'evening'];
@@ -317,7 +322,21 @@ function setRhythm(list) {
 
 const rhythmKey = (iso, habitId, slot) => `${iso}|${habitId}|${slot}`;
 
+// A burst is timed with the same stopwatch as everything else, so its key has
+// to be tellable apart from a reading's — those are `courseId|date|kind|idx`.
+const RHYTHM_KEY = /^\d{4}-\d{2}-\d{2}\|[^|]+\|(?:morning|afternoon|evening)$/;
+
+const isRhythmKey = (key) => RHYTHM_KEY.test(String(key || ''));
+
 const rhythmDone = (key) => Boolean(state.rhythmLog[key]);
+
+/** Used when a timed burst ends: the work is done, so the box ticks itself. */
+function setRhythmDone(key, value) {
+  if (value) state.rhythmLog[key] = true;
+  else delete state.rhythmLog[key];
+  pruneRhythm(key.slice(0, 10));
+  persist();
+}
 
 const rhythmLog = () => state.rhythmLog;
 
@@ -425,7 +444,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_RHYTHM, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, rhythm, setRhythm, rhythmKey, rhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -1001,10 +1020,17 @@ function timeOn(log, key) {
  * and today never breaks a streak: an untouched morning is a morning, not a
  * failure. Nothing here feeds the plan or the deadlines.
  */
-function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } = {}) {
+function rhythmProgress(log, habits, { from = startOfToday(), days = 7, timeLog = [] } = {}) {
   const ticks = log || {};
   const list = habits || [];
   const slotsOf = (habit) => (habit.slots?.length ? habit.slots : ['morning', 'afternoon', 'evening']);
+
+  // One pass over the sittings, so a card with nine slots on it does not walk
+  // the whole log nine times.
+  const minutesByKey = new Map();
+  for (const entry of timeLog || []) {
+    minutesByKey.set(entry.key, (minutesByKey.get(entry.key) || 0) + entry.minutes);
+  }
 
   const countFor = (date) => {
     let done = 0;
@@ -1019,11 +1045,21 @@ function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } = {}) {
   };
 
   const today = list.map((habit) => {
+    const burst = habit.minutes > 0 ? habit.minutes : 0;
     const slots = slotsOf(habit).map((slot) => {
       const key = `${toISO(from)}|${habit.id}|${slot}`;
-      return { slot, key, done: Boolean(ticks[key]) };
+      const minutes = minutesByKey.get(key) || 0;
+      return { slot, key, minutes, done: Boolean(ticks[key]), met: burst > 0 && minutes >= burst };
     });
-    return { habit, slots, done: slots.filter((s) => s.done).length, total: slots.length };
+    return {
+      habit,
+      slots,
+      burst,
+      done: slots.filter((s) => s.done).length,
+      total: slots.length,
+      minutes: slots.reduce((sum, s) => sum + s.minutes, 0),
+      target: burst * slots.length
+    };
   });
 
   const week = [];
@@ -1044,7 +1080,9 @@ function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } = {}) {
 
   const todayDone = today.reduce((sum, h) => sum + h.done, 0);
   const todayTotal = today.reduce((sum, h) => sum + h.total, 0);
-  return { today, todayDone, todayTotal, week, streak };
+  const todayMinutes = today.reduce((sum, h) => sum + h.minutes, 0);
+  const todayTarget = today.reduce((sum, h) => sum + h.target, 0);
+  return { today, todayDone, todayTotal, todayMinutes, todayTarget, week, streak };
 }
 
 /** Work that exists but has no date yet, because you arrange it yourself. */
@@ -1754,8 +1792,24 @@ function timerButton(task) {
  * still shows how much of its estimate is behind you.
  */
 function creditTime(banked) {
+  // A burst you actually sat through is a burst done. Stopping the clock is the
+  // only signal there is, so it ticks the box rather than asking for a second tap.
+  if (store.isRhythmKey(banked.key)) {
+    if (banked.minutes > 0) store.setRhythmDone(banked.key, true);
+    return;
+  }
   const task = TASKS.find((t) => t.key === banked.key);
   if (task?.unit === 'project') store.setProgress(banked.key, store.progressFor(banked.key) + banked.minutes);
+}
+
+/** What the stopwatch is on, in words — a reading's title, or which burst. */
+function runningLabel(running) {
+  if (store.isRhythmKey(running.key)) {
+    const [, habitId, slot] = running.key.split('|');
+    const habit = store.rhythm().find((h) => h.id === habitId);
+    return `${habit?.title || 'memorisation'} · ${(store.SLOT_LABELS[slot] || slot).toLowerCase()}`;
+  }
+  return TASKS.find((t) => t.key === running.key)?.title || 'something';
 }
 
 /** Whole minutes on the clock for a running timer. */
@@ -1909,7 +1963,7 @@ function weekOfWorkCard() {
       ${
         running
           ? `<p class="note running-now">
-               Running now on <strong>${esc(TASKS.find((t) => t.key === running.key)?.title || 'something')}</strong> —
+               Running now on <strong>${esc(runningLabel(running))}</strong> —
                <span data-elapsed="${esc(running.startedAt)}">${esc(elapsedClock(running))}</span>.
                <button class="btn small" data-action="stop-timer" data-key="${esc(running.key)}">Stop</button>
              </p>`
@@ -1946,6 +2000,45 @@ function weekOfWorkCard() {
 
 const courseById = (id) => DATA?.courses.find((c) => c.id === id) || null;
 
+/**
+ * One burst: a box to tick and a clock to run.
+ *
+ * Both, rather than one or the other. The box is the honest minimum — you did
+ * it, you say so — and the clock is for when you want to know whether "a few
+ * minutes" was four or fourteen. Timing a burst ticks it when you stop, so the
+ * two never disagree; ticking by hand leaves the clock alone.
+ */
+function slotRow(s, habit, burst) {
+  const running = store.runningTimer();
+  const mine = running && running.key === s.key;
+  const label = store.SLOT_LABELS[s.slot] || s.slot;
+  // Once you are past the goal the goal stops being news — "12 min of 10 min"
+  // is a worse way of saying "12 min".
+  const shown = !s.minutes
+    ? ''
+    : s.met || !burst
+      ? S.formatMinutes(s.minutes)
+      : `${S.formatMinutes(s.minutes)} of ${S.formatMinutes(burst)}`;
+
+  return `
+    <li class="slot ${s.done ? 'on' : ''} ${mine ? 'is-running' : ''}">
+      <button class="slot-tick" data-action="tick-rhythm" data-rkey="${esc(s.key)}" aria-pressed="${s.done}">
+        <span class="slot-box" aria-hidden="true">${s.done ? '✓' : ''}</span>
+        <span>${esc(label)}</span>
+      </button>
+      <span class="slot-mins ${s.met ? 'met' : ''}">${esc(shown)}</span>
+      ${
+        mine
+          ? `<button class="amount timer running" data-action="stop-timer" data-key="${esc(s.key)}">
+               <span data-elapsed="${esc(running.startedAt)}">${esc(elapsedClock(running))}</span> ■
+             </button>`
+          : `<button class="amount timer" data-action="start-timer" data-key="${esc(s.key)}"
+                     data-course="${esc(habit.courseId || '')}"
+                     title="Time this ${esc(label.toLowerCase())} burst of ${esc(habit.title)}">▶ Start</button>`
+      }
+    </li>`;
+}
+
 /** How much reading a given day is carrying, across every class. */
 function loadOn(date) {
   let minutes = 0;
@@ -1971,7 +2064,7 @@ function loadOn(date) {
 function rhythmCard() {
   const habits = store.rhythm();
   const today = S.startOfToday();
-  const r = S.rhythmProgress(store.rhythmLog(), habits, { from: today });
+  const r = S.rhythmProgress(store.rhythmLog(), habits, { from: today, timeLog: store.timeLog() });
   const blockDays = store.settings().studyDays;
   const next = S.nextBlockDay(today, blockDays);
   const isBlockToday = next && S.daysBetween(next, today) === 0;
@@ -1981,25 +2074,18 @@ function rhythmCard() {
     ? `<ul class="rhythm-habits">
          ${r.today
            .map(
-             ({ habit, slots, done, total }) => `
+             ({ habit, slots, done, total, burst, minutes, target }) => `
            <li class="rhythm-habit">
              <div class="rhythm-habit-head">
                <span class="rhythm-habit-title">${habit.courseId && courseById(habit.courseId) ? dot(courseById(habit.courseId).color) : ''}${esc(habit.title)}</span>
-               <span class="muted">${done}/${total}</span>
+               <span class="muted">${done}/${total}${
+                 minutes > 0 ? ` · ${S.formatMinutes(minutes)}${target ? ` of ${S.formatMinutes(target)}` : ''}` : ''
+               }</span>
              </div>
              ${habit.detail ? `<div class="task-detail">${esc(habit.detail)}</div>` : ''}
-             <div class="slots">
-               ${slots
-                 .map(
-                   (s) => `
-                 <button class="slot ${s.done ? 'on' : ''}" data-action="tick-rhythm" data-rkey="${esc(s.key)}"
-                         aria-pressed="${s.done}">
-                   <span class="slot-box" aria-hidden="true">${s.done ? '✓' : ''}</span>
-                   ${esc(store.SLOT_LABELS[s.slot] || s.slot)}
-                 </button>`
-                 )
-                 .join('')}
-             </div>
+             <ul class="slots">
+               ${slots.map((s) => slotRow(s, habit, burst)).join('')}
+             </ul>
            </li>`
            )
            .join('')}
@@ -2875,6 +2961,11 @@ function viewSettings() {
             <label for="habit-note-${esc(h.id)}">Note</label>
             <input id="habit-note-${esc(h.id)}" type="text" value="${esc(h.detail || '')}"
                    placeholder="optional" data-habit-field="detail" data-habit="${esc(h.id)}">
+          </div>
+          <div class="row">
+            <label for="habit-mins-${esc(h.id)}">Minutes a burst</label>
+            <input id="habit-mins-${esc(h.id)}" type="number" min="0" max="120"
+                   value="${Number(h.minutes) || 0}" data-habit-field="minutes" data-habit="${esc(h.id)}">
           </div>
           <div class="chips">
             ${store.SLOT_ORDER.map(
@@ -3769,7 +3860,10 @@ document.addEventListener('click', async (e) => {
     if (!title) return;
     const id = `habit-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
     if (store.rhythm().some((h) => h.id === id)) return;
-    store.setRhythm([...store.rhythm(), { id, title: title.trim(), detail: '', courseId: null, slots: [...store.SLOT_ORDER] }]);
+    store.setRhythm([
+      ...store.rhythm(),
+      { id, title: title.trim(), detail: '', courseId: null, minutes: store.DEFAULT_BURST, slots: [...store.SLOT_ORDER] }
+    ]);
     return refresh();
   }
 
@@ -3897,10 +3991,16 @@ document.addEventListener('change', (e) => {
   const habitField = e.target.closest('[data-habit-field]');
   if (habitField) {
     const { habit: id, habitField: field } = habitField.dataset;
-    const value = habitField.value.trim();
+    const raw = habitField.value.trim();
     // Renaming must not rename the id: the ticks you have already made are
     // filed under it, and a streak should survive a change of wording.
-    if (field === 'title' && !value) return refresh();
+    if (field === 'title' && !raw) return refresh();
+    let value = raw;
+    if (field === 'minutes') {
+      const n = parseInt(raw, 10);
+      // 0 is a real answer: it means "do it, do not time it".
+      value = Number.isFinite(n) && n >= 0 ? Math.min(120, n) : store.DEFAULT_BURST;
+    }
     store.setRhythm(store.rhythm().map((h) => (h.id === id ? { ...h, [field]: value } : h)));
     return refresh();
   }
