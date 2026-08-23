@@ -560,6 +560,62 @@ export function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the daily rhythm ---------- */
+
+/**
+ * How the daily habits are going — today's boxes, and the week behind them.
+ *
+ * Deliberately forgiving, because the whole point of the thing is that it is
+ * not another way to be behind. A day counts as kept if you touched it at all,
+ * and today never breaks a streak: an untouched morning is a morning, not a
+ * failure. Nothing here feeds the plan or the deadlines.
+ */
+export function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } = {}) {
+  const ticks = log || {};
+  const list = habits || [];
+  const slotsOf = (habit) => (habit.slots?.length ? habit.slots : ['morning', 'afternoon', 'evening']);
+
+  const countFor = (date) => {
+    let done = 0;
+    let total = 0;
+    for (const habit of list) {
+      for (const slot of slotsOf(habit)) {
+        total += 1;
+        if (ticks[`${toISO(date)}|${habit.id}|${slot}`]) done += 1;
+      }
+    }
+    return { done, total };
+  };
+
+  const today = list.map((habit) => {
+    const slots = slotsOf(habit).map((slot) => {
+      const key = `${toISO(from)}|${habit.id}|${slot}`;
+      return { slot, key, done: Boolean(ticks[key]) };
+    });
+    return { habit, slots, done: slots.filter((s) => s.done).length, total: slots.length };
+  });
+
+  const week = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = addDays(from, -i);
+    week.push({ date, ...countFor(date) });
+  }
+
+  // Walk backwards until a day was missed. Today is only counted once it has
+  // something on it, so the streak reads the same at breakfast as at bedtime.
+  let streak = 0;
+  for (let i = 0; i < 400; i += 1) {
+    const { done, total } = countFor(addDays(from, -i));
+    if (!total) break;
+    if (done > 0) streak += 1;
+    else if (i > 0) break;
+  }
+
+  const todayDone = today.reduce((sum, h) => sum + h.done, 0);
+  const todayTotal = today.reduce((sum, h) => sum + h.total, 0);
+  return { today, todayDone, todayTotal, week, streak };
+}
+
 /** Work that exists but has no date yet, because you arrange it yourself. */
 export function unscheduled(tasks) {
   return tasks.filter((t) => t.undated && !t.complete);
@@ -567,18 +623,37 @@ export function unscheduled(tasks) {
 
 /* ---------- the day-by-day plan ---------- */
 
+function allDaysBetween(from, to) {
+  const days = [];
+  for (let d = new Date(from); d <= to; d = addDays(d, 1)) days.push(new Date(d));
+  if (!days.length) days.push(new Date(from));
+  return days;
+}
+
 function studyDaysBetween(from, to, studyDays) {
   const days = [];
   for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
     if (studyDays.includes(d.getDay())) days.push(new Date(d));
   }
-  // If none of the remaining days are marked as study days, you still have to
+  // If none of the remaining days are marked as reading days, you still have to
   // read — fall back to every remaining day rather than showing an empty plan.
-  if (!days.length) {
-    for (let d = new Date(from); d <= to; d = addDays(d, 1)) days.push(new Date(d));
-  }
-  if (!days.length) days.push(new Date(from));
+  if (!days.length) return allDaysBetween(from, to);
   return days;
+}
+
+/**
+ * The next day you have set aside for reading, today included.
+ *
+ * Used to say "your next block is Monday" rather than leaving a quiet Tuesday
+ * looking like there is nothing to do all week.
+ */
+export function nextBlockDay(from = startOfToday(), studyDays = settings().studyDays) {
+  if (!studyDays?.length) return null;
+  for (let i = 0; i < 7; i += 1) {
+    const day = addDays(from, i);
+    if (studyDays.includes(day.getDay())) return day;
+  }
+  return null;
 }
 
 /**
@@ -594,10 +669,17 @@ export function planFor(tasks, deadline, opts = {}) {
 
   // Work is due before class, so the last useful study day is normally the day
   // before — but an evening class leaves that day open too.
-  const days = studyDaysBetween(today, lastStudyDay(deadline, today), s.studyDays);
+  const until = lastStudyDay(deadline, today);
+  // Two different rhythms share one plan. Books are read in blocks: whatever
+  // days you have set aside, even if that is only Monday, and the whole week's
+  // reading lands there in one sitting. Scripture is read a chapter a day, so
+  // it is placed on every day whether or not it is a reading day.
+  const blocks = studyDaysBetween(today, until, s.studyDays);
+  const days = allDaysBetween(today, until);
+  const isBlock = new Set(blocks.map((d) => toISO(d)));
 
   const totalMinutes = pending.reduce((sum, t) => sum + t.remaining, 0);
-  const perDay = totalMinutes / days.length;
+  const perDay = totalMinutes / blocks.length;
 
   const chunkLabel = (task, ranges) =>
     task.synthetic ? `pages ${formatRanges(ranges)} of ${task.pages}` : `pp. ${formatRanges(ranges)}`;
@@ -649,12 +731,20 @@ export function planFor(tasks, deadline, opts = {}) {
     }
   }
 
-  const plan = days.map((date) => ({ date, items: [], minutes: 0 }));
-  let i = 0;
+  const plan = days.map((date) => ({ date, items: [], minutes: 0, block: isBlock.has(toISO(date)) }));
+  // Books go into the reading days only, so `slot` walks that subset rather
+  // than the calendar.
+  const reading = plan.map((day, idx) => (day.block ? idx : -1)).filter((idx) => idx >= 0);
+  const slots = reading.length ? reading : plan.map((_, idx) => idx);
+  let slot = 0;
   for (const atom of atoms) {
     // Move on once this chunk would push the day well past its share — but
     // never leave a day empty, or a single long reading would have nowhere to go.
-    while (i < plan.length - 1 && plan[i].minutes > 0 && plan[i].minutes + atom.minutes > perDay * 1.35) i += 1;
+    let i = slots[slot];
+    while (slot < slots.length - 1 && plan[i].minutes > 0 && plan[i].minutes + atom.minutes > perDay * 1.35) {
+      slot += 1;
+      i = slots[slot];
+    }
     const last = plan[i].items[plan[i].items.length - 1];
     // Two chunks of the same book landing on the same day read as one stretch.
     if (last && last.task.key === atom.task.key) {
@@ -694,7 +784,11 @@ export function planFor(tasks, deadline, opts = {}) {
     });
   }
 
-  return { plan, totalMinutes, perDay, days: days.length, pending, deadline };
+  // A day off with nothing on it is not worth a row. A reading day with nothing
+  // on it is: it says the block is clear.
+  const shown = plan.filter((day) => day.block || day.items.length);
+
+  return { plan: shown, totalMinutes, perDay, days: blocks.length, blocks, pending, deadline };
 }
 
 /* ---------- deadlines & reminders ---------- */

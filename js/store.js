@@ -3,9 +3,30 @@
 
 const KEY = 'seminary.v1';
 
+// Small and daily, on purpose. The point of these is not to get a lot done in
+// one go — it is to touch the language three times before bed and let that add
+// up on its own. Nothing here is ever "behind": an untouched slot is just an
+// untouched slot.
+export const DEFAULT_RHYTHM = [
+  {
+    id: 'greek-vocab',
+    title: 'Greek vocabulary',
+    detail: 'A few minutes on the current chapter’s words. Stop while it is still easy.',
+    courseId: 'greek',
+    slots: ['morning', 'afternoon', 'evening']
+  }
+];
+
+export const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+export const SLOT_ORDER = ['morning', 'afternoon', 'evening'];
+
 export const DEFAULT_SETTINGS = {
-  // Which days of the week you actually study. 0 = Sunday .. 6 = Saturday.
+  // The days you sit down and read. Not "days you are awake and studying" —
+  // days you block out for the books. Leaving one day ticked puts a whole
+  // week's reading into one sitting, which is the point. 0 = Sunday .. 6 = Sat.
   studyDays: [1, 2, 3, 4, 5, 6],
+  // Daily habits, kept in settings so they travel with an export.
+  rhythm: structuredClone(DEFAULT_RHYTHM),
   // How far ahead the app warns you about a deadline.
   leadDays: 7,
   // Effort model, used to turn mixed units into a daily time target.
@@ -37,8 +58,20 @@ const EMPTY = {
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
-  timeLog: [] // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
+
+/**
+ * Settings saved before a field existed come back without it. Merging over the
+ * defaults covers that — except for the habit list, where a saved empty list is
+ * a real choice ("I do not want any") and must not be overwritten by the seed.
+ */
+function mergeSettings(raw) {
+  const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
+  merged.rhythm = Array.isArray(raw?.rhythm) ? raw.rhythm : structuredClone(DEFAULT_RHYTHM);
+  return merged;
+}
 
 function read() {
   try {
@@ -46,7 +79,7 @@ function read() {
     if (!raw) return structuredClone(EMPTY);
     const parsed = JSON.parse(raw);
     return {
-      settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+      settings: mergeSettings(parsed.settings),
       done: parsed.done || {},
       progress: parsed.progress || {},
       library: parsed.library || {},
@@ -56,7 +89,8 @@ function read() {
       bookmarks: parsed.bookmarks || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
-      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
+      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+      rhythmLog: parsed.rhythmLog || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -266,6 +300,42 @@ export function logTime(key, courseId, minutes) {
 
 export const timeLog = () => state.timeLog;
 
+/* ---------- the daily rhythm ---------- */
+
+// Ticks are kept for two months and then dropped. A streak nobody has looked at
+// since March is not worth carrying, and this is the one part of the state that
+// grows by itself every single day.
+const RHYTHM_MEMORY = 60;
+
+export const rhythm = () => state.settings.rhythm || [];
+
+export function setRhythm(list) {
+  updateSettings({ rhythm: list });
+}
+
+export const rhythmKey = (iso, habitId, slot) => `${iso}|${habitId}|${slot}`;
+
+export const rhythmDone = (key) => Boolean(state.rhythmLog[key]);
+
+export const rhythmLog = () => state.rhythmLog;
+
+function pruneRhythm(todayIso) {
+  const [y, m, d] = todayIso.split('-').map(Number);
+  const cutoff = new Date(y, m - 1, d - RHYTHM_MEMORY);
+  const iso = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  for (const key of Object.keys(state.rhythmLog)) {
+    if (key.slice(0, 10) < iso) delete state.rhythmLog[key];
+  }
+}
+
+export function toggleRhythmDone(key) {
+  if (state.rhythmLog[key]) delete state.rhythmLog[key];
+  else state.rhythmLog[key] = true;
+  pruneRhythm(key.slice(0, 10));
+  persist();
+  return Boolean(state.rhythmLog[key]);
+}
+
 /* ---------- a record of things going wrong ---------- */
 
 const PROBLEM_KEY = 'seminary.problems';
@@ -325,7 +395,7 @@ export function exportData() {
 export function importData(json) {
   const parsed = JSON.parse(json);
   state = {
-    settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+    settings: mergeSettings(parsed.settings),
     done: parsed.done || {},
     progress: parsed.progress || {},
     library: parsed.library || {},
@@ -335,7 +405,8 @@ export function importData(json) {
     bookmarks: parsed.bookmarks || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
-    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
+    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+    rhythmLog: parsed.rhythmLog || {}
   };
   persist();
 }
@@ -344,6 +415,7 @@ export function resetProgress() {
   state.done = {};
   state.progress = {};
   state.fired = {};
+  state.rhythmLog = {};
   persist();
 }
 

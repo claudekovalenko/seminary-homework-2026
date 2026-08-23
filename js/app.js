@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v21 · 2026-08-14';
+const BUILD = 'v22 · 2026-08-23';
 
 let DATA = null;
 let TASKS = [];
@@ -301,9 +301,11 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
 function dayRow(day, courseColor) {
   const isToday = S.daysBetween(day.date, S.startOfToday()) === 0;
   return `
-    <div class="day ${isToday ? 'is-today' : ''}">
+    <div class="day ${isToday ? 'is-today' : ''} ${day.block === false ? 'is-off' : ''}">
       <div class="day-head">
-        <span class="day-name">${isToday ? 'Today' : S.formatDate(day.date)}</span>
+        <span class="day-name">${isToday ? 'Today' : S.formatDate(day.date)}${
+          day.block === false ? ' <span class="muted">· not a reading day</span>' : ''
+        }</span>
         <span class="day-mins">${day.minutes ? S.formatMinutes(day.minutes) : '—'}</span>
       </div>
       <ul class="tasks">
@@ -381,6 +383,120 @@ function weekOfWorkCard() {
              </ul>`
           : ''
       }
+    </section>`;
+}
+
+const courseById = (id) => DATA?.courses.find((c) => c.id === id) || null;
+
+/** How much reading a given day is carrying, across every class. */
+function loadOn(date) {
+  let minutes = 0;
+  for (const { plan } of currentPlans()) {
+    const day = plan.plan.find((d) => S.daysBetween(d.date, date) === 0);
+    if (day) minutes += day.minutes;
+  }
+  return minutes;
+}
+
+/**
+ * The two rhythms the term actually runs on.
+ *
+ * Greek is a language, so it goes in small daily doses — a few minutes in the
+ * morning, a few in the afternoon, a few in the evening — and the only thing
+ * asked of you is to tick the box. Reading is the opposite: it does not survive
+ * being sliced into twenty minutes a night, so it is blocked into whole days
+ * you sit down and get after it.
+ *
+ * Nothing in here is a deadline and nothing here goes red. A missed slot is a
+ * missed slot; the streak picks up again tomorrow.
+ */
+function rhythmCard() {
+  const habits = store.rhythm();
+  const today = S.startOfToday();
+  const r = S.rhythmProgress(store.rhythmLog(), habits, { from: today });
+  const blockDays = store.settings().studyDays;
+  const next = S.nextBlockDay(today, blockDays);
+  const isBlockToday = next && S.daysBetween(next, today) === 0;
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const habitList = habits.length
+    ? `<ul class="rhythm-habits">
+         ${r.today
+           .map(
+             ({ habit, slots, done, total }) => `
+           <li class="rhythm-habit">
+             <div class="rhythm-habit-head">
+               <span class="rhythm-habit-title">${habit.courseId && courseById(habit.courseId) ? dot(courseById(habit.courseId).color) : ''}${esc(habit.title)}</span>
+               <span class="muted">${done}/${total}</span>
+             </div>
+             ${habit.detail ? `<div class="task-detail">${esc(habit.detail)}</div>` : ''}
+             <div class="slots">
+               ${slots
+                 .map(
+                   (s) => `
+                 <button class="slot ${s.done ? 'on' : ''}" data-action="tick-rhythm" data-rkey="${esc(s.key)}"
+                         aria-pressed="${s.done}">
+                   <span class="slot-box" aria-hidden="true">${s.done ? '✓' : ''}</span>
+                   ${esc(store.SLOT_LABELS[s.slot] || s.slot)}
+                 </button>`
+                 )
+                 .join('')}
+             </div>
+           </li>`
+           )
+           .join('')}
+       </ul>
+       <div class="rhythm-week" role="img" aria-label="The last seven days">
+         ${r.week
+           .map((d) => {
+             const state = !d.total ? 'none' : d.done === d.total ? 'full' : d.done ? 'some' : 'none';
+             const isToday = S.daysBetween(d.date, today) === 0;
+             return `<span class="rhythm-dot is-${state} ${isToday ? 'is-today' : ''}"
+                           title="${esc(S.formatDate(d.date))}: ${d.done} of ${d.total}"></span>`;
+           })
+           .join('')}
+         <small class="muted">${r.streak ? `${r.streak} day${r.streak === 1 ? '' : 's'} running` : 'start whenever'}</small>
+       </div>`
+    : `<p class="note">No daily habits set. Add one in Settings — a few minutes of vocabulary is plenty.</p>`;
+
+  const load = next ? loadOn(next) : 0;
+  const blockLine = !next
+    ? 'No reading days set, so the books are spread over every day. Pick your days in Settings.'
+    : isBlockToday
+      ? `<strong>Today is a reading day.</strong> ${load ? `${S.formatMinutes(load)} of reading is blocked in — sit down and get after it.` : 'Nothing left on it.'}`
+      : `Next reading block: <strong>${esc(S.formatDate(next, { weekday: 'long' }))}</strong>${
+          load ? ` · ${S.formatMinutes(load)}` : ''
+        }. The books wait for it; only the Bible reading carries on daily.`;
+
+  // Blocking a week into one day is the point, but a block nobody could sit
+  // through is worth saying out loud once, without turning it into a warning
+  // you have to dismiss. It is stated, not flagged red.
+  const TOO_LONG = 6 * 60;
+  const overloaded = load > TOO_LONG && blockDays.length < 4;
+
+  return `
+    <section class="card rhythm">
+      <div class="card-head">
+        <h2>Rhythm</h2>
+        <span class="card-when">${r.todayTotal ? `${r.todayDone}/${r.todayTotal} today` : ''}</span>
+      </div>
+      ${habitList}
+      <div class="rhythm-block">
+        <div class="rhythm-block-days">
+          ${dayNames
+            .map((n, i) => `<span class="rhythm-day ${blockDays.includes(i) ? 'on' : ''}">${n}</span>`)
+            .join('')}
+        </div>
+        <p class="note">${blockLine}</p>
+        ${
+          overloaded
+            ? `<p class="note">
+                 ${S.formatMinutes(load)} is more than one sitting holds. Your call: take it as a long
+                 haul, or tick another day in Settings and the app spreads it out.
+               </p>`
+            : ''
+        }
+      </div>
     </section>`;
 }
 
@@ -529,6 +645,7 @@ function viewToday() {
         : ''
     }
 
+    ${rhythmCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
     ${unscheduledSection({ collapsible: true })}
@@ -618,7 +735,7 @@ function viewPlan() {
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
             <div><span class="stat">${S.formatMinutes(w.remaining)}</span><small>of ${S.formatMinutes(w.total)}</small></div>
-            <div><span class="stat">${plan.days}</span><small>study days</small></div>
+            <div><span class="stat">${plan.days}</span><small>reading days</small></div>
             <div><span class="stat">${S.formatMinutes(plan.perDay)}</span><small>per day</small></div>
           </div>
           <p class="note pace ${pace.onTrack && !owed.length ? 'ok' : 'behind'}">
@@ -1154,8 +1271,13 @@ function viewSettings() {
     </section>
 
     <section class="card">
-      <h2>Study days</h2>
-      <p class="note">Reading is spread across the days you tick. Untick your day off.</p>
+      <h2>Reading days</h2>
+      <p class="note">
+        The days you block out for the books. Reading is packed into these and nowhere else, so
+        ticking only Monday puts the whole week's reading into one Monday sitting — which is a real
+        way to do it, and often a better one than twenty minutes a night. Bible reading ignores this
+        and stays a chapter a day.
+      </p>
       <div class="chips">
         ${dayNames
           .map(
@@ -1164,6 +1286,52 @@ function viewSettings() {
           )
           .join('')}
       </div>
+      <p class="note">
+        ${
+          s.studyDays.length === 1
+            ? `One block a week, on ${esc(dayNames[s.studyDays[0]])}.`
+            : `${s.studyDays.length} reading days a week.`
+        }
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Daily rhythm</h2>
+      <p class="note">
+        The small daily things — vocabulary and the like — that work by repetition rather than by
+        sitting down for an hour. These never appear as work owed and never go red: they are boxes to
+        tick on the home page, and that is all.
+      </p>
+      ${
+        store.rhythm().length
+          ? store
+              .rhythm()
+              .map(
+                (h) => `
+        <div class="habit-edit">
+          <div class="row">
+            <label for="habit-${esc(h.id)}">${h.courseId && courseById(h.courseId) ? dot(courseById(h.courseId).color) : ''}Name</label>
+            <input id="habit-${esc(h.id)}" type="text" value="${esc(h.title)}" data-habit-field="title" data-habit="${esc(h.id)}">
+          </div>
+          <div class="row">
+            <label for="habit-note-${esc(h.id)}">Note</label>
+            <input id="habit-note-${esc(h.id)}" type="text" value="${esc(h.detail || '')}"
+                   placeholder="optional" data-habit-field="detail" data-habit="${esc(h.id)}">
+          </div>
+          <div class="chips">
+            ${store.SLOT_ORDER.map(
+              (slot) =>
+                `<button class="chip ${h.slots.includes(slot) ? 'on' : ''}" data-action="toggle-slot"
+                         data-habit="${esc(h.id)}" data-slot="${slot}">${esc(store.SLOT_LABELS[slot])}</button>`
+            ).join('')}
+            <button class="chip danger" data-action="drop-habit" data-habit="${esc(h.id)}">Remove</button>
+          </div>
+        </div>`
+              )
+              .join('')
+          : '<p class="empty">Nothing daily set.</p>'
+      }
+      <button class="btn ghost" data-action="add-habit">Add a daily habit</button>
     </section>
 
     <section class="card">
@@ -2033,6 +2201,41 @@ document.addEventListener('click', async (e) => {
     return refresh();
   }
 
+  if (action === 'tick-rhythm') {
+    store.toggleRhythmDone(el.dataset.rkey);
+    return refresh();
+  }
+
+  if (action === 'add-habit') {
+    const title = prompt('What do you want to do a little of each day?', 'Greek paradigms');
+    if (!title) return;
+    const id = `habit-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
+    if (store.rhythm().some((h) => h.id === id)) return;
+    store.setRhythm([...store.rhythm(), { id, title: title.trim(), detail: '', courseId: null, slots: [...store.SLOT_ORDER] }]);
+    return refresh();
+  }
+
+  if (action === 'drop-habit') {
+    const habit = store.rhythm().find((h) => h.id === el.dataset.habit);
+    if (!habit || !confirm(`Stop tracking "${habit.title}"?`)) return;
+    store.setRhythm(store.rhythm().filter((h) => h.id !== habit.id));
+    return refresh();
+  }
+
+  if (action === 'toggle-slot') {
+    const { habit: id, slot } = el.dataset;
+    store.setRhythm(
+      store.rhythm().map((h) => {
+        if (h.id !== id) return h;
+        const has = h.slots.includes(slot);
+        const slots = has ? h.slots.filter((s) => s !== slot) : store.SLOT_ORDER.filter((s) => h.slots.includes(s) || s === slot);
+        // A habit with no times of day left has nothing to tick.
+        return slots.length ? { ...h, slots } : h;
+      })
+    );
+    return refresh();
+  }
+
   if (action === 'toggle-day') {
     const day = Number(el.dataset.day);
     const days = store.settings().studyDays;
@@ -2130,6 +2333,17 @@ document.addEventListener('change', (e) => {
     if (time.value) next[time.dataset.classtime] = time.value;
     else delete next[time.dataset.classtime];
     store.updateSettings({ classTimes: next });
+    return refresh();
+  }
+
+  const habitField = e.target.closest('[data-habit-field]');
+  if (habitField) {
+    const { habit: id, habitField: field } = habitField.dataset;
+    const value = habitField.value.trim();
+    // Renaming must not rename the id: the ticks you have already made are
+    // filed under it, and a streak should survive a change of wording.
+    if (field === 'title' && !value) return refresh();
+    store.setRhythm(store.rhythm().map((h) => (h.id === id ? { ...h, [field]: value } : h)));
     return refresh();
   }
 

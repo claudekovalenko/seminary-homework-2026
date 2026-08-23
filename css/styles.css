@@ -657,6 +657,165 @@ summary {
   color: #fff;
 }
 
+.chip.danger {
+  color: var(--danger);
+}
+
+/* ---------- the daily rhythm ---------- */
+
+.rhythm-habits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rhythm-habit + .rhythm-habit {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.rhythm-habit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rhythm-habit-title {
+  font-weight: 600;
+}
+
+/* Three wide targets, because these are tapped on a phone with one hand and
+   several times a day. */
+.slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.slot-box {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.slot.on {
+  border-color: var(--ok);
+  color: var(--text);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.slot.on .slot-box {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #0e1016;
+}
+
+.rhythm-week {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.rhythm-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 99px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+}
+
+.rhythm-dot.is-some {
+  background: color-mix(in srgb, var(--ok) 45%, transparent);
+  border-color: transparent;
+}
+
+.rhythm-dot.is-full {
+  background: var(--ok);
+  border-color: transparent;
+}
+
+.rhythm-dot.is-today {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.rhythm-week small {
+  margin-left: auto;
+}
+
+.rhythm-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.rhythm-block-days {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.rhythm-day {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  padding: 4px 0;
+  border-radius: 6px;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+}
+
+.rhythm-day.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rhythm-block .note {
+  margin: 0;
+}
+
+.rhythm-block .note + .note {
+  margin-top: 8px;
+}
+
+.habit-edit {
+  padding: 10px 0;
+}
+
+.habit-edit + .habit-edit {
+  border-top: 1px solid var(--line);
+}
+
+.habit-edit .chips {
+  margin-top: 8px;
+}
+
 /* ---------- tab bar ---------- */
 
 .tabbar {

@@ -5,9 +5,30 @@ const __mod_store = (() => {
 
 const KEY = 'seminary.v1';
 
+// Small and daily, on purpose. The point of these is not to get a lot done in
+// one go — it is to touch the language three times before bed and let that add
+// up on its own. Nothing here is ever "behind": an untouched slot is just an
+// untouched slot.
+const DEFAULT_RHYTHM = [
+  {
+    id: 'greek-vocab',
+    title: 'Greek vocabulary',
+    detail: 'A few minutes on the current chapter’s words. Stop while it is still easy.',
+    courseId: 'greek',
+    slots: ['morning', 'afternoon', 'evening']
+  }
+];
+
+const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+const SLOT_ORDER = ['morning', 'afternoon', 'evening'];
+
 const DEFAULT_SETTINGS = {
-  // Which days of the week you actually study. 0 = Sunday .. 6 = Saturday.
+  // The days you sit down and read. Not "days you are awake and studying" —
+  // days you block out for the books. Leaving one day ticked puts a whole
+  // week's reading into one sitting, which is the point. 0 = Sunday .. 6 = Sat.
   studyDays: [1, 2, 3, 4, 5, 6],
+  // Daily habits, kept in settings so they travel with an export.
+  rhythm: structuredClone(DEFAULT_RHYTHM),
   // How far ahead the app warns you about a deadline.
   leadDays: 7,
   // Effort model, used to turn mixed units into a daily time target.
@@ -39,8 +60,20 @@ const EMPTY = {
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
-  timeLog: [] // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
+
+/**
+ * Settings saved before a field existed come back without it. Merging over the
+ * defaults covers that — except for the habit list, where a saved empty list is
+ * a real choice ("I do not want any") and must not be overwritten by the seed.
+ */
+function mergeSettings(raw) {
+  const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
+  merged.rhythm = Array.isArray(raw?.rhythm) ? raw.rhythm : structuredClone(DEFAULT_RHYTHM);
+  return merged;
+}
 
 function read() {
   try {
@@ -48,7 +81,7 @@ function read() {
     if (!raw) return structuredClone(EMPTY);
     const parsed = JSON.parse(raw);
     return {
-      settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+      settings: mergeSettings(parsed.settings),
       done: parsed.done || {},
       progress: parsed.progress || {},
       library: parsed.library || {},
@@ -58,7 +91,8 @@ function read() {
       bookmarks: parsed.bookmarks || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
-      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
+      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+      rhythmLog: parsed.rhythmLog || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -268,6 +302,42 @@ function logTime(key, courseId, minutes) {
 
 const timeLog = () => state.timeLog;
 
+/* ---------- the daily rhythm ---------- */
+
+// Ticks are kept for two months and then dropped. A streak nobody has looked at
+// since March is not worth carrying, and this is the one part of the state that
+// grows by itself every single day.
+const RHYTHM_MEMORY = 60;
+
+const rhythm = () => state.settings.rhythm || [];
+
+function setRhythm(list) {
+  updateSettings({ rhythm: list });
+}
+
+const rhythmKey = (iso, habitId, slot) => `${iso}|${habitId}|${slot}`;
+
+const rhythmDone = (key) => Boolean(state.rhythmLog[key]);
+
+const rhythmLog = () => state.rhythmLog;
+
+function pruneRhythm(todayIso) {
+  const [y, m, d] = todayIso.split('-').map(Number);
+  const cutoff = new Date(y, m - 1, d - RHYTHM_MEMORY);
+  const iso = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  for (const key of Object.keys(state.rhythmLog)) {
+    if (key.slice(0, 10) < iso) delete state.rhythmLog[key];
+  }
+}
+
+function toggleRhythmDone(key) {
+  if (state.rhythmLog[key]) delete state.rhythmLog[key];
+  else state.rhythmLog[key] = true;
+  pruneRhythm(key.slice(0, 10));
+  persist();
+  return Boolean(state.rhythmLog[key]);
+}
+
 /* ---------- a record of things going wrong ---------- */
 
 const PROBLEM_KEY = 'seminary.problems';
@@ -327,7 +397,7 @@ function exportData() {
 function importData(json) {
   const parsed = JSON.parse(json);
   state = {
-    settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+    settings: mergeSettings(parsed.settings),
     done: parsed.done || {},
     progress: parsed.progress || {},
     library: parsed.library || {},
@@ -337,7 +407,8 @@ function importData(json) {
     bookmarks: parsed.bookmarks || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
-    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
+    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+    rhythmLog: parsed.rhythmLog || {}
   };
   persist();
 }
@@ -346,6 +417,7 @@ function resetProgress() {
   state.done = {};
   state.progress = {};
   state.fired = {};
+  state.rhythmLog = {};
   persist();
 }
 
@@ -353,7 +425,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_RHYTHM, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, rhythm, setRhythm, rhythmKey, rhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -919,6 +991,62 @@ function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the daily rhythm ---------- */
+
+/**
+ * How the daily habits are going — today's boxes, and the week behind them.
+ *
+ * Deliberately forgiving, because the whole point of the thing is that it is
+ * not another way to be behind. A day counts as kept if you touched it at all,
+ * and today never breaks a streak: an untouched morning is a morning, not a
+ * failure. Nothing here feeds the plan or the deadlines.
+ */
+function rhythmProgress(log, habits, { from = startOfToday(), days = 7 } = {}) {
+  const ticks = log || {};
+  const list = habits || [];
+  const slotsOf = (habit) => (habit.slots?.length ? habit.slots : ['morning', 'afternoon', 'evening']);
+
+  const countFor = (date) => {
+    let done = 0;
+    let total = 0;
+    for (const habit of list) {
+      for (const slot of slotsOf(habit)) {
+        total += 1;
+        if (ticks[`${toISO(date)}|${habit.id}|${slot}`]) done += 1;
+      }
+    }
+    return { done, total };
+  };
+
+  const today = list.map((habit) => {
+    const slots = slotsOf(habit).map((slot) => {
+      const key = `${toISO(from)}|${habit.id}|${slot}`;
+      return { slot, key, done: Boolean(ticks[key]) };
+    });
+    return { habit, slots, done: slots.filter((s) => s.done).length, total: slots.length };
+  });
+
+  const week = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = addDays(from, -i);
+    week.push({ date, ...countFor(date) });
+  }
+
+  // Walk backwards until a day was missed. Today is only counted once it has
+  // something on it, so the streak reads the same at breakfast as at bedtime.
+  let streak = 0;
+  for (let i = 0; i < 400; i += 1) {
+    const { done, total } = countFor(addDays(from, -i));
+    if (!total) break;
+    if (done > 0) streak += 1;
+    else if (i > 0) break;
+  }
+
+  const todayDone = today.reduce((sum, h) => sum + h.done, 0);
+  const todayTotal = today.reduce((sum, h) => sum + h.total, 0);
+  return { today, todayDone, todayTotal, week, streak };
+}
+
 /** Work that exists but has no date yet, because you arrange it yourself. */
 function unscheduled(tasks) {
   return tasks.filter((t) => t.undated && !t.complete);
@@ -926,18 +1054,37 @@ function unscheduled(tasks) {
 
 /* ---------- the day-by-day plan ---------- */
 
+function allDaysBetween(from, to) {
+  const days = [];
+  for (let d = new Date(from); d <= to; d = addDays(d, 1)) days.push(new Date(d));
+  if (!days.length) days.push(new Date(from));
+  return days;
+}
+
 function studyDaysBetween(from, to, studyDays) {
   const days = [];
   for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
     if (studyDays.includes(d.getDay())) days.push(new Date(d));
   }
-  // If none of the remaining days are marked as study days, you still have to
+  // If none of the remaining days are marked as reading days, you still have to
   // read — fall back to every remaining day rather than showing an empty plan.
-  if (!days.length) {
-    for (let d = new Date(from); d <= to; d = addDays(d, 1)) days.push(new Date(d));
-  }
-  if (!days.length) days.push(new Date(from));
+  if (!days.length) return allDaysBetween(from, to);
   return days;
+}
+
+/**
+ * The next day you have set aside for reading, today included.
+ *
+ * Used to say "your next block is Monday" rather than leaving a quiet Tuesday
+ * looking like there is nothing to do all week.
+ */
+function nextBlockDay(from = startOfToday(), studyDays = settings().studyDays) {
+  if (!studyDays?.length) return null;
+  for (let i = 0; i < 7; i += 1) {
+    const day = addDays(from, i);
+    if (studyDays.includes(day.getDay())) return day;
+  }
+  return null;
 }
 
 /**
@@ -953,10 +1100,17 @@ function planFor(tasks, deadline, opts = {}) {
 
   // Work is due before class, so the last useful study day is normally the day
   // before — but an evening class leaves that day open too.
-  const days = studyDaysBetween(today, lastStudyDay(deadline, today), s.studyDays);
+  const until = lastStudyDay(deadline, today);
+  // Two different rhythms share one plan. Books are read in blocks: whatever
+  // days you have set aside, even if that is only Monday, and the whole week's
+  // reading lands there in one sitting. Scripture is read a chapter a day, so
+  // it is placed on every day whether or not it is a reading day.
+  const blocks = studyDaysBetween(today, until, s.studyDays);
+  const days = allDaysBetween(today, until);
+  const isBlock = new Set(blocks.map((d) => toISO(d)));
 
   const totalMinutes = pending.reduce((sum, t) => sum + t.remaining, 0);
-  const perDay = totalMinutes / days.length;
+  const perDay = totalMinutes / blocks.length;
 
   const chunkLabel = (task, ranges) =>
     task.synthetic ? `pages ${formatRanges(ranges)} of ${task.pages}` : `pp. ${formatRanges(ranges)}`;
@@ -1008,12 +1162,20 @@ function planFor(tasks, deadline, opts = {}) {
     }
   }
 
-  const plan = days.map((date) => ({ date, items: [], minutes: 0 }));
-  let i = 0;
+  const plan = days.map((date) => ({ date, items: [], minutes: 0, block: isBlock.has(toISO(date)) }));
+  // Books go into the reading days only, so `slot` walks that subset rather
+  // than the calendar.
+  const reading = plan.map((day, idx) => (day.block ? idx : -1)).filter((idx) => idx >= 0);
+  const slots = reading.length ? reading : plan.map((_, idx) => idx);
+  let slot = 0;
   for (const atom of atoms) {
     // Move on once this chunk would push the day well past its share — but
     // never leave a day empty, or a single long reading would have nowhere to go.
-    while (i < plan.length - 1 && plan[i].minutes > 0 && plan[i].minutes + atom.minutes > perDay * 1.35) i += 1;
+    let i = slots[slot];
+    while (slot < slots.length - 1 && plan[i].minutes > 0 && plan[i].minutes + atom.minutes > perDay * 1.35) {
+      slot += 1;
+      i = slots[slot];
+    }
     const last = plan[i].items[plan[i].items.length - 1];
     // Two chunks of the same book landing on the same day read as one stretch.
     if (last && last.task.key === atom.task.key) {
@@ -1053,7 +1215,11 @@ function planFor(tasks, deadline, opts = {}) {
     });
   }
 
-  return { plan, totalMinutes, perDay, days: days.length, pending, deadline };
+  // A day off with nothing on it is not worth a row. A reading day with nothing
+  // on it is: it says the block is clear.
+  const shown = plan.filter((day) => day.block || day.items.length);
+
+  return { plan: shown, totalMinutes, perDay, days: blocks.length, blocks, pending, deadline };
 }
 
 /* ---------- deadlines & reminders ---------- */
@@ -1105,7 +1271,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, unscheduled, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, rhythmProgress, unscheduled, nextBlockDay, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -1397,7 +1563,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v21 · 2026-08-14';
+const BUILD = 'v22 · 2026-08-23';
 
 let DATA = null;
 let TASKS = [];
@@ -1693,9 +1859,11 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
 function dayRow(day, courseColor) {
   const isToday = S.daysBetween(day.date, S.startOfToday()) === 0;
   return `
-    <div class="day ${isToday ? 'is-today' : ''}">
+    <div class="day ${isToday ? 'is-today' : ''} ${day.block === false ? 'is-off' : ''}">
       <div class="day-head">
-        <span class="day-name">${isToday ? 'Today' : S.formatDate(day.date)}</span>
+        <span class="day-name">${isToday ? 'Today' : S.formatDate(day.date)}${
+          day.block === false ? ' <span class="muted">· not a reading day</span>' : ''
+        }</span>
         <span class="day-mins">${day.minutes ? S.formatMinutes(day.minutes) : '—'}</span>
       </div>
       <ul class="tasks">
@@ -1773,6 +1941,120 @@ function weekOfWorkCard() {
              </ul>`
           : ''
       }
+    </section>`;
+}
+
+const courseById = (id) => DATA?.courses.find((c) => c.id === id) || null;
+
+/** How much reading a given day is carrying, across every class. */
+function loadOn(date) {
+  let minutes = 0;
+  for (const { plan } of currentPlans()) {
+    const day = plan.plan.find((d) => S.daysBetween(d.date, date) === 0);
+    if (day) minutes += day.minutes;
+  }
+  return minutes;
+}
+
+/**
+ * The two rhythms the term actually runs on.
+ *
+ * Greek is a language, so it goes in small daily doses — a few minutes in the
+ * morning, a few in the afternoon, a few in the evening — and the only thing
+ * asked of you is to tick the box. Reading is the opposite: it does not survive
+ * being sliced into twenty minutes a night, so it is blocked into whole days
+ * you sit down and get after it.
+ *
+ * Nothing in here is a deadline and nothing here goes red. A missed slot is a
+ * missed slot; the streak picks up again tomorrow.
+ */
+function rhythmCard() {
+  const habits = store.rhythm();
+  const today = S.startOfToday();
+  const r = S.rhythmProgress(store.rhythmLog(), habits, { from: today });
+  const blockDays = store.settings().studyDays;
+  const next = S.nextBlockDay(today, blockDays);
+  const isBlockToday = next && S.daysBetween(next, today) === 0;
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const habitList = habits.length
+    ? `<ul class="rhythm-habits">
+         ${r.today
+           .map(
+             ({ habit, slots, done, total }) => `
+           <li class="rhythm-habit">
+             <div class="rhythm-habit-head">
+               <span class="rhythm-habit-title">${habit.courseId && courseById(habit.courseId) ? dot(courseById(habit.courseId).color) : ''}${esc(habit.title)}</span>
+               <span class="muted">${done}/${total}</span>
+             </div>
+             ${habit.detail ? `<div class="task-detail">${esc(habit.detail)}</div>` : ''}
+             <div class="slots">
+               ${slots
+                 .map(
+                   (s) => `
+                 <button class="slot ${s.done ? 'on' : ''}" data-action="tick-rhythm" data-rkey="${esc(s.key)}"
+                         aria-pressed="${s.done}">
+                   <span class="slot-box" aria-hidden="true">${s.done ? '✓' : ''}</span>
+                   ${esc(store.SLOT_LABELS[s.slot] || s.slot)}
+                 </button>`
+                 )
+                 .join('')}
+             </div>
+           </li>`
+           )
+           .join('')}
+       </ul>
+       <div class="rhythm-week" role="img" aria-label="The last seven days">
+         ${r.week
+           .map((d) => {
+             const state = !d.total ? 'none' : d.done === d.total ? 'full' : d.done ? 'some' : 'none';
+             const isToday = S.daysBetween(d.date, today) === 0;
+             return `<span class="rhythm-dot is-${state} ${isToday ? 'is-today' : ''}"
+                           title="${esc(S.formatDate(d.date))}: ${d.done} of ${d.total}"></span>`;
+           })
+           .join('')}
+         <small class="muted">${r.streak ? `${r.streak} day${r.streak === 1 ? '' : 's'} running` : 'start whenever'}</small>
+       </div>`
+    : `<p class="note">No daily habits set. Add one in Settings — a few minutes of vocabulary is plenty.</p>`;
+
+  const load = next ? loadOn(next) : 0;
+  const blockLine = !next
+    ? 'No reading days set, so the books are spread over every day. Pick your days in Settings.'
+    : isBlockToday
+      ? `<strong>Today is a reading day.</strong> ${load ? `${S.formatMinutes(load)} of reading is blocked in — sit down and get after it.` : 'Nothing left on it.'}`
+      : `Next reading block: <strong>${esc(S.formatDate(next, { weekday: 'long' }))}</strong>${
+          load ? ` · ${S.formatMinutes(load)}` : ''
+        }. The books wait for it; only the Bible reading carries on daily.`;
+
+  // Blocking a week into one day is the point, but a block nobody could sit
+  // through is worth saying out loud once, without turning it into a warning
+  // you have to dismiss. It is stated, not flagged red.
+  const TOO_LONG = 6 * 60;
+  const overloaded = load > TOO_LONG && blockDays.length < 4;
+
+  return `
+    <section class="card rhythm">
+      <div class="card-head">
+        <h2>Rhythm</h2>
+        <span class="card-when">${r.todayTotal ? `${r.todayDone}/${r.todayTotal} today` : ''}</span>
+      </div>
+      ${habitList}
+      <div class="rhythm-block">
+        <div class="rhythm-block-days">
+          ${dayNames
+            .map((n, i) => `<span class="rhythm-day ${blockDays.includes(i) ? 'on' : ''}">${n}</span>`)
+            .join('')}
+        </div>
+        <p class="note">${blockLine}</p>
+        ${
+          overloaded
+            ? `<p class="note">
+                 ${S.formatMinutes(load)} is more than one sitting holds. Your call: take it as a long
+                 haul, or tick another day in Settings and the app spreads it out.
+               </p>`
+            : ''
+        }
+      </div>
     </section>`;
 }
 
@@ -1921,6 +2203,7 @@ function viewToday() {
         : ''
     }
 
+    ${rhythmCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
     ${unscheduledSection({ collapsible: true })}
@@ -2010,7 +2293,7 @@ function viewPlan() {
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
             <div><span class="stat">${S.formatMinutes(w.remaining)}</span><small>of ${S.formatMinutes(w.total)}</small></div>
-            <div><span class="stat">${plan.days}</span><small>study days</small></div>
+            <div><span class="stat">${plan.days}</span><small>reading days</small></div>
             <div><span class="stat">${S.formatMinutes(plan.perDay)}</span><small>per day</small></div>
           </div>
           <p class="note pace ${pace.onTrack && !owed.length ? 'ok' : 'behind'}">
@@ -2546,8 +2829,13 @@ function viewSettings() {
     </section>
 
     <section class="card">
-      <h2>Study days</h2>
-      <p class="note">Reading is spread across the days you tick. Untick your day off.</p>
+      <h2>Reading days</h2>
+      <p class="note">
+        The days you block out for the books. Reading is packed into these and nowhere else, so
+        ticking only Monday puts the whole week's reading into one Monday sitting — which is a real
+        way to do it, and often a better one than twenty minutes a night. Bible reading ignores this
+        and stays a chapter a day.
+      </p>
       <div class="chips">
         ${dayNames
           .map(
@@ -2556,6 +2844,52 @@ function viewSettings() {
           )
           .join('')}
       </div>
+      <p class="note">
+        ${
+          s.studyDays.length === 1
+            ? `One block a week, on ${esc(dayNames[s.studyDays[0]])}.`
+            : `${s.studyDays.length} reading days a week.`
+        }
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Daily rhythm</h2>
+      <p class="note">
+        The small daily things — vocabulary and the like — that work by repetition rather than by
+        sitting down for an hour. These never appear as work owed and never go red: they are boxes to
+        tick on the home page, and that is all.
+      </p>
+      ${
+        store.rhythm().length
+          ? store
+              .rhythm()
+              .map(
+                (h) => `
+        <div class="habit-edit">
+          <div class="row">
+            <label for="habit-${esc(h.id)}">${h.courseId && courseById(h.courseId) ? dot(courseById(h.courseId).color) : ''}Name</label>
+            <input id="habit-${esc(h.id)}" type="text" value="${esc(h.title)}" data-habit-field="title" data-habit="${esc(h.id)}">
+          </div>
+          <div class="row">
+            <label for="habit-note-${esc(h.id)}">Note</label>
+            <input id="habit-note-${esc(h.id)}" type="text" value="${esc(h.detail || '')}"
+                   placeholder="optional" data-habit-field="detail" data-habit="${esc(h.id)}">
+          </div>
+          <div class="chips">
+            ${store.SLOT_ORDER.map(
+              (slot) =>
+                `<button class="chip ${h.slots.includes(slot) ? 'on' : ''}" data-action="toggle-slot"
+                         data-habit="${esc(h.id)}" data-slot="${slot}">${esc(store.SLOT_LABELS[slot])}</button>`
+            ).join('')}
+            <button class="chip danger" data-action="drop-habit" data-habit="${esc(h.id)}">Remove</button>
+          </div>
+        </div>`
+              )
+              .join('')
+          : '<p class="empty">Nothing daily set.</p>'
+      }
+      <button class="btn ghost" data-action="add-habit">Add a daily habit</button>
     </section>
 
     <section class="card">
@@ -3425,6 +3759,41 @@ document.addEventListener('click', async (e) => {
     return refresh();
   }
 
+  if (action === 'tick-rhythm') {
+    store.toggleRhythmDone(el.dataset.rkey);
+    return refresh();
+  }
+
+  if (action === 'add-habit') {
+    const title = prompt('What do you want to do a little of each day?', 'Greek paradigms');
+    if (!title) return;
+    const id = `habit-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
+    if (store.rhythm().some((h) => h.id === id)) return;
+    store.setRhythm([...store.rhythm(), { id, title: title.trim(), detail: '', courseId: null, slots: [...store.SLOT_ORDER] }]);
+    return refresh();
+  }
+
+  if (action === 'drop-habit') {
+    const habit = store.rhythm().find((h) => h.id === el.dataset.habit);
+    if (!habit || !confirm(`Stop tracking "${habit.title}"?`)) return;
+    store.setRhythm(store.rhythm().filter((h) => h.id !== habit.id));
+    return refresh();
+  }
+
+  if (action === 'toggle-slot') {
+    const { habit: id, slot } = el.dataset;
+    store.setRhythm(
+      store.rhythm().map((h) => {
+        if (h.id !== id) return h;
+        const has = h.slots.includes(slot);
+        const slots = has ? h.slots.filter((s) => s !== slot) : store.SLOT_ORDER.filter((s) => h.slots.includes(s) || s === slot);
+        // A habit with no times of day left has nothing to tick.
+        return slots.length ? { ...h, slots } : h;
+      })
+    );
+    return refresh();
+  }
+
   if (action === 'toggle-day') {
     const day = Number(el.dataset.day);
     const days = store.settings().studyDays;
@@ -3522,6 +3891,17 @@ document.addEventListener('change', (e) => {
     if (time.value) next[time.dataset.classtime] = time.value;
     else delete next[time.dataset.classtime];
     store.updateSettings({ classTimes: next });
+    return refresh();
+  }
+
+  const habitField = e.target.closest('[data-habit-field]');
+  if (habitField) {
+    const { habit: id, habitField: field } = habitField.dataset;
+    const value = habitField.value.trim();
+    // Renaming must not rename the id: the ticks you have already made are
+    // filed under it, and a streak should survive a change of wording.
+    if (field === 'title' && !value) return refresh();
+    store.setRhythm(store.rhythm().map((h) => (h.id === id ? { ...h, [field]: value } : h)));
     return refresh();
   }
 
