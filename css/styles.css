@@ -1334,3 +1334,111 @@ summary {
 .card.fold[open] > summary {
   margin-bottom: 10px;
 }
+
+/* ---------- the stopwatch and the week's measured time ---------- */
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.amount.timer {
+  cursor: pointer;
+  color: var(--text);
+}
+
+.amount.timer.running {
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-total {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+  margin: 2px 0 6px;
+}
+
+.note.running-now {
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  border-radius: 9px;
+  padding: 8px 10px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.note.running-now [data-elapsed] {
+  font-variant-numeric: tabular-nums;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.week-day {
+  text-align: center;
+}
+
+.week-day small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.week-day.is-today small {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.week-bar {
+  height: 44px;
+  background: var(--bg-elev-2);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.week-bar > div {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 6px;
+  min-height: 2px;
+}
+
+.week-day.is-today .week-bar > div {
+  background: var(--ok);
+}
+
+.week-courses {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+.week-courses li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+}
+
+.week-courses li span {
+  margin-left: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

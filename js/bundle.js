@@ -37,7 +37,9 @@ const EMPTY = {
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
-  sessionDates: {} // "courseId|sessionId" -> ISO date, for meetings you arrange
+  sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
+  running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
+  timeLog: [] // [{ key, courseId, minutes, at }] — sittings, for weekly totals
 };
 
 function read() {
@@ -54,7 +56,9 @@ function read() {
       fired: parsed.fired || {},
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
-      sessionDates: parsed.sessionDates || {}
+      sessionDates: parsed.sessionDates || {},
+      running: parsed.running || null,
+      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
     };
   } catch {
     return structuredClone(EMPTY);
@@ -210,6 +214,60 @@ function setOverride(key, pages) {
   persist();
 }
 
+/* ---------- the stopwatch ---------- */
+
+// A sitting longer than this is somebody who forgot to press stop, not somebody
+// who worked through the night. It is capped rather than discarded, so the work
+// still counts for something and the number stays believable.
+const LONGEST_SITTING = 6 * 60;
+const LOG_LIMIT = 400;
+
+const runningTimer = () => state.running;
+
+/**
+ * Only one thing can be timed at once, which is how working actually goes.
+ * Starting something else banks the sitting in progress first.
+ */
+function startTimer(key, courseId) {
+  const banked = stopTimer();
+  state.running = { key, courseId: courseId || null, startedAt: new Date().toISOString() };
+  persist();
+  return banked;
+}
+
+/** Stop and bank whatever was running. Returns what was recorded, or null. */
+function stopTimer() {
+  const running = state.running;
+  state.running = null;
+  if (!running) {
+    persist();
+    return null;
+  }
+  const minutes = Math.min(LONGEST_SITTING, Math.round((Date.now() - new Date(running.startedAt).getTime()) / 60000));
+  if (minutes > 0) {
+    state.timeLog = [
+      ...state.timeLog,
+      { key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
+    ].slice(-LOG_LIMIT);
+  }
+  persist();
+  return { ...running, minutes };
+}
+
+function cancelTimer() {
+  state.running = null;
+  persist();
+}
+
+/** Record time worked away from the app, or corrected by hand. */
+function logTime(key, courseId, minutes) {
+  if (!minutes) return;
+  state.timeLog = [...state.timeLog, { key, courseId: courseId || null, minutes, at: new Date().toISOString() }].slice(-LOG_LIMIT);
+  persist();
+}
+
+const timeLog = () => state.timeLog;
+
 /* ---------- a record of things going wrong ---------- */
 
 const PROBLEM_KEY = 'seminary.problems';
@@ -277,7 +335,9 @@ function importData(json) {
     fired: parsed.fired || {},
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
-    sessionDates: parsed.sessionDates || {}
+    sessionDates: parsed.sessionDates || {},
+    running: parsed.running || null,
+    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
   };
   persist();
 }
@@ -293,7 +353,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -807,6 +867,58 @@ function overdue(tasks, { from = new Date() } = {}) {
   return tasks.filter((t) => !t.complete && t.due && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
 }
 
+/* ---------- how long you have actually worked ---------- */
+
+/** Monday of the week containing `date` — where a study week is taken to start. */
+function weekStart(date = new Date()) {
+  const d = parseDay(date);
+  // getDay() is 0 for Sunday, so Sunday belongs to the week that just ended.
+  const back = (d.getDay() + 6) % 7;
+  return addDays(d, -back);
+}
+
+/**
+ * Time worked in a week, from the log of sittings plus whatever is on the clock
+ * right now. Grouped by course and by day, because "how long this week" is only
+ * useful next to where it went.
+ */
+function weekOfWork(log, { from = weekStart(), running = null, now = new Date() } = {}) {
+  const to = addDays(from, 7);
+  const entries = (log || []).filter((e) => {
+    const at = new Date(e.at);
+    return at >= from && at < to;
+  });
+
+  // The sitting in progress counts toward today, so the total moves as you work.
+  const live = running
+    ? Math.max(0, Math.round((now.getTime() - new Date(running.startedAt).getTime()) / 60000))
+    : 0;
+  const all = live > 0 ? [...entries, { ...running, minutes: live, at: now.toISOString() }] : entries;
+
+  const byCourse = new Map();
+  const byDay = Array.from({ length: 7 }, (_, i) => ({ date: addDays(from, i), minutes: 0 }));
+  for (const e of all) {
+    byCourse.set(e.courseId || 'other', (byCourse.get(e.courseId || 'other') || 0) + e.minutes);
+    const i = daysBetween(from, new Date(e.at));
+    if (i >= 0 && i < 7) byDay[i].minutes += e.minutes;
+  }
+
+  return {
+    from,
+    total: all.reduce((sum, e) => sum + e.minutes, 0),
+    live,
+    sittings: all.length,
+    byCourse,
+    byDay,
+    entries: entries.slice().sort((a, b) => new Date(b.at) - new Date(a.at))
+  };
+}
+
+/** Minutes logged against one item, whenever they were worked. */
+function timeOn(log, key) {
+  return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
+}
+
 /** Work that exists but has no date yet, because you arrange it yourself. */
 function unscheduled(tasks) {
   return tasks.filter((t) => t.undated && !t.complete);
@@ -993,7 +1105,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, unscheduled, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, unscheduled, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -1285,7 +1397,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v20 · 2026-08-13';
+const BUILD = 'v21 · 2026-08-14';
 
 let DATA = null;
 let TASKS = [];
@@ -1451,7 +1563,68 @@ function materialButton(task) {
   return read + open;
 }
 
-function taskLine(task, { showCourse = false, chunk = null, asPassage = false } = {}) {
+/**
+ * Start or stop the stopwatch on a piece of work.
+ *
+ * Only one thing runs at a time, and the elapsed figure is worked out from the
+ * moment it started rather than counted up — so it keeps time while the app is
+ * shut, backgrounded, or the phone is asleep, and comes back right.
+ */
+function timerButton(task) {
+  const running = store.runningTimer();
+  const mine = running && running.key === task.key;
+  if (mine) {
+    return `<button class="amount timer running" data-action="stop-timer" data-key="${esc(task.key)}">
+              <span data-elapsed="${esc(running.startedAt)}">${esc(elapsedClock(running))}</span> ■
+            </button>`;
+  }
+  return `<button class="amount timer" data-action="start-timer" data-key="${esc(task.key)}"
+                  data-course="${esc(task.courseId)}" title="Start timing ${esc(task.title)}">▶ Start</button>`;
+}
+
+/**
+ * A finished sitting counts twice over: toward the week's measured total, which
+ * the store has already recorded, and toward the item's own progress, so a paper
+ * still shows how much of its estimate is behind you.
+ */
+function creditTime(banked) {
+  const task = TASKS.find((t) => t.key === banked.key);
+  if (task?.unit === 'project') store.setProgress(banked.key, store.progressFor(banked.key) + banked.minutes);
+}
+
+/** Whole minutes on the clock for a running timer. */
+function elapsedMinutes(running) {
+  return Math.max(0, Math.round((Date.now() - new Date(running.startedAt).getTime()) / 60000));
+}
+
+/** The running figure, as a stopwatch reads: 4:07, or 1:04:07 past the hour. */
+function elapsedClock(running) {
+  const secs = Math.max(0, Math.floor((Date.now() - new Date(running.startedAt).getTime()) / 1000));
+  const pad = (n) => String(n).padStart(2, '0');
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  return h ? `${h}:${pad(m)}:${pad(secs % 60)}` : `${m}:${pad(secs % 60)}`;
+}
+
+/**
+ * Keep the running figure moving. Only the digits are repainted — redrawing the
+ * whole view once a second is how you make a phone hot.
+ */
+let tick = null;
+function watchTimer() {
+  clearInterval(tick);
+  tick = null;
+  const running = store.runningTimer();
+  if (!running) return;
+  const paint = () => {
+    const shown = elapsedClock(running);
+    for (const el of document.querySelectorAll('[data-elapsed]')) el.textContent = shown;
+  };
+  paint();
+  tick = setInterval(paint, 1000);
+}
+
+function taskLine(task, { showCourse = false, chunk = null, asPassage = false, withTimer = false } = {}) {
   const done = task.complete;
   // A part-way chunk is ticked once you have read past its last page. A whole
   // item is ticked only when it is marked done — page arithmetic cannot answer
@@ -1507,10 +1680,13 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false } 
         <div class="tags">${flags}</div>
       </div>
       ${materialButton(task)}
-      <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
-              ${task.unit === 'pages' && !chunk ? `data-action="edit-pages" data-key="${esc(task.key)}"` : 'disabled'}>
-        ${esc(amount)}
-      </button>
+      <div class="task-actions">
+        ${withTimer ? timerButton(task) : ''}
+        <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
+                ${task.unit === 'pages' && !chunk ? `data-action="edit-pages" data-key="${esc(task.key)}"` : 'disabled'}>
+          ${esc(amount)}
+        </button>
+      </div>
     </li>`;
 }
 
@@ -1529,6 +1705,76 @@ function dayRow(day, courseColor) {
 }
 
 /* ---------------- views ---------------- */
+
+/**
+ * How long you have actually worked this week.
+ *
+ * Everything else in the app is an estimate of how long something ought to
+ * take. This is the only number that is measured, so it is kept separate and
+ * plain: the total, where it went, and which days it happened on.
+ */
+function weekOfWorkCard() {
+  const running = store.runningTimer();
+  const week = S.weekOfWork(store.timeLog(), { running });
+  if (!week.total && !running) {
+    return `
+      <section class="card">
+        <h2>Time this week</h2>
+        <p class="note">
+          Nothing timed yet. Press <strong>▶ Start</strong> on a paper or project when you sit down
+          to it, and the time lands here — the clock keeps running while the app is shut.
+        </p>
+      </section>`;
+  }
+
+  const named = new Map(DATA.courses.map((c) => [c.id, c]));
+  const busiest = Math.max(1, ...week.byDay.map((d) => d.minutes));
+  const today = S.startOfToday();
+
+  return `
+    <section class="card">
+      <div class="card-head">
+        <h2>Time this week</h2>
+        <span class="card-when">since ${esc(S.formatDate(week.from))}</span>
+      </div>
+      <div class="week-total">${S.formatMinutes(week.total)}</div>
+      ${
+        running
+          ? `<p class="note running-now">
+               Running now on <strong>${esc(TASKS.find((t) => t.key === running.key)?.title || 'something')}</strong> —
+               <span data-elapsed="${esc(running.startedAt)}">${esc(elapsedClock(running))}</span>.
+               <button class="btn small" data-action="stop-timer" data-key="${esc(running.key)}">Stop</button>
+             </p>`
+          : ''
+      }
+      <div class="week-days">
+        ${week.byDay
+          .map((d) => {
+            const isToday = S.daysBetween(d.date, today) === 0;
+            return `
+          <div class="week-day ${isToday ? 'is-today' : ''}" title="${esc(S.formatDate(d.date))}: ${esc(S.formatMinutes(d.minutes))}">
+            <div class="week-bar"><div style="height:${Math.round((d.minutes / busiest) * 100)}%"></div></div>
+            <small>${esc(S.formatDate(d.date, { weekday: 'narrow' }))}</small>
+          </div>`;
+          })
+          .join('')}
+      </div>
+      ${
+        week.byCourse.size
+          ? `<ul class="week-courses">
+               ${[...week.byCourse.entries()]
+                 .sort((a, b) => b[1] - a[1])
+                 .map(([id, minutes]) => {
+                   const course = named.get(id);
+                   return `<li>${course ? dot(course.color) : ''}${esc(course?.short || course?.name || 'Other')}
+                           <span>${esc(S.formatMinutes(minutes))}</span></li>`;
+                 })
+                 .join('')}
+             </ul>`
+          : ''
+      }
+    </section>`;
+}
 
 /**
  * What to say when you are behind.
@@ -1625,7 +1871,7 @@ function todaySections(bucket) {
           <span class="card-when">${scripture ? esc(course.short || course.name) + ' · ' : ''}${S.formatMinutes(minutes)}</span>
         </div>
         <ul class="tasks">
-          ${items.map((a) => taskLine({ ...a.task, color: course.color }, { chunk: a, asPassage: scripture })).join('')}
+          ${items.map((a) => taskLine({ ...a.task, color: course.color }, { chunk: a, asPassage: scripture, withTimer: true })).join('')}
         </ul>
       </section>`;
     })
@@ -1676,6 +1922,7 @@ function viewToday() {
     }
 
     ${todaySections(bucket)}
+    ${weekOfWorkCard()}
     ${unscheduledSection({ collapsible: true })}
 
     ${
@@ -1691,7 +1938,10 @@ function viewToday() {
                      <div class="task-title">${dot(task.color)}${esc(task.title)}</div>
                      <div class="task-detail">${esc(task.courseName)} · due ${esc(S.formatDate(S.dueAt(task)))} · ${S.formatMinutes(task.remaining)} left over ${pace.days} study days</div>
                    </div>
-                   <button class="amount editable" data-action="log-project" data-key="${esc(task.key)}">+${S.formatMinutes(pace.perDay)}</button>
+                   <div class="task-actions">
+                     ${timerButton(task)}
+                     <button class="amount editable" data-action="log-project" data-key="${esc(task.key)}">+${S.formatMinutes(pace.perDay)}</button>
+                   </div>
                  </li>`
                  )
                  .join('')}
@@ -1803,7 +2053,10 @@ function viewPlan() {
                     <div class="task-detail">${esc(task.courseName)} · due ${esc(S.formatDate(S.dueAt(task)))} (${esc(S.relativeDay(S.dueAt(task)))})</div>
                     <div class="task-detail muted">${S.formatMinutes(task.read)} logged · ${S.formatMinutes(task.remaining)} left · aim for ${S.formatMinutes(pace.perDay)}/day</div>
                   </div>
-                  <button class="amount editable" data-action="log-project" data-key="${esc(task.key)}">log</button>
+                  <div class="task-actions">
+                    ${timerButton(task)}
+                    <button class="amount editable" data-action="log-project" data-key="${esc(task.key)}">log</button>
+                  </div>
                 </li>`
                 )
                 .join('')}
@@ -1986,7 +2239,7 @@ function unscheduledSection({ collapsible = false } = {}) {
                      aria-label="Date for ${esc(group.task.topic)}"
                      data-sessiondate="${esc(group.courseId)}|${esc(group.sessionId)}">
             </div>
-            <ul class="tasks">${group.items.map((t) => taskLine(t)).join('')}</ul>
+            <ul class="tasks">${group.items.map((t) => taskLine(t, { withTimer: true })).join('')}</ul>
           </div>`
           )
           .join('')}`;
@@ -2421,6 +2674,8 @@ function render() {
   }
 
   if (name === 'settings') showDiagnostics();
+
+  watchTimer();
 }
 
 /**
@@ -3145,6 +3400,19 @@ document.addEventListener('click', async (e) => {
     if (answer === null) return;
     const n = parseInt(answer, 10);
     store.setOverride(key, Number.isFinite(n) && n > 0 ? n : null);
+    return refresh();
+  }
+
+  if (action === 'start-timer') {
+    const banked = store.startTimer(key, el.dataset.course);
+    // Starting something else banks whatever was already running.
+    if (banked?.minutes) creditTime(banked);
+    return refresh();
+  }
+
+  if (action === 'stop-timer') {
+    const banked = store.stopTimer();
+    if (banked) creditTime(banked);
     return refresh();
   }
 

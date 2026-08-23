@@ -470,9 +470,13 @@
             {
               "order": 1,
               "source": "Going Deeper with NT Greek",
-              "ref": "ch. 2",
-              "estPages": 30,
-              "estimated": true
+              "ref": "ch. 2 — pp. 51–74",
+              "ranges": [
+                [
+                  51,
+                  74
+                ]
+              ]
             },
             {
               "order": 2,

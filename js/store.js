@@ -35,7 +35,9 @@ const EMPTY = {
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
-  sessionDates: {} // "courseId|sessionId" -> ISO date, for meetings you arrange
+  sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
+  running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
+  timeLog: [] // [{ key, courseId, minutes, at }] — sittings, for weekly totals
 };
 
 function read() {
@@ -52,7 +54,9 @@ function read() {
       fired: parsed.fired || {},
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
-      sessionDates: parsed.sessionDates || {}
+      sessionDates: parsed.sessionDates || {},
+      running: parsed.running || null,
+      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
     };
   } catch {
     return structuredClone(EMPTY);
@@ -208,6 +212,60 @@ export function setOverride(key, pages) {
   persist();
 }
 
+/* ---------- the stopwatch ---------- */
+
+// A sitting longer than this is somebody who forgot to press stop, not somebody
+// who worked through the night. It is capped rather than discarded, so the work
+// still counts for something and the number stays believable.
+const LONGEST_SITTING = 6 * 60;
+const LOG_LIMIT = 400;
+
+export const runningTimer = () => state.running;
+
+/**
+ * Only one thing can be timed at once, which is how working actually goes.
+ * Starting something else banks the sitting in progress first.
+ */
+export function startTimer(key, courseId) {
+  const banked = stopTimer();
+  state.running = { key, courseId: courseId || null, startedAt: new Date().toISOString() };
+  persist();
+  return banked;
+}
+
+/** Stop and bank whatever was running. Returns what was recorded, or null. */
+export function stopTimer() {
+  const running = state.running;
+  state.running = null;
+  if (!running) {
+    persist();
+    return null;
+  }
+  const minutes = Math.min(LONGEST_SITTING, Math.round((Date.now() - new Date(running.startedAt).getTime()) / 60000));
+  if (minutes > 0) {
+    state.timeLog = [
+      ...state.timeLog,
+      { key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
+    ].slice(-LOG_LIMIT);
+  }
+  persist();
+  return { ...running, minutes };
+}
+
+export function cancelTimer() {
+  state.running = null;
+  persist();
+}
+
+/** Record time worked away from the app, or corrected by hand. */
+export function logTime(key, courseId, minutes) {
+  if (!minutes) return;
+  state.timeLog = [...state.timeLog, { key, courseId: courseId || null, minutes, at: new Date().toISOString() }].slice(-LOG_LIMIT);
+  persist();
+}
+
+export const timeLog = () => state.timeLog;
+
 /* ---------- a record of things going wrong ---------- */
 
 const PROBLEM_KEY = 'seminary.problems';
@@ -275,7 +333,9 @@ export function importData(json) {
     fired: parsed.fired || {},
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
-    sessionDates: parsed.sessionDates || {}
+    sessionDates: parsed.sessionDates || {},
+    running: parsed.running || null,
+    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : []
   };
   persist();
 }

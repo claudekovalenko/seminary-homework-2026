@@ -508,6 +508,58 @@ export function overdue(tasks, { from = new Date() } = {}) {
   return tasks.filter((t) => !t.complete && t.due && dueAt(t) < from).sort((a, b) => dueAt(a) - dueAt(b));
 }
 
+/* ---------- how long you have actually worked ---------- */
+
+/** Monday of the week containing `date` — where a study week is taken to start. */
+export function weekStart(date = new Date()) {
+  const d = parseDay(date);
+  // getDay() is 0 for Sunday, so Sunday belongs to the week that just ended.
+  const back = (d.getDay() + 6) % 7;
+  return addDays(d, -back);
+}
+
+/**
+ * Time worked in a week, from the log of sittings plus whatever is on the clock
+ * right now. Grouped by course and by day, because "how long this week" is only
+ * useful next to where it went.
+ */
+export function weekOfWork(log, { from = weekStart(), running = null, now = new Date() } = {}) {
+  const to = addDays(from, 7);
+  const entries = (log || []).filter((e) => {
+    const at = new Date(e.at);
+    return at >= from && at < to;
+  });
+
+  // The sitting in progress counts toward today, so the total moves as you work.
+  const live = running
+    ? Math.max(0, Math.round((now.getTime() - new Date(running.startedAt).getTime()) / 60000))
+    : 0;
+  const all = live > 0 ? [...entries, { ...running, minutes: live, at: now.toISOString() }] : entries;
+
+  const byCourse = new Map();
+  const byDay = Array.from({ length: 7 }, (_, i) => ({ date: addDays(from, i), minutes: 0 }));
+  for (const e of all) {
+    byCourse.set(e.courseId || 'other', (byCourse.get(e.courseId || 'other') || 0) + e.minutes);
+    const i = daysBetween(from, new Date(e.at));
+    if (i >= 0 && i < 7) byDay[i].minutes += e.minutes;
+  }
+
+  return {
+    from,
+    total: all.reduce((sum, e) => sum + e.minutes, 0),
+    live,
+    sittings: all.length,
+    byCourse,
+    byDay,
+    entries: entries.slice().sort((a, b) => new Date(b.at) - new Date(a.at))
+  };
+}
+
+/** Minutes logged against one item, whenever they were worked. */
+export function timeOn(log, key) {
+  return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
+}
+
 /** Work that exists but has no date yet, because you arrange it yourself. */
 export function unscheduled(tasks) {
   return tasks.filter((t) => t.undated && !t.complete);
