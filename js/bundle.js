@@ -838,7 +838,12 @@ function buildTasks(data) {
           unit: isProject ? 'project' : 'task',
           order: 100 + i,
           title: a.title,
-          detail: a.note || (a.atClass ? 'At the beginning of class' : 'Due before class'),
+          // A note says what the work is; the timing line says when it is due.
+          // Both are worth showing, so a note adds to that line rather than
+          // replacing it and quietly losing the deadline.
+          detail: [a.note, a.atClass ? 'At the beginning of class' : 'Due before class']
+            .filter(Boolean)
+            .join(' — '),
           atClass: Boolean(a.atClass),
           startPlanning: a.startPlanning || null,
           raw: a,
@@ -1601,7 +1606,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v22 · 2026-08-23';
+const BUILD = 'v23 · 2026-08-26';
 
 let DATA = null;
 let TASKS = [];

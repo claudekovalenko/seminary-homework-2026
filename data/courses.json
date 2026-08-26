@@ -7,7 +7,8 @@
     "pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.",
     "classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".",
     "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.",
-    "material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week."
+    "material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week.",
+    "Greek 9/1 assignments are as announced in class on 8/25: the first Translation & Diagram is John 1:1, not John 1:2, and chapter summaries were added. The rest of the printed John sequence is unchanged."
   ],
   "courses": [
     {
@@ -489,11 +490,6 @@
           ],
           "assignments": [
             {
-              "title": "T&D: John 1:1",
-              "type": "translation",
-              "verses": 1
-            },
-            {
               "title": "Quiz: ch. 1 vocab",
               "type": "quiz",
               "atClass": true
@@ -522,14 +518,21 @@
           ],
           "assignments": [
             {
-              "title": "T&D: John 1:2",
+              "title": "T&D: John 1:1",
               "type": "translation",
-              "verses": 1
+              "verses": 1,
+              "note": "Translation & sentence diagram, uploaded to Populi"
+            },
+            {
+              "title": "Chapter summaries — GDNTG ch. 3",
+              "type": "summary",
+              "note": "Summaries of the week’s reading"
             },
             {
               "title": "Quiz: ch. 2",
               "type": "quiz",
-              "atClass": true
+              "atClass": true,
+              "note": "Nominative & accusative categories, the nominative pecking order, and ch. 2 vocabulary"
             }
           ]
         },
