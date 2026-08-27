@@ -5,7 +5,7 @@
     <p id="state">idle</p>
     <script type="module">
       import { typeset, degrade, imageToPdf, resetFaces } from './page.js';
-      import { HEAD, FOLIO, BODY, NOTES, EMPHASIS } from './truth.js';
+      import { HEAD, FOLIO, BODY, NOTES, EMPHASIS, GREEK } from './truth.js';
       import * as ocr from '../../js/ocr.js';
 
       const state = document.getElementById('state');
@@ -37,6 +37,35 @@
         typeset(ctx, { text: NOTES, x: left + column + gutter, y: y + 60, width: column, size: 21, leading: 34 });
         ctx.font = '26px Liberation Serif, serif';
         ctx.fillText(FOLIO, left + column, 2130);
+        return canvas;
+      }
+
+      // A second page, for the Greek. Kept separate so the first page stays
+      // exactly the page every earlier measurement was taken on.
+      function greekPage() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1700;
+        canvas.height = 2200;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '30px Liberation Serif, serif';
+        ctx.fillStyle = '#111';
+        ctx.fillText(HEAD, 250, 190);
+        // DejaVu Serif carries polytonic Greek; Liberation does not, and the
+        // breathings would come out as empty boxes.
+        typeset(ctx, {
+          text: GREEK,
+          x: 250,
+          y: 320,
+          width: 1200,
+          size: 36,
+          leading: 60,
+          indent: 60,
+          font: 'DejaVu Serif, serif'
+        });
+        ctx.font = '28px Liberation Serif, serif';
+        ctx.fillText('48', 250 + 600, 2110);
         return canvas;
       }
 
@@ -77,16 +106,20 @@
         return ocr.debugPage(pdf);
       };
 
-      globalThis.runBench = async (mode = 'scan', skew = 0.9) => {
+      globalThis.runBench = async (mode = 'scan', skew = 0.9, languages = 'eng') => {
         state.textContent = 'building page';
         await document.fonts.ready;
         const clean = mode === 'columns' ? columnPage() : bookPage();
+        const extra = mode === 'scan' ? [greekPage()] : [];
         // 'clean' grades a page that needs no repair, to catch preprocessing
         // that helps a photocopy by hurting everything else.
-        const pdf = await imageToPdf(mode === 'clean' ? clean : degrade(clean, 7, skew), mode === 'clean' ? 0.92 : 0.55);
+        const sheets = [clean, ...extra].map((sheet) => (mode === 'clean' ? sheet : degrade(sheet, 7, skew)));
+        const pdf = await imageToPdf(sheets, mode === 'clean' ? 0.92 : 0.55);
         state.textContent = 'reading';
         const started = performance.now();
-        const result = await ocr.ocrPdf(pdf, (p) => (state.textContent = p.stage + ' ' + p.done + '/' + p.total));
+        const result = await ocr.ocrPdf(pdf, (p) => (state.textContent = p.stage + ' ' + p.done + '/' + p.total), {
+          languages: languages.split('+')
+        });
         state.textContent = 'done';
         return {
           ms: Math.round(performance.now() - started),

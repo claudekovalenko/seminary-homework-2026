@@ -63,6 +63,16 @@ read as columns rather than straight across the gutter, footnotes stay at the
 foot, the running head and the page number go, and every word is checked against
 an English word list without touching the vocabulary the book itself keeps using.
 
+**Greek is read as Greek.** The reading for this term is full of Koine, and an
+English-only OCR renders a line of it as Latin gibberish — which is worse than
+leaving it out, because it looks like text. A Greek model is loaded alongside
+the English one, so <span lang="grc">ἐν ἀρχῇ ἦν ὁ λόγος</span> comes back as
+that, breathings and accents included, whether it is a whole quotation or one
+word inside an English sentence. On the benchmark's Greek page: 100% of the
+Greek characters lost before, 5% character error after, with the English on the
+same run completely unchanged. It costs about 2 MB more the first time and
+roughly a second more per page; Settings → Languages turns it off.
+
 **Italic and bold survive.** The engine will not say which words were
 emphasised — its modern model reports every word as ordinary and every font name
 as blank — so the app measures the page instead: a word whose stems lean is
@@ -76,14 +86,16 @@ the result, so each of those decisions was made against a number:
 
 | page                          | before          | after           |
 | ----------------------------- | --------------- | --------------- |
-| photocopy, tilted 0.9 degrees | 18.78% / 70.03% | 0.34% / 2.61%   |
-| photocopy, tilted 3 degrees   | 25.95% / 100%   | 0.14% / 2.28%   |
-| two columns                   | 82.23% / 100%   | 5.74% / 28.34%  |
-| a clean scan                  | 2.09% / 6.51%   | 0.00% / 1.63%   |
+| photocopy, tilted 0.9 degrees | 18.78% / 70.03% | 0.26% / 3.26%   |
+| photocopy, tilted 3 degrees   | 25.95% / 100%   | 0.26% / 3.58%   |
+| two columns                   | 82.23% / 100%   | 5.54% / 28.34%  |
+| a clean scan                  | 2.09% / 6.51%   | 0.00% / 2.28%   |
+| a page of Greek               | 100%            | 5.36%           |
 
-Character error rate on the body text, then on the footnotes. Emphasis is scored
-separately, and on the same page comes back at 5 of 5 italic words and 1 of 1
-bold, with nothing else marked. See `tools/bench/README.md` to run it. `node tools/test.mjs` checks the parts that
+Character error rate on the body text, then on the footnotes; the Greek page is
+scored on its Greek. Emphasis is scored separately, and comes back at 5 of 5
+italic words and 1 of 1 bold with nothing else marked. See
+`tools/bench/README.md` to run it. `node tools/test.mjs` checks the parts that
 need no browser — hyphens broken across lines and pages, word repair, and the
 image passes.
 

@@ -6,7 +6,7 @@ import { emphasisRuns } from './text.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v24 · 2026-08-27';
+const BUILD = 'v25 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -1381,6 +1381,14 @@ function viewFiles() {
         uses repeatedly is left alone: names and technical terms are safe.
       </p>
       <p class="note">
+        <strong>Greek comes across too.</strong> A scan of a page with Koine on it is read
+        with a Greek model beside the English one, so <span lang="grc">ἐν ἀρχῇ ἦν ὁ λόγος</span>
+        arrives as Greek — accents, breathings and all — instead of as the Latin gibberish an
+        English-only reading makes of it. It works on a single word inside an English sentence
+        as well as on a whole quotation. Turn it off in Settings if you would rather not fetch
+        the extra 2 MB. Hebrew is still not read.
+      </p>
+      <p class="note">
         <strong>Italic and bold come across too.</strong> The engine will not tell you which
         words were emphasised — it reports every word as ordinary — so the app measures the
         page instead: a word whose stems lean is italic, one whose strokes are thicker than
@@ -1545,6 +1553,28 @@ function viewSettings() {
           Number.isInteger(s.finishDay)
             ? `Aiming to have each week finished by <strong>${esc(dayNames[s.finishDay])}</strong>.`
             : 'No finish line — the plan runs up to each class.'
+        }
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Languages</h2>
+      <p class="note">
+        Which scripts OCR should expect when it reads a scan. English is always on. Greek is
+        worth having for this term's reading: without it a line of Koine is read as though it
+        were English and comes back as nonsense — with it, breathings and accents and all,
+        <span lang="grc">ἐν ἀρχῇ ἦν ὁ λόγος</span>. It costs about 2 MB more the first time and
+        a little longer per page, and it does not make the English any worse.
+      </p>
+      <div class="chips">
+        <button class="chip on" disabled>English</button>
+        <button class="chip ${s.readGreek ? 'on' : ''}" data-action="toggle-greek">Greek</button>
+      </div>
+      <p class="note">
+        ${
+          s.readGreek
+            ? 'Greek is read. Hebrew is not — there is no model for it here.'
+            : 'Greek will be read as though it were English, which is to say not at all.'
         }
       </p>
     </section>
@@ -2442,13 +2472,16 @@ document.addEventListener('click', async (e) => {
     const prior = el.dataset.resume ? await lib.getText(id).catch(() => null) : null;
     const from = prior?.ocr && prior.complete === false && prior.nextPage > 1 ? prior : null;
 
+    const languages = store.settings().readGreek ? ['eng', 'grc'] : ['eng'];
+
     if (
       !confirm(
         from
           ? `Carry on reading from page ${from.nextPage}?\n\n` +
               `The ${from.pageCount} pages already read are kept.`
           : `Read this scan with OCR?\n\n` +
-              `It downloads a ~${ocr.ENGINE_MB} MB engine and English word list the first time, ` +
+              `It downloads a ~${ocr.engineMb(languages)} MB engine and word list the first time` +
+              `${languages.includes('grc') ? ', Greek included' : ''}, ` +
               `then takes roughly 10–20 seconds per page. Everything happens on this device — ` +
               `nothing is uploaded.\n\n` +
               `Keep this screen in front of you while it works. Switching to another app pauses ` +
@@ -2514,6 +2547,7 @@ document.addEventListener('click', async (e) => {
         {
           startPage: from ? from.nextPage : 1,
           pages: from ? from.pages : [],
+          languages,
           onPage: ({ pages, lastPage, total }) => remember(ocr.summarise(pages, lastPage, total))
         }
       );
@@ -2534,8 +2568,12 @@ document.addEventListener('click', async (e) => {
          ${result.deskewed ? `Straightened ${result.deskewed} crooked page${result.deskewed === 1 ? '' : 's'}. ` : ''}
          ${result.notePages ? `Footnotes were found on ${result.notePages} page${result.notePages === 1 ? '' : 's'} and kept separate. ` : ''}
          ${result.emphasised ? `Kept the italics and bold on ${result.emphasised} word${result.emphasised === 1 ? '' : 's'}. ` : ''}
-         It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
-         still misreads the odd word, so check anything you quote against the PDF.</span>
+         ${
+           languages.includes('grc')
+             ? 'It read <strong>English and Greek</strong>; Hebrew still comes back as nonsense.'
+             : 'It read <strong>English only</strong> — turn on Greek in Settings if this book has any.'
+         }
+         It still misreads the odd word, so check anything you quote against the PDF.</span>
          ${
            result.poorPages?.length
              ? `<span class="note warn-note">It struggled with
@@ -2729,6 +2767,11 @@ document.addEventListener('click', async (e) => {
         return slots.length ? { ...h, slots } : h;
       })
     );
+    return refresh();
+  }
+
+  if (action === 'toggle-greek') {
+    store.updateSettings({ readGreek: !store.settings().readGreek });
     return refresh();
   }
 

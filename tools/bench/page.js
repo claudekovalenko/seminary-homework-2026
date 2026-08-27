@@ -162,12 +162,16 @@ export function degrade(canvas, seed = 7, skew = 0.9) {
   return out;
 }
 
-/** Wrap a JPEG in the smallest PDF that can hold it, so the real path is tested. */
-export async function imageToPdf(canvas, quality = 0.55) {
-  const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', quality));
-  const jpeg = new Uint8Array(await blob.arrayBuffer());
+/** Wrap the pages in the smallest PDF that can hold them, so the real path is tested. */
+export async function imageToPdf(canvases, quality = 0.55) {
+  const pages = Array.isArray(canvases) ? canvases : [canvases];
+  const jpegs = [];
+  for (const canvas of pages) {
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', quality));
+    jpegs.push(new Uint8Array(await blob.arrayBuffer()));
+  }
+
   const W = 612;
-  const H = Math.round((canvas.height / canvas.width) * W);
   const enc = new TextEncoder();
   const chunks = [];
   const offsets = [];
@@ -187,24 +191,41 @@ export async function imageToPdf(canvas, quality = 0.55) {
     push('endobj\n');
   };
 
+  // 1 catalog, 2 pages; then three objects per page: the page, its image, its
+  // content stream.
+  const pageId = (i) => 3 + i * 3;
+  const imageId = (i) => 4 + i * 3;
+  const contentId = (i) => 5 + i * 3;
+
   push('%PDF-1.4\n');
   object(1, '<< /Type /Catalog /Pages 2 0 R >>');
-  object(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  object(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
   object(
-    4,
-    `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} ` +
-      `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream`,
-    jpeg
+    2,
+    `<< /Type /Pages /Kids [${pages.map((_, i) => `${pageId(i)} 0 R`).join(' ')}] /Count ${pages.length} >>`
   );
-  const content = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
-  object(5, `<< /Length ${content.length} >>\nstream`, enc.encode(content));
+  pages.forEach((canvas, i) => {
+    const H = Math.round((canvas.height / canvas.width) * W);
+    object(
+      pageId(i),
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] ` +
+        `/Resources << /XObject << /Im0 ${imageId(i)} 0 R >> >> /Contents ${contentId(i)} 0 R >>`
+    );
+    object(
+      imageId(i),
+      `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} ` +
+        `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegs[i].length} >>\nstream`,
+      jpegs[i]
+    );
+    const content = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+    object(contentId(i), `<< /Length ${content.length} >>\nstream`, enc.encode(content));
+  });
 
+  const count = 2 + pages.length * 3;
   const xref = length;
-  let table = `xref\n0 6\n0000000000 65535 f \n`;
-  for (let n = 1; n <= 5; n++) table += `${String(offsets[n]).padStart(10, '0')} 00000 n \n`;
+  let table = `xref\n0 ${count + 1}\n0000000000 65535 f \n`;
+  for (let n = 1; n <= count; n++) table += `${String(offsets[n]).padStart(10, '0')} 00000 n \n`;
   push(table);
-  push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  push(`trailer\n<< /Size ${count + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
 
   const all = new Uint8Array(length);
   let at = 0;

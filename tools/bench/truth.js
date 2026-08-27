@@ -22,6 +22,16 @@ flattens it into ordinary prose has not made it easier but emptier. Compare the
 opening of *De Trinitate*, where Augustine says the same thing at greater
 length and with more patience than we have.`;
 
+// Greek as a theology book uses it: single words inside an English sentence,
+// and then a quotation set on its own. Polytonic, because Koine is.
+export const GREEK = `Bavinck's argument turns on a word. The λόγος of the prologue is not
+an idea about God but God's own speech, and to render it as ratio, as the older
+Latin translations did, is to answer the question the sentence was asking. The
+same holds for ἐν ἀρχῇ: a beginning, not a first moment.
+
+Ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος. οὗτος
+ἦν ἐν ἀρχῇ πρὸς τὸν θεόν.`;
+
 export const NOTES = `1. Bavinck, Reformed Dogmatics, II.29-41; compare Turretin, Institutes, III.vii.
 
 2. This is the burden of the whole of Webster's essay on the immensity of God, to which the argument above is indebted throughout.

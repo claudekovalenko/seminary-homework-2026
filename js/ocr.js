@@ -14,8 +14,26 @@ import { prepare, skewOf, measureWord } from './imageprep.js';
 const TESSERACT_URL = '../vendor/tesseract/tesseract.esm.min.js';
 const VENDOR = '../vendor/tesseract/';
 
-/** Roughly the download — engine and word list — so the UI can warn honestly. */
-export const ENGINE_MB = 10;
+/**
+ * The languages the engine can be given, and what each costs to fetch.
+ *
+ * Greek is a second model rather than a second pass: Tesseract takes a list and
+ * decides per line which of them it is looking at, which is exactly the shape of
+ * the problem here — a theology page is English with Greek inside it, sometimes
+ * a word at a time.
+ */
+export const LANGUAGES = {
+  eng: { name: 'English', mb: 5 },
+  grc: { name: 'Ancient Greek', mb: 2 }
+};
+
+/** Roughly the download — engine, models and word list — so the UI can warn honestly. */
+export function engineMb(languages = ['eng']) {
+  const models = languages.reduce((sum, lang) => sum + (LANGUAGES[lang]?.mb || 0), 0);
+  // 4 MB of WebAssembly core, plus 1 MB of English word list.
+  return Math.round(models + 5);
+}
+
 
 /**
  * Tesseract reads best at around 300 dpi. PDF pages are measured at 72 dpi, so
@@ -77,13 +95,13 @@ export async function supported() {
   }
 }
 
-async function makeWorker(onLoad) {
+async function makeWorker(onLoad, languages = ['eng']) {
   const url = (name) => new URL(VENDOR + name, import.meta.url).href;
   // The ESM build exposes everything on its default export, not as named ones.
   const Tesseract = (await import(new URL(TESSERACT_URL, import.meta.url).href)).default;
   const { createWorker } = Tesseract;
 
-  const worker = await createWorker('eng', 1, {
+  const worker = await createWorker(languages.join('+'), 1, {
     workerPath: url('worker.min.js'),
     corePath: url('tesseract-core-simd-lstm.wasm.js'),
     // Point at the directory; Tesseract appends "eng.traineddata". Stored
@@ -124,7 +142,7 @@ async function makeWorker(onLoad) {
  * onProgress({done, total, stage}) fires as it goes; call cancel() to stop.
  * Returns the same shape as pdftext.extractText, so the reader treats them alike.
  */
-export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = [], onPage } = {}) {
+export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = [], onPage, languages = ['eng'] } = {}) {
   cancelled = false;
   const pdfjs = await loadPdfjs();
   const data = new Uint8Array(await blob.arrayBuffer());
@@ -134,8 +152,9 @@ export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = []
   // Fetched alongside the engine, and never allowed to stop the run: without it
   // the text is still readable, only rougher.
   const words = lexicon.load().catch(() => null);
-  const worker = await makeWorker((status, progress) =>
-    onProgress?.({ done: startPage - 1, total: doc.numPages, stage: 'engine', status, progress })
+  const worker = await makeWorker(
+    (status, progress) => onProgress?.({ done: startPage - 1, total: doc.numPages, stage: 'engine', status, progress }),
+    languages
   );
   await keepAwake();
 
@@ -226,7 +245,7 @@ export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = []
 export async function debugPage(blob, pageNumber = 1) {
   const pdfjs = await loadPdfjs();
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()), isEvalSupported: false }).promise;
-  const worker = await makeWorker();
+  const worker = await makeWorker(undefined, ['eng', 'grc']);
   const page = await doc.getPage(pageNumber);
   const base = page.getViewport({ scale: 1 });
   let scale = TARGET_DPI / 72;
@@ -469,7 +488,11 @@ function deSpeckle(text) {
  * measurement made from it. And a genuinely unreadable smudge comes back as a
  * one or two letter word with the engine's own confidence in single figures.
  */
-const PUNCTUATION_ONLY = /^[^A-Za-z0-9]+$/;
+// Unicode classes, not A-Z: a line of Greek has no ASCII letters in it at all,
+// and every one of these tests used to throw it away as punctuation and dirt.
+const PUNCTUATION_ONLY = /^[^\p{L}\p{N}]+$/u;
+/** The letters and digits of a word, in any script. */
+const lettersIn = (text) => String(text).replace(/[^\p{L}\p{N}]/gu, '');
 // Marks that do legitimately stand alone between spaces, in ordinary typesetting.
 const STANDS_ALONE = /^(?:[—–-]{1,3}|\.{3}|[("'“‘]|[)"'”’]|[?!]+)$/;
 const SURE = 90;
@@ -491,7 +514,7 @@ function isRealWord(word, margin) {
   if (!margin) return true;
   // Longer words are kept even out in the margin: half of a long word is still
   // worth reading, and the lexicon pass downstream often finishes it.
-  return text.replace(/[^A-Za-z0-9]/g, '').length > 2 || confidence >= UNSURE;
+  return lettersIn(text).length > 2 || confidence >= UNSURE;
 }
 
 const percentile = (nums, p) => {
@@ -547,7 +570,7 @@ function readEmphasis(lines, page) {
     for (const word of line.words) {
       // Short words carry too little ink to measure: two letters can lean by
       // accident. They inherit whatever their neighbours are, further down.
-      const long = word.text.replace(/[^A-Za-z0-9]/g, '').length >= 2;
+      const long = lettersIn(word.text).length >= 2;
       word.face = long ? measureWord(page.binary, page.width, page.height, word.bbox) : null;
     }
     // The type size of this line, from the tallest words on it — the ones with
@@ -648,7 +671,7 @@ function linesOf(result, page) {
   for (const line of kept) {
     const { words } = line;
     const text = deSpeckle(textOf(words).replace(/[^\S\n]+/g, ' '));
-    if (text.replace(/[^A-Za-z0-9]/g, '').length <= 2) continue;
+    if (lettersIn(text).length <= 2) continue;
     const heights = words.map((w) => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
     out.push({
       text,
@@ -690,9 +713,9 @@ function stripFurniture(lines, height) {
   const isFolio = (line) => {
     const core = line.text
       .split(/\s+/)
-      .filter((token) => /\d/.test(token) || token.replace(/[^A-Za-z0-9]/g, '').length > 2)
+      .filter((token) => /\d/.test(token) || lettersIn(token).length > 2)
       .join(' ')
-      .replace(/[^A-Za-z0-9]/g, '');
+      .replace(/[^\p{L}\p{N}]/gu, '');
     return core.length > 0 && core.length <= 6 && /^[ivxlcdm\d]+$/i.test(core);
   };
 

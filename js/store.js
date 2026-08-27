@@ -45,6 +45,11 @@ export const DEFAULT_SETTINGS = {
   minsPerBibleChapter: 5,
   // Default guess when a reading is given as "ch. 4" with no page numbers.
   defaultChapterPages: 22,
+  // Read Greek as well as English when a scan is OCR'd. On by default: the
+  // course reading is full of it, and a page of Koine read as though it were
+  // English comes back as nonsense rather than as Greek. Costs another 2 MB the
+  // first time, and a little time per page.
+  readGreek: true,
   // Confirmed class times, keyed by course id — overrides whatever the
   // syllabus data says. Empty until you know when a class actually meets.
   classTimes: {},

@@ -64,7 +64,7 @@ function distance(a, b) {
 const wordsOf = (s) =>
   norm(s)
     .toLowerCase()
-    .replace(/[^a-z0-9' -]/g, ' ')
+    .replace(/[^\p{L}\p{N}' -]/gu, ' ')
     .split(/\s+/)
     .filter(Boolean);
 
@@ -81,7 +81,7 @@ function score(truth, got) {
   };
 }
 
-const { BODY, NOTES, EMPHASIS } = await import('./truth.js');
+const { BODY, NOTES, EMPHASIS, GREEK } = await import('./truth.js');
 
 // Emphasis travels as two private-use markers; the grader strips them for the
 // text comparison and reads them separately for the emphasis one.
@@ -152,17 +152,25 @@ page.on('console', (m) => m.type() === 'error' && console.error('CONSOLE', m.tex
 await page.goto('http://127.0.0.1:8799/tools/bench/bench.html');
 const mode = process.env.BENCH_MODE || 'scan';
 const skew = Number(process.env.BENCH_SKEW ?? 0.9);
-const result = await page.evaluate(([m, s]) => globalThis.runBench(m, s), [mode, skew]);
+// The app reads Greek by default, so the benchmark does too.
+const languages = process.env.BENCH_LANGS || 'eng+grc';
+const result = await page.evaluate(([m, s, l]) => globalThis.runBench(m, s, l), [mode, skew, languages]);
 await browser.close();
 server.close();
 
-const label = (process.argv[2] || 'run') + ' [' + mode + (mode === 'scan' ? ' skew ' + skew : '') + ']';
-const body = result.pages.map((p) => p.text).join('\n\n');
-const notes = result.pages.map((p) => p.notes).join('\n\n');
-const truthBody = mode === 'columns' ? BODY : `${BODY}\n\n${EMPHASIS.replace(/\*/g, '')}`;
-const b = score(truthBody, bare(body));
-const n = score(NOTES, bare(notes));
+const label = (process.argv[2] || 'run') + ' [' + mode + (mode === 'scan' ? ' skew ' + skew : '') + ' · ' + languages + ']';
+// Page one is the English page every earlier measurement was taken on; page
+// two, when there is one, is the Greek. Scored separately, because a single
+// number over both would hide whichever of them went wrong.
+const body = bare(result.pages[0]?.text || '');
+const notes = bare(result.pages[0]?.notes || '');
+const greekPage = bare(result.pages[1]?.text || '');
 const pct = (x) => (x * 100).toFixed(2) + '%';
+
+const truthBody = mode === 'columns' ? BODY : `${BODY}\n\n${EMPHASIS.replace(/\*/g, '')}`;
+const greekOf = (text) => (String(text).match(/[\u0370-\u03ff\u1f00-\u1fff]+/gu) || []).join(' ');
+const b = score(truthBody, body);
+const n = score(NOTES, notes);
 
 console.log('\n=== ' + label + ' ===');
 console.log('time            ' + (result.ms / 1000).toFixed(1) + 's   repaired words: ' + result.repaired);
@@ -170,12 +178,20 @@ console.log('body   CER ' + pct(b.cer).padStart(7) + '   WER ' + pct(b.wer).padS
 console.log('notes  CER ' + pct(n.cer).padStart(7) + '   WER ' + pct(n.wer).padStart(7) + '   (' + n.chars + ' chars, ' + n.words + ' words)');
 if (mode !== 'columns') {
   const want = intended(EMPHASIS);
-  const got = reported(body);
+  const got = reported(result.pages[0]?.text || '');
   const it = agreement(want.italic, got.italic);
   const bo = agreement(want.bold, got.bold);
   console.log('italic ' + it.found + '/' + it.wanted + ' found, ' + it.reported + ' marked   (recall ' + pct(it.recall) + ', precision ' + pct(it.precision) + ')');
   console.log('bold   ' + bo.found + '/' + bo.wanted + ' found, ' + bo.reported + ' marked   (recall ' + pct(bo.recall) + ', precision ' + pct(bo.precision) + ')');
 }
 
-console.log('\n--- body as read (first 700 chars) ---\n' + bare(body).slice(0, 700));
-console.log('\n--- notes as read ---\n' + bare(notes).slice(0, 400));
+if (mode === 'scan') {
+  const wantGreek = greekOf(GREEK);
+  const gotGreek = greekOf(greekPage);
+  const g = score(wantGreek, gotGreek);
+  console.log('greek  CER ' + pct(g.cer).padStart(7) + '   WER ' + pct(g.wer).padStart(7) + '   (' + g.chars + ' chars of Greek expected, ' + gotGreek.length + ' read)');
+  console.log('\n--- greek as read ---\n' + gotGreek.slice(0, 320));
+}
+
+console.log('\n--- body as read (first 700 chars) ---\n' + body.slice(0, 700));
+console.log('\n--- notes as read ---\n' + notes.slice(0, 400));
