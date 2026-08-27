@@ -1601,7 +1601,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v22 · 2026-08-23';
+const BUILD = 'v23 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -1720,6 +1720,87 @@ function progressBar(w, { size = '', label = true } = {}) {
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
       ${label ? `<span class="progress-pct">${complete ? 'Done' : `${pct}%`}</span>` : ''}
     </div>`;
+}
+
+const ICON_LINK = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`;
+
+/**
+ * Hand the other app a way back here. It reads `from` and points its own back
+ * link at it, so tapping through and tapping back lands you where you started
+ * rather than on somebody's home screen. Skipped for the single-file build,
+ * whose origin is `null` and which nothing can navigate back to anyway.
+ */
+function withReturn(url) {
+  try {
+    const u = new URL(url, location.href);
+    if (location.protocol.startsWith('http') && !u.searchParams.has('from')) {
+      u.searchParams.set('from', location.origin + location.pathname);
+    }
+    return u.href;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * A course or a session may carry `links`: somewhere to go and *do* the work,
+ * as against the Files tab, which is where you go to read it. Nothing is
+ * inherited — a link on the course shows every week, a link on a session shows
+ * only around that session.
+ */
+function linkChips(links, { compact = false } = {}) {
+  if (!links || !links.length) return '';
+  return `<div class="links ${compact ? 'compact' : ''}">
+    ${links
+      .map(
+        (l) => `
+      <a class="linkchip" href="${esc(withReturn(l.url))}" target="_blank" rel="noopener"
+         ${l.note ? `title="${esc(l.note)}"` : ''}>
+        ${ICON_LINK}<span>${esc(l.label)}</span>
+      </a>`
+      )
+      .join('')}
+  </div>`;
+}
+
+/**
+ * The links worth showing today: everything a course carries, plus the links of
+ * any session inside the window you actually revise in — from the warning
+ * window before its class until a week after it, because the week after a
+ * class is when you are revising what it covered.
+ */
+function studyLinksFor(course, { from = S.startOfToday() } = {}) {
+  const ahead = store.settings().leadDays;
+  const links = [...(course.links || [])];
+  for (const session of course.sessions) {
+    if (!session.links || !session.links.length) continue;
+    const when = S.sessionDate(course, session);
+    // A session with no date yet cannot be out of window.
+    const days = when ? S.daysBetween(from, S.parseDate(when)) : 0;
+    if (days <= ahead && days >= -7) links.push(...session.links);
+  }
+  return links;
+}
+
+function studyLinksCard() {
+  const rows = DATA.courses
+    .map((course) => ({ course, links: studyLinksFor(course) }))
+    .filter((r) => r.links.length);
+  if (!rows.length) return '';
+
+  return `
+    <section class="card">
+      <h2>Drill it</h2>
+      ${rows
+        .map(
+          ({ course, links }) => `
+        <div class="links-group">
+          <div class="links-course">${dot(course.color)}${esc(course.short || course.name)}</div>
+          ${linkChips(links)}
+        </div>`
+        )
+        .join('')}
+    </section>`;
 }
 
 const MODE_LABELS = { 'in-person': 'in person', online: 'online', hybrid: 'hybrid' };
@@ -2289,6 +2370,7 @@ function viewToday() {
         : ''
     }
 
+    ${studyLinksCard()}
     ${rhythmCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
@@ -2375,6 +2457,7 @@ function viewPlan() {
           </div>
           <p class="topic">${esc(session.topic)}</p>
           <div class="tags">${modePill(session)}</div>
+          ${linkChips([...(course.links || []), ...(session.links || [])], { compact: true })}
           ${progressBar(w)}
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
@@ -2467,6 +2550,7 @@ function viewSchedule() {
                 ${w.total ? `<span class="sched-progress">${progressBar(w, { size: 'progress-sm', label: false })}</span>` : ''}
               </summary>
               <ul class="tasks">${tasks.map((t) => taskLine(t)).join('') || '<li class="empty">No work listed.</li>'}</ul>
+              ${linkChips(session.links, { compact: true })}
             </details>`;
           })
           .join('')}

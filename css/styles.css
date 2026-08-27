@@ -1635,3 +1635,65 @@ summary {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- study links ----------
+   Somewhere to go and do the work, as against the Files tab, which is where
+   you go to read it. */
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.links.compact {
+  margin-top: 8px;
+}
+
+.linkchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.links.compact .linkchip {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.linkchip:active {
+  transform: translateY(1px);
+}
+
+.linkchip svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.links-group + .links-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.links-course {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--muted);
+}

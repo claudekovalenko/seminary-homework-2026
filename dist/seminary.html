@@ -1650,6 +1650,68 @@ summary {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- study links ----------
+   Somewhere to go and do the work, as against the Files tab, which is where
+   you go to read it. */
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.links.compact {
+  margin-top: 8px;
+}
+
+.linkchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.links.compact .linkchip {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.linkchip:active {
+  transform: translateY(1px);
+}
+
+.linkchip svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.links-group + .links-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.links-course {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
 </style>
   </head>
   <body>
@@ -1691,7 +1753,7 @@ summary {
     </nav>
 
     <script type="module">
-globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2 — pp. 51–74","ranges":[[51,74]]},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3},{"id":"applied3","name":"Applied Theology III","short":"Applied 3","color":"#d98b3f","credits":1,"instructor":"Todd Morikawa","location":"Various — arranged with the professor and your pastor","syllabus":"./syllabi/applied-theology-iii-fall-2026.pdf","datesUnknown":true,"meetingDay":null,"classTime":null,"sessions":[{"id":"discussion-1","date":null,"topic":"Book discussion 1","when":"Schedule within the first half of term","readings":[{"source":"Perkins, The Art of Prophesying","ref":"Preface, Introduction, chs. 1–6","material":"Perkins, The Art of Prophesying","estPages":60,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-2","date":null,"topic":"Book discussion 2","when":"Schedule within the first half of term","readings":[{"source":"Perkins, The Art of Prophesying","ref":"chs. 7–11 and summary","material":"Perkins, The Art of Prophesying","estPages":55,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-3","date":null,"topic":"Book discussion 3","when":"Schedule as close to the end of term as possible","readings":[{"source":"Perkins, The Calling of the Ministry","ref":"the whole work","material":"Perkins, The Calling of the Ministry","estPages":90,"driver":true,"flag":"The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"ministry","date":null,"topic":"Preaching opportunity","when":"Arrange with your pastor as soon as you can","assignments":[{"title":"Preach to or on behalf of your church","type":"ministry","note":"Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."},{"title":"Reflection paper on preaching (~500 words)","type":"paper","note":"What text and venue, how your studies shaped the sermon, what you would do differently.","effortMinutes":180}]},{"id":"pastoral","date":null,"topic":"Pastoral meetings","when":"Three times across the term, whenever suits","assignments":[{"title":"Meet your pastor (1 of 3)","type":"meeting"},{"title":"Meet your pastor (2 of 3)","type":"meeting"},{"title":"Meet your pastor (3 of 3)","type":"meeting","note":"Drop the professor a note once all three are done."}]},{"id":"final-paper","date":null,"topic":"Final reflection paper","when":"Due within a week of the last day of term","assignments":[{"title":"Final reflection paper (~750 words)","type":"paper","note":"On the Perkins readings, especially his biblical exegesis.","effortMinutes":300}]}]}]};
+globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week.","links: a course or a session may carry links[] — {label, url, tag, note}. A course's links show every week; a session's show from a week before its class until a week after it. They are for somewhere to go and DO the work, not somewhere to read it."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2 — pp. 51–74","ranges":[[51,74]]},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}],"links":[{"label":"Nominative — SPA + AAAH","url":"https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/nominative","tag":"mnemonics","note":"Subject, Predicate nominative, Apposition; Address, Appellation, Absolute, Hanging."},{"label":"Accusative — Echo, Two, Sub, Alias + MMR","url":"https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/accusative","tag":"mnemonics","note":"One object with four twists, then Measure, Manner, Respect."},{"label":"Spot it — quiz yourself","url":"https://claudekovalenko.github.io/going-deeper-greek-concepts/#/spot","tag":"mnemonics","note":"Multiple choice on the real examples."}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3,"links":[{"label":"Case mnemonics","url":"https://claudekovalenko.github.io/going-deeper-greek-concepts/#/map","tag":"mnemonics","note":"The acrostics for every case use covered so far."},{"label":"Drill","url":"https://claudekovalenko.github.io/going-deeper-greek-concepts/#/drill","tag":"mnemonics","note":"Flashcards on Leitner boxes."}]},{"id":"applied3","name":"Applied Theology III","short":"Applied 3","color":"#d98b3f","credits":1,"instructor":"Todd Morikawa","location":"Various — arranged with the professor and your pastor","syllabus":"./syllabi/applied-theology-iii-fall-2026.pdf","datesUnknown":true,"meetingDay":null,"classTime":null,"sessions":[{"id":"discussion-1","date":null,"topic":"Book discussion 1","when":"Schedule within the first half of term","readings":[{"source":"Perkins, The Art of Prophesying","ref":"Preface, Introduction, chs. 1–6","material":"Perkins, The Art of Prophesying","estPages":60,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-2","date":null,"topic":"Book discussion 2","when":"Schedule within the first half of term","readings":[{"source":"Perkins, The Art of Prophesying","ref":"chs. 7–11 and summary","material":"Perkins, The Art of Prophesying","estPages":55,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-3","date":null,"topic":"Book discussion 3","when":"Schedule as close to the end of term as possible","readings":[{"source":"Perkins, The Calling of the Ministry","ref":"the whole work","material":"Perkins, The Calling of the Ministry","estPages":90,"driver":true,"flag":"The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"ministry","date":null,"topic":"Preaching opportunity","when":"Arrange with your pastor as soon as you can","assignments":[{"title":"Preach to or on behalf of your church","type":"ministry","note":"Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."},{"title":"Reflection paper on preaching (~500 words)","type":"paper","note":"What text and venue, how your studies shaped the sermon, what you would do differently.","effortMinutes":180}]},{"id":"pastoral","date":null,"topic":"Pastoral meetings","when":"Three times across the term, whenever suits","assignments":[{"title":"Meet your pastor (1 of 3)","type":"meeting"},{"title":"Meet your pastor (2 of 3)","type":"meeting"},{"title":"Meet your pastor (3 of 3)","type":"meeting","note":"Drop the professor a note once all three are done."}]},{"id":"final-paper","date":null,"topic":"Final reflection paper","when":"Due within a week of the last day of term","assignments":[{"title":"Final reflection paper (~750 words)","type":"paper","note":"On the Perkins readings, especially his biblical exegesis.","effortMinutes":300}]}]}]};
 // Generated by tools/build.mjs — edit js/*.js, not this file.
 const __mod_store = (() => {
 // Local persistence: settings, per-item completion, page-count overrides,
@@ -3295,7 +3357,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v22 · 2026-08-23';
+const BUILD = 'v23 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -3414,6 +3476,87 @@ function progressBar(w, { size = '', label = true } = {}) {
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
       ${label ? `<span class="progress-pct">${complete ? 'Done' : `${pct}%`}</span>` : ''}
     </div>`;
+}
+
+const ICON_LINK = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`;
+
+/**
+ * Hand the other app a way back here. It reads `from` and points its own back
+ * link at it, so tapping through and tapping back lands you where you started
+ * rather than on somebody's home screen. Skipped for the single-file build,
+ * whose origin is `null` and which nothing can navigate back to anyway.
+ */
+function withReturn(url) {
+  try {
+    const u = new URL(url, location.href);
+    if (location.protocol.startsWith('http') && !u.searchParams.has('from')) {
+      u.searchParams.set('from', location.origin + location.pathname);
+    }
+    return u.href;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * A course or a session may carry `links`: somewhere to go and *do* the work,
+ * as against the Files tab, which is where you go to read it. Nothing is
+ * inherited — a link on the course shows every week, a link on a session shows
+ * only around that session.
+ */
+function linkChips(links, { compact = false } = {}) {
+  if (!links || !links.length) return '';
+  return `<div class="links ${compact ? 'compact' : ''}">
+    ${links
+      .map(
+        (l) => `
+      <a class="linkchip" href="${esc(withReturn(l.url))}" target="_blank" rel="noopener"
+         ${l.note ? `title="${esc(l.note)}"` : ''}>
+        ${ICON_LINK}<span>${esc(l.label)}</span>
+      </a>`
+      )
+      .join('')}
+  </div>`;
+}
+
+/**
+ * The links worth showing today: everything a course carries, plus the links of
+ * any session inside the window you actually revise in — from the warning
+ * window before its class until a week after it, because the week after a
+ * class is when you are revising what it covered.
+ */
+function studyLinksFor(course, { from = S.startOfToday() } = {}) {
+  const ahead = store.settings().leadDays;
+  const links = [...(course.links || [])];
+  for (const session of course.sessions) {
+    if (!session.links || !session.links.length) continue;
+    const when = S.sessionDate(course, session);
+    // A session with no date yet cannot be out of window.
+    const days = when ? S.daysBetween(from, S.parseDate(when)) : 0;
+    if (days <= ahead && days >= -7) links.push(...session.links);
+  }
+  return links;
+}
+
+function studyLinksCard() {
+  const rows = DATA.courses
+    .map((course) => ({ course, links: studyLinksFor(course) }))
+    .filter((r) => r.links.length);
+  if (!rows.length) return '';
+
+  return `
+    <section class="card">
+      <h2>Drill it</h2>
+      ${rows
+        .map(
+          ({ course, links }) => `
+        <div class="links-group">
+          <div class="links-course">${dot(course.color)}${esc(course.short || course.name)}</div>
+          ${linkChips(links)}
+        </div>`
+        )
+        .join('')}
+    </section>`;
 }
 
 const MODE_LABELS = { 'in-person': 'in person', online: 'online', hybrid: 'hybrid' };
@@ -3983,6 +4126,7 @@ function viewToday() {
         : ''
     }
 
+    ${studyLinksCard()}
     ${rhythmCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
@@ -4069,6 +4213,7 @@ function viewPlan() {
           </div>
           <p class="topic">${esc(session.topic)}</p>
           <div class="tags">${modePill(session)}</div>
+          ${linkChips([...(course.links || []), ...(session.links || [])], { compact: true })}
           ${progressBar(w)}
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
@@ -4161,6 +4306,7 @@ function viewSchedule() {
                 ${w.total ? `<span class="sched-progress">${progressBar(w, { size: 'progress-sm', label: false })}</span>` : ''}
               </summary>
               <ul class="tasks">${tasks.map((t) => taskLine(t)).join('') || '<li class="empty">No work listed.</li>'}</ul>
+              ${linkChips(session.links, { compact: true })}
             </details>`;
           })
           .join('')}

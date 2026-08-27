@@ -133,6 +133,11 @@ Adding a third course means appending one more object to `courses`.
           "unit": "verses", "verses": 13 }            // paced per verse, not per page
       ],
       "bible": { "ref": "Deut 6; Mark 12", "chapters": 2 },
+      "links": [                                            // somewhere to go and DO the work
+        { "label": "Nominative — SPA + AAAH", "tag": "mnemonics",
+          "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/nominative",
+          "note": "shown on hover" }
+      ],
       "assignments": [
         { "title": "T&D: John 1:2", "type": "translation" },
         { "title": "Quiz: ch. 2", "type": "quiz", "atClass": true },
@@ -181,6 +186,38 @@ Each session can carry `"mode": "in-person"`, `"online"` or `"hybrid"`. The app
 shows it as a badge on the Plan card and next to the topic in the Schedule.
 Nothing carries a mode yet — send me the in-person/online schedule and it is a
 data-only change to `data/courses.json`.
+
+## Study links
+
+The Files tab is where you go to *read* the work. Sometimes what you need is
+somewhere to go and *do* it — a drill, a quiz, a vocabulary tool. Any course or
+any session can carry a `links` array in `data/courses.json`:
+
+```jsonc
+"links": [
+  { "label": "Case mnemonics", "tag": "mnemonics", "note": "shown on hover",
+    "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/map" }
+]
+```
+
+Nothing is inherited, and the difference is the point:
+
+- **On a course** — shows every week, on the Plan card and under *Drill it* on
+  Today. Use it for the thing you always want one tap away.
+- **On a session** — shows in that session on the Schedule, and under *Drill it*
+  from your warning window before the class until a week after it. The week
+  *after* a class is when you are revising what it covered, which is why the
+  window runs both ways.
+
+Links open in a new tab, and carry a `?from=` pointing back here, so an app that
+understands it can offer a way back to where you started rather than dropping
+you on its own home screen.
+
+Greek currently links to [going-deeper-greek-concepts][gd], the mnemonics and
+drills for the case uses — the acrostics from the Map, the flashcards from
+Drill, and the nominative/accusative cards from the 25 August session.
+
+[gd]: https://github.com/claudekovalenko/going-deeper-greek-concepts
 
 ## Things worth checking against the paper syllabi
 

@@ -7,7 +7,8 @@
     "pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.",
     "classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".",
     "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.",
-    "material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week."
+    "material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week.",
+    "links: a course or a session may carry links[] — {label, url, tag, note}. A course's links show every week; a session's show from a week before its class until a week after it. They are for somewhere to go and DO the work, not somewhere to read it."
   ],
   "courses": [
     {
@@ -498,6 +499,26 @@
               "type": "quiz",
               "atClass": true
             }
+          ],
+          "links": [
+            {
+              "label": "Nominative — SPA + AAAH",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/nominative",
+              "tag": "mnemonics",
+              "note": "Subject, Predicate nominative, Apposition; Address, Appellation, Absolute, Hanging."
+            },
+            {
+              "label": "Accusative — Echo, Two, Sub, Alias + MMR",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/accusative",
+              "tag": "mnemonics",
+              "note": "One object with four twists, then Measure, Manner, Respect."
+            },
+            {
+              "label": "Spot it — quiz yourself",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/spot",
+              "tag": "mnemonics",
+              "note": "Multiple choice on the real examples."
+            }
           ]
         },
         {
@@ -914,7 +935,21 @@
       "instructor": "David Larson, Chris Bruno",
       "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
       "syllabus": "./syllabi/intermediate-greek-grek-6003-fall-2026.pdf",
-      "credits": 3
+      "credits": 3,
+      "links": [
+        {
+          "label": "Case mnemonics",
+          "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/map",
+          "tag": "mnemonics",
+          "note": "The acrostics for every case use covered so far."
+        },
+        {
+          "label": "Drill",
+          "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/drill",
+          "tag": "mnemonics",
+          "note": "Flashcards on Leitner boxes."
+        }
+      ]
     },
     {
       "id": "applied3",
