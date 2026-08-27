@@ -3428,7 +3428,7 @@ const notify = __mod_notify;
 const lib = __mod_library;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v23 · 2026-08-27';
+const BUILD = 'v24 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -4460,7 +4460,9 @@ function redoRow(m, entry) {
   if (!entry || entry.kind !== 'file') return '';
   if (!/\.pdf$/i.test(entry.fileName || '')) return '';
   const info = entry.text;
-  const how = info?.ocr ? 'read by OCR' : 'from the PDF text layer';
+  const how = info?.ocr
+    ? `read by OCR${typeof info.confidence === 'number' && info.confidence ? `, ${info.confidence}% sure` : ''}`
+    : 'from the PDF text layer';
   const size = info?.chars ? `${Math.round(info.chars / 1000)}k characters, ` : '';
   const has = extractedIds.has(m.id);
 
@@ -4760,10 +4762,18 @@ function viewFiles() {
         instead.
       </p>
       <p class="note">
-        OCR keeps footnotes at the foot rather than running them into the sentence they
-        interrupt, and checks every word it reads against an English word list, so
-        "incomprehensihility" comes back as the word it was meant to be. It leaves alone
-        anything your book uses repeatedly — names and technical terms are safe.
+        Before reading a page, OCR cleans it: it straightens a crooked scan, decides black
+        from white a patch at a time so the shadow down a book's gutter does not swallow a
+        column, and takes off the dust the copier photographed. Then it reads columns as
+        columns rather than straight across the page, keeps footnotes at the foot instead of
+        running them into the sentence they interrupt, drops the running head and the page
+        number, and checks every word against an English word list — so
+        "incomprehensihility" comes back as the word it was meant to be. Anything your book
+        uses repeatedly is left alone: names and technical terms are safe.
+      </p>
+      <p class="note">
+        When it has finished it says how sure it was, and names the pages it struggled with.
+        Those are the ones to check against the PDF.
       </p>
     </section>
 
@@ -5668,6 +5678,8 @@ document.addEventListener('click', async (e) => {
             totalPages: result.totalPages,
             complete: result.complete,
             nextPage: result.nextPage,
+            confidence: result.confidence,
+            poorPages: result.poorPages,
             ocr: true
           }
         });
@@ -5721,10 +5733,21 @@ document.addEventListener('click', async (e) => {
          of ${result.totalPages} (${Math.round(result.chars / 1000)}k characters)${
            result.partial ? ' — stopped early; the Resume button carries on' : ''
          }.
+         ${result.confidence ? `The engine rates its own reading ${result.confidence}%. ` : ''}
          ${result.repaired ? `Repaired ${result.repaired} misread word${result.repaired === 1 ? '' : 's'}. ` : ''}
+         ${result.deskewed ? `Straightened ${result.deskewed} crooked page${result.deskewed === 1 ? '' : 's'}. ` : ''}
          ${result.notePages ? `Footnotes were found on ${result.notePages} page${result.notePages === 1 ? '' : 's'} and kept separate. ` : ''}
          It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
-         still misreads the odd word, so check anything you quote against the PDF.</span>`
+         still misreads the odd word, so check anything you quote against the PDF.</span>
+         ${
+           result.poorPages?.length
+             ? `<span class="note warn-note">It struggled with
+                  page${result.poorPages.length === 1 ? '' : 's'} ${esc(result.poorPages.slice(0, 8).join(', '))}${
+                    result.poorPages.length > 8 ? ` and ${result.poorPages.length - 8} more` : ''
+                  }. Those are the ones to check against the PDF first — usually a page that was
+                  photographed at an angle or came out too faint.</span>`
+             : ''
+         }`
       );
       if (result.partial) return refresh();
       refresh();

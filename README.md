@@ -41,6 +41,35 @@ for each row inside the window the syllabus gives (*"Use Fri, Sep 11"*, or
 deadlines and the reminders like anything else; ignore it and the box is still
 there next week.
 
+### Reading a scan
+
+Half the course reading arrives as a photograph of a page rather than as text.
+For those, **OCR** reads the picture — on the device, with no upload and no
+account — and the difference between a usable reading and an unusable one is
+mostly what happens before the engine sees the page. So the page is cleaned
+first: straightened if it is crooked by more than a degree, thresholded a patch
+at a time so the shadow down a book's gutter cannot swallow a column, and
+cleared of the dust the copier photographed. Then the layout is rebuilt: columns
+read as columns rather than straight across the gutter, footnotes stay at the
+foot, the running head and the page number go, and every word is checked against
+an English word list without touching the vocabulary the book itself keeps using.
+
+None of that is guesswork. `tools/bench` prints a page of known text, puts it
+through what a photocopier and a phone camera do to it, reads it back and scores
+the result, so each of those decisions was made against a number:
+
+| page                          | before          | after           |
+| ----------------------------- | --------------- | --------------- |
+| photocopy, tilted 0.9 degrees | 18.78% / 70.03% | 0.34% / 2.61%   |
+| photocopy, tilted 3 degrees   | 25.95% / 100%   | 0.14% / 2.28%   |
+| two columns                   | 82.23% / 100%   | 5.74% / 28.34%  |
+| a clean scan                  | 2.09% / 6.51%   | 0.00% / 1.63%   |
+
+Character error rate on the body text, then on the footnotes. See
+`tools/bench/README.md` to run it. `node tools/test.mjs` checks the parts that
+need no browser — hyphens broken across lines and pages, word repair, and the
+image passes.
+
 ## Downloading it
 
 Two ways to get it, depending on what you want:

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>OCR bench</title></head>
+  <body>
+    <p id="state">idle</p>
+    <script type="module">
+      import { typeset, degrade, imageToPdf } from './page.js';
+      import { HEAD, FOLIO, BODY, NOTES } from './truth.js';
+      import * as ocr from '../../js/ocr.js';
+
+      const state = document.getElementById('state');
+
+      // The other common shape: a journal article set in two columns, which is
+      // where reading order stops being "top to bottom" and starts mattering.
+      function columnPage() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1700;
+        canvas.height = 2200;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const left = 190;
+        const gutter = 90;
+        const column = 610;
+        ctx.font = '30px Liberation Serif, serif';
+        ctx.fillStyle = '#111';
+        ctx.fillText(HEAD, left, 150);
+
+        // Split the text between the columns at a paragraph boundary, so the
+        // page reads the way a typesetter would have set it.
+        const paras = BODY.split('\n\n');
+        const first = paras.slice(0, 2).join('\n\n');
+        const second = paras.slice(2).join('\n\n');
+        typeset(ctx, { text: first, x: left, y: 260, width: column, size: 27, leading: 44, indent: 40 });
+        const y = typeset(ctx, { text: second, x: left + column + gutter, y: 260, width: column, size: 27, leading: 44, indent: 40 });
+        typeset(ctx, { text: NOTES, x: left + column + gutter, y: y + 60, width: column, size: 21, leading: 34 });
+        ctx.font = '26px Liberation Serif, serif';
+        ctx.fillText(FOLIO, left + column, 2130);
+        return canvas;
+      }
+
+      function bookPage() {
+        // A page at roughly 200 dpi, which is what a library photocopier gives.
+        const canvas = document.createElement('canvas');
+        canvas.width = 1700;
+        canvas.height = 2200;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const left = 250;
+        const width = 1200;
+        ctx.font = '30px Liberation Serif, serif';
+        ctx.fillStyle = '#111';
+        ctx.fillText(HEAD, left, 190);
+        const y = typeset(ctx, { text: BODY, x: left, y: 300, width, size: 38, leading: 62, indent: 60 });
+        // A rule and the footnotes beneath it, set small, as in the books.
+        ctx.strokeStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(left, y + 40);
+        ctx.lineTo(left + 380, y + 40);
+        ctx.stroke();
+        typeset(ctx, { text: NOTES, x: left, y: y + 100, width, size: 26, leading: 42 });
+        ctx.font = '28px Liberation Serif, serif';
+        ctx.fillText(FOLIO, left + width / 2, 2110);
+        return canvas;
+      }
+
+      // The engine's own view of the page, for designing the layout code
+      // against real geometry rather than against a guess at it.
+      globalThis.debugBench = async (skew = 0.9, mode = 'scan') => {
+        await document.fonts.ready;
+        const pdf = await imageToPdf(degrade(mode === 'columns' ? columnPage() : bookPage(), 7, skew));
+        return ocr.debugPage(pdf);
+      };
+
+      globalThis.runBench = async (mode = 'scan', skew = 0.9) => {
+        state.textContent = 'building page';
+        await document.fonts.ready;
+        const clean = mode === 'columns' ? columnPage() : bookPage();
+        // 'clean' grades a page that needs no repair, to catch preprocessing
+        // that helps a photocopy by hurting everything else.
+        const pdf = await imageToPdf(mode === 'clean' ? clean : degrade(clean, 7, skew), mode === 'clean' ? 0.92 : 0.55);
+        state.textContent = 'reading';
+        const started = performance.now();
+        const result = await ocr.ocrPdf(pdf, (p) => (state.textContent = p.stage + ' ' + p.done + '/' + p.total));
+        state.textContent = 'done';
+        return {
+          ms: Math.round(performance.now() - started),
+          repaired: result.repaired,
+          pages: result.pages.map((p) => ({ text: p.text, notes: p.notes || '' }))
+        };
+      };
+    </script>
+  </body>
+</html>
