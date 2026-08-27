@@ -2,6 +2,7 @@ import * as store from './store.js';
 import * as S from './schedule.js';
 import * as notify from './notify.js';
 import * as lib from './library.js';
+import { emphasisRuns } from './text.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
@@ -191,6 +192,30 @@ function timerButton(task) {
 }
 
 /**
+ * Everything ever spent on one reading, kept beside the stopwatch.
+ *
+ * The stopwatch alone only ever answered "how long is this sitting" — the
+ * moment you stopped it, the number was gone into the weekly total and the
+ * reading itself had nothing to show for it. This is the other half: minutes
+ * banked against this item since the first time you opened it, still counting
+ * while the clock runs. Tap it to correct, for the evening you read on the bus
+ * and forgot to start anything.
+ */
+function timeChip(task) {
+  const running = store.runningTimer();
+  const mine = running && running.key === task.key;
+  const banked = store.totalOn(task.key);
+  if (!banked && !mine) {
+    return `<button class="amount clock ghost" data-action="edit-time" data-key="${esc(task.key)}"
+                    title="Say how long you have spent on ${esc(task.title)}">+ time</button>`;
+  }
+  const shown = banked + (mine ? elapsedMinutes(running) : 0);
+  return `<button class="amount clock ${mine ? 'running' : ''}" data-action="edit-time" data-key="${esc(task.key)}"
+                  ${mine ? `data-total-base="${banked}" data-total-since="${esc(running.startedAt)}"` : ''}
+                  title="Time spent on ${esc(task.title)} so far">${S.formatMinutes(shown)}</button>`;
+}
+
+/**
  * A finished sitting counts twice over: toward the week's measured total, which
  * the store has already recorded, and toward the item's own progress, so a paper
  * still shows how much of its estimate is behind you.
@@ -243,6 +268,12 @@ function watchTimer() {
   const paint = () => {
     const shown = elapsedClock(running);
     for (const el of document.querySelectorAll('[data-elapsed]')) el.textContent = shown;
+    // The item's own total climbs with it, so the number you are watching is
+    // the one that will still be there when you stop.
+    const minutes = elapsedMinutes(running);
+    for (const el of document.querySelectorAll('[data-total-base]')) {
+      el.textContent = S.formatMinutes(Number(el.dataset.totalBase || 0) + minutes);
+    }
   };
   paint();
   tick = setInterval(paint, 1000);
@@ -305,6 +336,7 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
       </div>
       ${materialButton(task)}
       <div class="task-actions">
+        ${withTimer ? timeChip(task) : ''}
         ${withTimer ? timerButton(task) : ''}
         <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
                 ${task.unit === 'pages' && !chunk ? `data-action="edit-pages" data-key="${esc(task.key)}"` : 'disabled'}>
@@ -1349,8 +1381,21 @@ function viewFiles() {
         uses repeatedly is left alone: names and technical terms are safe.
       </p>
       <p class="note">
+        <strong>Italic and bold come across too.</strong> The engine will not tell you which
+        words were emphasised — it reports every word as ordinary — so the app measures the
+        page instead: a word whose stems lean is italic, one whose strokes are thicker than
+        the rest of its line is bold. That keeps the difference between a book's title and a
+        sentence about it, which is most of what italics are doing in a theology text.
+        Copying the text out turns them into markdown.
+      </p>
+      <p class="note">
         When it has finished it says how sure it was, and names the pages it struggled with.
         Those are the ones to check against the PDF.
+      </p>
+      <p class="note">
+        In the reader, <strong>select any passage and tap Highlight</strong>. Highlights are
+        listed under the bookmarks so a chapter's worth can be found again without rereading
+        it, they survive re-reading the same PDF, and tapping one takes it off again.
       </p>
     </section>
 
@@ -1733,10 +1778,55 @@ async function renderReader(id, taskKey) {
   const marked = new Set(marks.map(store.bookmarkKey));
   const where = store.readingPos(id);
 
-  const paragraph = (page, index, text, kind = '') => {
+  const highlights = store.highlightsFor(id);
+
+  /**
+   * One paragraph, with everything laid over it that belongs there.
+   *
+   * Emphasis comes out of the reading as markers; highlights come out of the
+   * store as offsets into the text as it reads. Both are spans over the same
+   * string, so they are resolved together: a flag per character, and a tag
+   * opened wherever the flags change. Done separately, an italic phrase
+   * half-covered by a highlight would need one of the two tags to be closed and
+   * reopened, and the markup would nest wrongly.
+   */
+  const paragraph = (page, index, raw, kind = '') => {
     const key = `${page}:${index}`;
+    const { plain, runs } = emphasisRuns(raw);
+    const mine = highlights.filter((h) => h.page === page && h.para === index);
+
+    const flags = new Array(plain.length).fill(0);
+    const EM_BIT = 1;
+    const STRONG_BIT = 2;
+    for (const run of runs) {
+      const bit = run.kind === 'strong' ? STRONG_BIT : EM_BIT;
+      for (let i = Math.max(0, run.start); i < Math.min(plain.length, run.end); i++) flags[i] |= bit;
+    }
+    // A highlight is identified by where it starts, so each needs its own bit
+    // rather than one shared "highlighted" flag; two abutting marks must stay
+    // two marks, each removable on its own.
+    const marks = new Array(plain.length).fill(null);
+    for (const h of mine) {
+      for (let i = Math.max(0, h.start); i < Math.min(plain.length, h.end); i++) marks[i] = store.highlightKey(h);
+    }
+
+    let html = '';
+    let at = 0;
+    while (at < plain.length) {
+      const flag = flags[at];
+      const mark = marks[at];
+      let to = at + 1;
+      while (to < plain.length && flags[to] === flag && marks[to] === mark) to++;
+      let piece = esc(plain.slice(at, to));
+      if (flag & EM_BIT) piece = `<em>${piece}</em>`;
+      if (flag & STRONG_BIT) piece = `<strong>${piece}</strong>`;
+      if (mark) piece = `<mark data-mark="${esc(mark)}" tabindex="0">${piece}</mark>`;
+      html += piece;
+      at = to;
+    }
+
     return `<p class="${kind} ${marked.has(key) ? 'is-marked' : ''}" id="para-${esc(key)}"
-              data-page="${page}" data-para="${index}">${esc(text)}</p>`;
+              data-page="${page}" data-para="${index}">${html || esc(plain)}</p>`;
   };
 
   main.innerHTML = `
@@ -1766,6 +1856,7 @@ async function renderReader(id, taskKey) {
         <span class="progress-pct" id="reader-place">page ${where?.page || 1} of ${extracted.pageCount}</span>
       </div>
       <div id="bookmark-list">${bookmarkList(marks)}</div>
+      <div id="highlight-list">${highlightList(highlights)}</div>
     </section>
     <section class="card reader" style="--reader-size:${size}px">
       ${extracted.pages
@@ -1791,7 +1882,11 @@ async function renderReader(id, taskKey) {
     </section>
     <button class="fab" data-action="bookmark-here" id="fab-bookmark" title="Bookmark this spot">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
-    </button>`;
+    </button>
+    <div class="selection-bar" id="selection-bar" hidden>
+      <span id="selection-count"></span>
+      <button class="btn small" data-action="highlight-selection">Highlight</button>
+    </div>`;
 
   reading = { id, pages: extracted.pageCount };
   watchReadingPosition();
@@ -1799,6 +1894,91 @@ async function renderReader(id, taskKey) {
   const target = pendingJump || where;
   pendingJump = null;
   if (target) jumpTo(target, { smooth: false });
+}
+
+/**
+ * Where the text you marked can be found again.
+ *
+ * A highlight is worth having twice over: in place, so the page you are reading
+ * shows what struck you, and in a list, so the striking bits can be found again
+ * without reading the chapter for them. Both are the same store; this is the
+ * second view of it.
+ */
+function highlightList(highlights) {
+  if (!highlights.length) return '';
+  return `
+    <details class="marks" open>
+      <summary>Highlights (${highlights.length})</summary>
+      <ul class="mark-list">
+        ${highlights
+          .map((h) => {
+            const key = store.highlightKey(h);
+            const text = h.text.length > 120 ? `${h.text.slice(0, 118)}…` : h.text;
+            return `
+          <li class="mark-row">
+            <button class="linkbtn mark-jump" data-action="goto-highlight" data-key="${esc(key)}"
+                    data-page="${h.page}" data-para="${h.para}">
+              <span class="mark-page">p. ${h.page}</span>
+              <span class="mark-text">${esc(text)}</span>
+            </button>
+            <button class="linkbtn mark-drop" data-action="drop-highlight" data-key="${esc(key)}"
+                    title="Remove this highlight">×</button>
+          </li>`;
+          })
+          .join('')}
+      </ul>
+    </details>`;
+}
+
+/**
+ * What is selected, as an offset into the paragraph it sits in.
+ *
+ * The rendered paragraph is not one text node — emphasis and earlier highlights
+ * have already broken it into several — so the offset has to be counted across
+ * them in order. Nothing is inserted into the text while rendering, so those
+ * lengths add up to exactly the string the offsets are measured against.
+ */
+function selectionInParagraph() {
+  const selection = document.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  const para = range.startContainer.parentElement?.closest('p[data-page]');
+  if (!para || !para.contains(range.endContainer)) return null;
+
+  const offsetOf = (node, offset) => {
+    let total = 0;
+    const walker = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
+    let current = walker.nextNode();
+    while (current) {
+      if (current === node) return total + offset;
+      total += current.textContent.length;
+      current = walker.nextNode();
+    }
+    return null;
+  };
+
+  const start = offsetOf(range.startContainer, range.startOffset);
+  const end = offsetOf(range.endContainer, range.endOffset);
+  if (start === null || end === null || end <= start) return null;
+  return {
+    page: Number(para.dataset.page),
+    para: Number(para.dataset.para),
+    start,
+    end,
+    text: para.textContent.slice(start, end).replace(/\s+/g, ' ').trim()
+  };
+}
+
+/** Show the Highlight button only while there is something to highlight. */
+function watchSelection() {
+  const bar = $('#selection-bar');
+  if (!bar) return;
+  const found = selectionInParagraph();
+  bar.hidden = !found;
+  if (found) {
+    const words = found.text.split(/\s+/).filter(Boolean).length;
+    $('#selection-count').textContent = `${words} word${words === 1 ? '' : 's'} selected`;
+  }
 }
 
 function bookmarkList(marks) {
@@ -1989,6 +2169,12 @@ function go(next) {
 
 /* ---------------- interactions ---------------- */
 
+// The Highlight button follows the selection: there is nothing to offer until
+// something is selected, and nothing to keep once it is not.
+document.addEventListener('selectionchange', () => {
+  if (parseView(view).name === 'read') watchSelection();
+});
+
 document.addEventListener('click', async (e) => {
   const tab = e.target.closest('.tab');
   if (tab) return go(tab.dataset.view);
@@ -2000,6 +2186,18 @@ document.addEventListener('click', async (e) => {
   const fold = e.target.closest('[data-collapse]');
   if (fold) {
     store.setCollapsed(fold.dataset.collapse, Boolean(fold.closest('details')?.open));
+    return;
+  }
+
+  // A mark in the middle of the text is not a button, but it is the obvious
+  // place to tap to be rid of one, so it behaves like one.
+  const mark = e.target.closest('mark[data-mark]');
+  if (mark && !e.target.closest('[data-action]')) {
+    const id = parseView(view).arg;
+    if (id && confirm(`Remove this highlight?\n\n"${mark.textContent.trim().slice(0, 120)}"`)) {
+      store.removeHighlight(id, mark.dataset.mark);
+      return renderReader(id, parseView(view).taskKey);
+    }
     return;
   }
 
@@ -2076,6 +2274,27 @@ document.addEventListener('click', async (e) => {
     $('#bookmark-list').innerHTML = bookmarkList(marks);
     document.getElementById(`para-${mark.page}:${mark.para}`)?.classList.toggle('is-marked', added);
     readerScroll();
+    return;
+  }
+
+  if (action === 'highlight-selection') {
+    const found = selectionInParagraph();
+    const id = parseView(view).arg;
+    if (!found || !id) return;
+    store.addHighlight(id, found);
+    document.getSelection()?.removeAllRanges();
+    return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'drop-highlight') {
+    const id = parseView(view).arg;
+    if (!id) return;
+    store.removeHighlight(id, el.dataset.key);
+    return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'goto-highlight') {
+    jumpTo({ page: Number(el.dataset.page), para: Number(el.dataset.para) });
     return;
   }
 
@@ -2314,6 +2533,7 @@ document.addEventListener('click', async (e) => {
          ${result.repaired ? `Repaired ${result.repaired} misread word${result.repaired === 1 ? '' : 's'}. ` : ''}
          ${result.deskewed ? `Straightened ${result.deskewed} crooked page${result.deskewed === 1 ? '' : 's'}. ` : ''}
          ${result.notePages ? `Footnotes were found on ${result.notePages} page${result.notePages === 1 ? '' : 's'} and kept separate. ` : ''}
+         ${result.emphasised ? `Kept the italics and bold on ${result.emphasised} word${result.emphasised === 1 ? '' : 's'}. ` : ''}
          It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
          still misreads the odd word, so check anything you quote against the PDF.</span>
          ${
@@ -2441,6 +2661,27 @@ document.addEventListener('click', async (e) => {
   if (action === 'stop-timer') {
     const banked = store.stopTimer();
     if (banked) creditTime(banked);
+    return refresh();
+  }
+
+  if (action === 'edit-time') {
+    const task = TASKS.find((t) => t.key === key);
+    if (!task) return;
+    const running = store.runningTimer();
+    if (running?.key === key) {
+      alert('The clock is running on this one. Stop it first and the sitting will be added.');
+      return;
+    }
+    const now = store.totalOn(key);
+    const answer = prompt(
+      `Total minutes spent on "${task.title}" so far?\n\nThe stopwatch adds to this by itself; ` +
+        `set it by hand for time you did not time.`,
+      now || 30
+    );
+    if (answer === null) return;
+    const n = Math.round(Number(answer));
+    if (!Number.isFinite(n) || n < 0) return;
+    store.setTotal(key, n);
     return refresh();
   }
 

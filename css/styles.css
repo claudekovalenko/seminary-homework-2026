@@ -1550,6 +1550,102 @@ summary {
   color: var(--text);
 }
 
+/* Passages you marked, in the text and in the list beside the bookmarks. */
+.reader mark {
+  background: color-mix(in srgb, var(--warn) 34%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 1px 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  cursor: pointer;
+}
+
+.reader mark:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.reader em {
+  font-style: italic;
+}
+
+.reader strong {
+  font-weight: 650;
+}
+
+.mark-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.mark-row .mark-jump {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.mark-row .mark-text {
+  color: var(--text);
+}
+
+.mark-row .mark-page {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mark-drop {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+/* Offered only while something is selected. */
+.selection-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 40;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.selection-bar[hidden] {
+  display: none;
+}
+
+/* Time banked against one reading, beside its stopwatch. */
+.amount.clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.amount.clock.ghost {
+  opacity: 0.55;
+}
+
+.amount.clock.running {
+  color: var(--accent);
+  opacity: 1;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

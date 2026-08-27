@@ -7,8 +7,9 @@
 // seconds per page on a phone — so it is never started without being asked for.
 
 import { loadPdfjs, resolveHyphens, JOIN } from './pdftext.js';
+import { EM, STRONG } from './text.js';
 import * as lexicon from './lexicon.js';
-import { prepare, skewOf } from './imageprep.js';
+import { prepare, skewOf, measureWord } from './imageprep.js';
 
 const TESSERACT_URL = '../vendor/tesseract/tesseract.esm.min.js';
 const VENDOR = '../vendor/tesseract/';
@@ -143,6 +144,7 @@ export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = []
   const pages = [...done];
   let lastPage = startPage - 1;
   let deskewed = 0;
+  let emphasised = 0;
 
   try {
     for (let n = startPage; n <= doc.numPages; n++) {
@@ -170,9 +172,12 @@ export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = []
       if (cleaned.angle) deskewed++;
 
       const { data: result } = await worker.recognize(canvas, {}, { text: true, blocks: true });
+      const laid = layOutLines(result, { height: canvas.height, width: canvas.width, page: cleaned });
+      // Counted after the layout pass, which is what decides emphasis.
+      emphasised += countEmphasis(result);
       pages.push({
         page: n,
-        ...layOutLines(result, { height: canvas.height, width: canvas.width }),
+        ...laid,
         // How sure the engine was of this page, kept so the reader can say which
         // pages came out badly instead of leaving you to find them.
         confidence: Math.round(result?.confidence ?? 0)
@@ -208,7 +213,8 @@ export async function ocrPdf(blob, onProgress, { startPage = 1, pages: done = []
   return {
     ...summarise(repaired.pages, lastPage, doc.numPages),
     repaired: repaired.changed,
-    deskewed
+    deskewed,
+    emphasised
   };
 }
 
@@ -240,7 +246,7 @@ export async function debugPage(blob, pageNumber = 1) {
   const { data: result } = await worker.recognize(canvas, {}, { text: true, blocks: true });
   await worker.terminate();
   await doc.destroy();
-  const lines = linesOf(result);
+  const lines = linesOf(result, cleaned);
   const trimmed = stripFurniture(lines, canvas.height);
   const split = splitNotes(trimmed);
   const columns = columnsOf(trimmed, canvas.width);
@@ -260,7 +266,13 @@ export async function debugPage(blob, pageNumber = 1) {
           bbox: l.bbox,
           confidence: l.confidence,
           text: l.text,
-          words: (l.words || []).map((w) => ({ text: w.text, confidence: w.confidence, bbox: w.bbox }))
+          words: (l.words || []).map((w) => ({
+            text: w.text,
+            confidence: w.confidence,
+            bbox: w.bbox,
+            face: w.face || null,
+            emphasis: w.emphasis || null
+          }))
         }))
       }))
     }))
@@ -516,7 +528,101 @@ const boxOf = (words) => ({
  * these boxes further down, and one speck in the margin was enough to make a
  * page look as though every line began in a different place.
  */
-function linesOf(result) {
+/**
+ * Which words on this page are set differently from the rest of it.
+ *
+ * Every measurement is judged against the page's own median, which is what
+ * makes this safe on a page of italic throughout (nothing stands out, so
+ * nothing is marked) and on small type (where absolute thresholds fail).
+ */
+function readEmphasis(lines, page) {
+  if (!page?.binary) return;
+  const middle = (nums) => {
+    const sorted = nums.slice().sort((a, b) => a - b);
+    return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+  };
+
+  const measured = [];
+  for (const line of lines) {
+    for (const word of line.words) {
+      // Short words carry too little ink to measure: two letters can lean by
+      // accident. They inherit whatever their neighbours are, further down.
+      const long = word.text.replace(/[^A-Za-z0-9]/g, '').length >= 2;
+      word.face = long ? measureWord(page.binary, page.width, page.height, word.bbox) : null;
+    }
+    // The type size of this line, from the tallest words on it — the ones with
+    // ascenders — since a stem is only thick relative to the size it is set in,
+    // and footnotes are set smaller than the page they sit under.
+    const heights = line.words.filter((w) => w.face).map((w) => w.face.height);
+    line.size = heights.length ? Math.max(middle(heights), 1) : 0;
+    for (const word of line.words) {
+      if (!word.face || !line.size) continue;
+      word.face.weight = word.face.stem / line.size;
+      measured.push(word.face);
+    }
+  }
+  if (measured.length < 12) return;
+
+  const weight = middle(measured.map((m) => m.weight));
+  const slant = middle(measured.map((m) => m.slant));
+
+  for (const line of lines) {
+    for (const word of line.words) {
+      if (!word.face?.weight) continue;
+      // A quarter again as thick as the page's own type is bold; five degrees
+      // off its own upright is italic. Both leave room for the wobble that
+      // photocopying adds, which is why neither is a hair's breadth.
+      if (word.face.slant - slant >= 5) word.emphasis = 'italic';
+      else if (word.face.weight > weight * 1.25) word.emphasis = 'bold';
+    }
+  }
+
+  // A short word between two emphasised ones was set the same way; it was only
+  // ever skipped because there was too little of it to measure.
+  for (const line of lines) {
+    for (let i = 1; i < line.words.length - 1; i++) {
+      const word = line.words[i];
+      if (word.emphasis || word.face) continue;
+      const before = line.words[i - 1].emphasis;
+      if (before && before === line.words[i + 1].emphasis) word.emphasis = before;
+    }
+  }
+}
+
+/** How many words on this page were found to be set differently. */
+function countEmphasis(result) {
+  let n = 0;
+  for (const block of result?.blocks || []) {
+    for (const para of block.paragraphs || []) {
+      for (const line of para.lines || []) {
+        for (const word of line.words || []) if (word.emphasis) n++;
+      }
+    }
+  }
+  return n;
+}
+
+/** The line's words as text, with runs of emphasis wrapped in their markers. */
+function textOf(words) {
+  const mark = (kind) => (kind === 'bold' ? STRONG : EM);
+  let out = '';
+  let open = null;
+  words.forEach((word, i) => {
+    const emphasis = word.emphasis || null;
+    // The space belongs between the words, outside the markers: a run reads
+    // "and *ad extra* is", never "and*ad extra*is".
+    if (i) out += ' ';
+    if (emphasis !== open) {
+      if (open) out += mark(open);
+      if (emphasis) out += mark(emphasis);
+      open = emphasis;
+    }
+    out += word.text;
+  });
+  return open ? out + mark(open) : out;
+}
+
+function linesOf(result, page) {
   const raw = [];
   for (const block of result?.blocks || []) {
     for (const para of block.paragraphs || []) {
@@ -531,11 +637,17 @@ function linesOf(result) {
   const column = columnBounds(raw);
   const inMargin = (w) => w.bbox.x1 < column.left - column.slack || w.bbox.x0 > column.right + column.slack;
 
-  const out = [];
+  const kept = [];
   for (const line of raw) {
     const words = line.words.filter((w) => isRealWord(w, inMargin(w)));
-    if (!words.length) continue;
-    const text = deSpeckle(words.map((w) => w.text).join(' ').replace(/\s+/g, ' '));
+    if (words.length) kept.push({ ...line, words });
+  }
+  readEmphasis(kept, page);
+
+  const out = [];
+  for (const line of kept) {
+    const { words } = line;
+    const text = deSpeckle(textOf(words).replace(/[^\S\n]+/g, ' '));
     if (text.replace(/[^A-Za-z0-9]/g, '').length <= 2) continue;
     const heights = words.map((w) => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
     out.push({
@@ -691,8 +803,8 @@ export function columnsOf(lines, pageWidth) {
   return real.length > 1 ? groups.filter((g) => g.length) : [lines];
 }
 
-function layOutLines(result, { height = 0, width = 0 } = {}) {
-  const all = linesOf(result);
+function layOutLines(result, { height = 0, width = 0, page = null } = {}) {
+  const all = linesOf(result, page);
   if (!all.length) return { text: tidyText(result?.text), notes: '' };
 
   const lines = stripFurniture(all, height);

@@ -12,11 +12,20 @@ that, and how much of it should I do today.**
   day-by-day split of the reading. Long page ranges are cut at real page
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.
 - **Schedule** — the whole term, both syllabi, expandable per class.
+- **Files** — the PDFs you attach, the text pulled out of them, and a reader you
+  can highlight in. Select any passage and tap Highlight; highlights are listed
+  under the bookmarks, survive a re-reading of the same PDF, and come off with a
+  tap.
 - **Settings** — the finish line, reminders, study days, and your reading pace.
 
 Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.
+
+Every reading carries its own clock. The stopwatch beside it banks each sitting
+against that reading for good, so the number next to a chapter is how long you
+have actually spent on it, across every evening you have picked it up — tap it
+to correct, for the reading you did on the bus without starting anything.
 
 ### The finish line
 
@@ -54,6 +63,13 @@ read as columns rather than straight across the gutter, footnotes stay at the
 foot, the running head and the page number go, and every word is checked against
 an English word list without touching the vocabulary the book itself keeps using.
 
+**Italic and bold survive.** The engine will not say which words were
+emphasised — its modern model reports every word as ordinary and every font name
+as blank — so the app measures the page instead: a word whose stems lean is
+italic, a word whose strokes are thicker than the rest of its line is bold. In
+a theology text that is most of what italics are doing, and losing them loses
+the difference between a book's title and a sentence about it.
+
 None of that is guesswork. `tools/bench` prints a page of known text, puts it
 through what a photocopier and a phone camera do to it, reads it back and scores
 the result, so each of those decisions was made against a number:
@@ -65,8 +81,9 @@ the result, so each of those decisions was made against a number:
 | two columns                   | 82.23% / 100%   | 5.74% / 28.34%  |
 | a clean scan                  | 2.09% / 6.51%   | 0.00% / 1.63%   |
 
-Character error rate on the body text, then on the footnotes. See
-`tools/bench/README.md` to run it. `node tools/test.mjs` checks the parts that
+Character error rate on the body text, then on the footnotes. Emphasis is scored
+separately, and on the same page comes back at 5 of 5 italic words and 1 of 1
+bold, with nothing else marked. See `tools/bench/README.md` to run it. `node tools/test.mjs` checks the parts that
 need no browser — hyphens broken across lines and pages, word repair, and the
 image passes.
 

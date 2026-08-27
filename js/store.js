@@ -66,11 +66,30 @@ const EMPTY = {
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
+  // materialId -> [{ page, para, start, end, text, at }] — passages you marked.
+  // Offsets are into the paragraph as it reads, so they survive a re-reading of
+  // the same PDF as long as the words themselves do.
+  highlights: {},
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
   timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  // itemKey -> minutes, for good. The log above is trimmed to the last few
+  // hundred sittings so it cannot grow without limit, which makes it the wrong
+  // place to ask how long a reading has taken in total: by December the
+  // September sittings would have quietly fallen off the end of the answer.
+  totals: {},
   rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
+
+/** The per-item totals, rebuilt from the sittings still on record. */
+function totalsFrom(log) {
+  const totals = {};
+  for (const entry of log || []) {
+    if (!entry?.key) continue;
+    totals[entry.key] = (totals[entry.key] || 0) + (Number(entry.minutes) || 0);
+  }
+  return totals;
+}
 
 /**
  * Settings saved before a field existed come back without it. Merging over the
@@ -97,9 +116,11 @@ function read() {
       fired: parsed.fired || {},
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
+      highlights: parsed.highlights || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+      totals: parsed.totals || totalsFrom(parsed.timeLog),
       rhythmLog: parsed.rhythmLog || {}
     };
   } catch {
@@ -206,6 +227,42 @@ export const bookmarksFor = (id) => state.bookmarks[id] || [];
 
 export const bookmarksAll = () => state.bookmarks;
 
+/* ---------- passages you have marked ---------- */
+
+export const highlightsFor = (id) => state.highlights[id] || [];
+
+export const highlightKey = (h) => `${h.page}:${h.para}:${h.start}`;
+
+/**
+ * Mark a passage, or unmark it if the same one is marked again. Overlapping
+ * marks are merged rather than stacked: two passes over the same sentence with
+ * a slightly different selection should leave one mark on it, not two.
+ */
+export function addHighlight(id, mark) {
+  const list = state.highlights[id] || [];
+  const same = (a, b) => a.page === b.page && a.para === b.para;
+  const overlapping = list.filter((h) => same(h, mark) && h.start < mark.end && mark.start < h.end);
+  const merged = overlapping.reduce(
+    (acc, h) => ({ ...acc, start: Math.min(acc.start, h.start), end: Math.max(acc.end, h.end) }),
+    { ...mark }
+  );
+  const rest = list.filter((h) => !overlapping.includes(h));
+  state.highlights[id] = [...rest, { ...merged, at: new Date().toISOString() }].sort(
+    (a, b) => a.page - b.page || a.para - b.para || a.start - b.start
+  );
+  persist();
+  return merged;
+}
+
+export function removeHighlight(id, key) {
+  const list = state.highlights[id] || [];
+  const next = list.filter((h) => highlightKey(h) !== key);
+  if (next.length === list.length) return false;
+  state.highlights[id] = next;
+  persist();
+  return true;
+}
+
 /* ---------- dates you have arranged yourself ---------- */
 
 export const sessionDates = () => state.sessionDates;
@@ -291,6 +348,7 @@ export function stopTimer() {
       ...state.timeLog,
       { key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
     ].slice(-LOG_LIMIT);
+    state.totals[running.key] = (state.totals[running.key] || 0) + minutes;
   }
   persist();
   return { ...running, minutes };
@@ -305,10 +363,24 @@ export function cancelTimer() {
 export function logTime(key, courseId, minutes) {
   if (!minutes) return;
   state.timeLog = [...state.timeLog, { key, courseId: courseId || null, minutes, at: new Date().toISOString() }].slice(-LOG_LIMIT);
+  state.totals[key] = Math.max(0, (state.totals[key] || 0) + minutes);
   persist();
 }
 
 export const timeLog = () => state.timeLog;
+
+/** Everything ever spent on one item, sittings and hand-corrections alike. */
+export const totalOn = (key) => state.totals[key] || 0;
+
+export const totals = () => state.totals;
+
+/** Set the running total by hand, for a reading you worked on away from the app. */
+export function setTotal(key, minutes) {
+  const next = Math.max(0, Math.round(minutes || 0));
+  if (next) state.totals[key] = next;
+  else delete state.totals[key];
+  persist();
+}
 
 /* ---------- the daily rhythm ---------- */
 
@@ -427,9 +499,11 @@ export function importData(json) {
     fired: parsed.fired || {},
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
+    highlights: parsed.highlights || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+    totals: parsed.totals || totalsFrom(parsed.timeLog),
     rhythmLog: parsed.rhythmLog || {}
   };
   persist();

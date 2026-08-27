@@ -8,6 +8,8 @@
 // The library is ~1.6 MB, so it is imported on first use rather than up front,
 // and cached by the service worker afterwards.
 
+import { toMarkdown } from './text.js';
+
 const PDFJS_URL = '../vendor/pdfjs/pdf.min.mjs';
 const WORKER_URL = '../vendor/pdfjs/pdf.worker.min.mjs';
 
@@ -234,11 +236,14 @@ export async function extractText(blob, onProgress) {
 
 /** Whole document as one string, with page markers for orientation. */
 export function toPlainText(extracted) {
+  // Out of the app the markers mean nothing, so they leave as markdown, which
+  // is the one notation every note-taking app already understands.
+  const asMarkdown = toMarkdown;
   return extracted.pages
     .filter((p) => p.text || p.notes)
     .map((p) => {
-      const notes = p.notes ? `\n\nFootnotes\n\n${p.notes}` : '';
-      return `— page ${p.page} —\n\n${p.text}${notes}`;
+      const notes = p.notes ? `\n\nFootnotes\n\n${asMarkdown(p.notes)}` : '';
+      return `— page ${p.page} —\n\n${asMarkdown(p.text)}${notes}`;
     })
     .join('\n\n');
 }

@@ -22,7 +22,9 @@ node tools/bench/inspect.mjs                  # why a page came out that way
 
 It prints character and word error rates for the body and the footnotes
 separately, because they fail differently: the body suffers from bad
-thresholding, the footnotes from being mistaken for something else.
+thresholding, the footnotes from being mistaken for something else. Emphasis is
+scored on its own terms — how many of the words actually set in italic and bold
+came back marked, and how many ordinary words were marked by mistake.
 
 It needs `playwright-core` (`npm i playwright-core`) and a Chromium to point it
 at, since Tesseract and the canvas passes are browser code. Nothing in `js/`
@@ -40,3 +42,7 @@ the body text, then on the footnotes:
 
 A footnote rate of 100% means the block was not found at all and its text ended
 up in the body, which is why the body rate beside it is so high.
+
+Emphasis, on the same photocopy: 5 of 5 italic words found and 1 of 1 bold, with
+nothing else marked. There is no "before" to compare that against — the engine
+reports every word as ordinary, so before this there was nothing at all.

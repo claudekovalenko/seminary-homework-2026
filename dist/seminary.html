@@ -1564,6 +1564,102 @@ summary {
   color: var(--text);
 }
 
+/* Passages you marked, in the text and in the list beside the bookmarks. */
+.reader mark {
+  background: color-mix(in srgb, var(--warn) 34%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 1px 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  cursor: pointer;
+}
+
+.reader mark:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.reader em {
+  font-style: italic;
+}
+
+.reader strong {
+  font-weight: 650;
+}
+
+.mark-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.mark-row .mark-jump {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.mark-row .mark-text {
+  color: var(--text);
+}
+
+.mark-row .mark-page {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mark-drop {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+/* Offered only while something is selected. */
+.selection-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 40;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.selection-bar[hidden] {
+  display: none;
+}
+
+/* Time banked against one reading, beside its stopwatch. */
+.amount.clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.amount.clock.ghost {
+  opacity: 0.55;
+}
+
+.amount.clock.running {
+  color: var(--accent);
+  opacity: 1;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1767,6 +1863,56 @@ summary {
     <script type="module">
 globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week.","suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Christian Dogmatics (Allen & Swain)"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Christian Dogmatics (Allen & Swain)"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2 — pp. 51–74","ranges":[[51,74]]},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3},{"id":"applied3","name":"Applied Theology III","short":"Applied 3","color":"#d98b3f","credits":1,"instructor":"Todd Morikawa","location":"Various — arranged with the professor and your pastor","syllabus":"./syllabi/applied-theology-iii-fall-2026.pdf","datesUnknown":true,"meetingDay":null,"classTime":null,"sessions":[{"id":"discussion-1","date":null,"topic":"Book discussion 1","when":"Schedule within the first half of term","suggest":"2026-09-11","suggestNote":"Three weeks in: early enough that discussion 2 still fits before the midpoint.","readings":[{"source":"Perkins, The Art of Prophesying","ref":"Preface, Introduction, chs. 1–6","material":"Perkins, The Art of Prophesying","estPages":60,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-2","date":null,"topic":"Book discussion 2","when":"Schedule within the first half of term","suggest":"2026-10-09","suggestNote":"Just before the midpoint of term, which is where \"the first half\" runs out.","readings":[{"source":"Perkins, The Art of Prophesying","ref":"chs. 7–11 and summary","material":"Perkins, The Art of Prophesying","estPages":55,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-3","date":null,"topic":"Book discussion 3","when":"Schedule as close to the end of term as possible","suggest":"2026-12-04","suggestNote":"The last Friday of term — the syllabus asks for this one as late as possible.","readings":[{"source":"Perkins, The Calling of the Ministry","ref":"the whole work","material":"Perkins, The Calling of the Ministry","estPages":90,"driver":true,"flag":"The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"ministry","date":null,"topic":"Preaching opportunity","when":"Arrange with your pastor as soon as you can","suggest":"2026-10-25","suggestNote":"A Sunday, and far enough out that your pastor has a service to give you.","assignments":[{"title":"Preach to or on behalf of your church","type":"ministry","note":"Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."},{"title":"Reflection paper on preaching (~500 words)","type":"paper","note":"What text and venue, how your studies shaped the sermon, what you would do differently.","effortMinutes":180}]},{"id":"pastoral-1","date":null,"topic":"Pastoral meeting 1 of 3","when":"Three times across the term, whenever suits","suggest":"2026-09-04","suggestNote":"Early, so the other two are not squeezed into December.","assignments":[{"title":"Meet your pastor (1 of 3)","type":"meeting"}]},{"id":"pastoral-2","date":null,"topic":"Pastoral meeting 2 of 3","when":"Three times across the term, whenever suits","suggest":"2026-10-23","suggestNote":"Mid-term, roughly halfway between the other two.","assignments":[{"title":"Meet your pastor (2 of 3)","type":"meeting"}]},{"id":"pastoral-3","date":null,"topic":"Pastoral meeting 3 of 3","when":"Three times across the term, whenever suits","suggest":"2026-11-20","suggestNote":"Before finals week swallows the calendar.","assignments":[{"title":"Meet your pastor (3 of 3)","type":"meeting","note":"Drop the professor a note once all three are done."}]},{"id":"final-paper","date":null,"topic":"Final reflection paper","when":"Due within a week of the last day of term","suggest":"2026-12-15","suggestNote":"A week after the last day of term, which is the deadline the syllabus sets.","assignments":[{"title":"Final reflection paper (~750 words)","type":"paper","note":"On the Perkins readings, especially his biblical exegesis.","effortMinutes":300}]}]}]};
 // Generated by tools/build.mjs — edit js/*.js, not this file.
+const __mod_text = (() => {
+// Emphasis, as it travels from the page to the screen.
+//
+// Italic and bold survive the whole pipeline as two private-use codepoints,
+// paired like a tag. They cannot occur in real text, so no page can be mistaken
+// for marked-up text, and nothing in between — the word repair, the hyphen
+// resolver, the paragraph joiner — has to know they exist. The reader turns
+// them into italic and bold; copying turns them into ordinary markdown.
+
+const EM = '';
+const STRONG = '';
+
+/** The text as it reads, with the markers taken out. */
+const bareText = (text) => String(text || '').replaceAll(EM, '').replaceAll(STRONG, '');
+
+/** Out of the app the markers mean nothing, so they leave as markdown. */
+const toMarkdown = (text) => String(text || '').replaceAll(STRONG, '**').replaceAll(EM, '*');
+
+/**
+ * Split marked-up text into the plain string and the runs of emphasis over it.
+ *
+ * Offsets are into the plain string — what the reader renders, and what a
+ * highlight is measured against — so a highlight stays where it was put
+ * whatever the markers around it do.
+ */
+function emphasisRuns(text) {
+  let plain = '';
+  const runs = [];
+  const open = {};
+  for (const ch of String(text || '')) {
+    if (ch === EM || ch === STRONG) {
+      const kind = ch === EM ? 'em' : 'strong';
+      if (open[kind] === undefined) {
+        open[kind] = plain.length;
+      } else {
+        if (plain.length > open[kind]) runs.push({ start: open[kind], end: plain.length, kind });
+        delete open[kind];
+      }
+      continue;
+    }
+    plain += ch;
+  }
+  // A marker left open by a page that ended mid-emphasis closes at the end.
+  for (const [kind, start] of Object.entries(open)) {
+    if (plain.length > start) runs.push({ start, end: plain.length, kind });
+  }
+  return { plain, runs };
+}
+return { EM, STRONG, bareText, toMarkdown, emphasisRuns };
+})();
 const __mod_store = (() => {
 // Local persistence: settings, per-item completion, page-count overrides,
 // and a record of which reminders have already fired.
@@ -1836,11 +1982,30 @@ const EMPTY = {
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
+  // materialId -> [{ page, para, start, end, text, at }] — passages you marked.
+  // Offsets are into the paragraph as it reads, so they survive a re-reading of
+  // the same PDF as long as the words themselves do.
+  highlights: {},
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
   timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  // itemKey -> minutes, for good. The log above is trimmed to the last few
+  // hundred sittings so it cannot grow without limit, which makes it the wrong
+  // place to ask how long a reading has taken in total: by December the
+  // September sittings would have quietly fallen off the end of the answer.
+  totals: {},
   rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
+
+/** The per-item totals, rebuilt from the sittings still on record. */
+function totalsFrom(log) {
+  const totals = {};
+  for (const entry of log || []) {
+    if (!entry?.key) continue;
+    totals[entry.key] = (totals[entry.key] || 0) + (Number(entry.minutes) || 0);
+  }
+  return totals;
+}
 
 /**
  * Settings saved before a field existed come back without it. Merging over the
@@ -1867,9 +2032,11 @@ function read() {
       fired: parsed.fired || {},
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
+      highlights: parsed.highlights || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+      totals: parsed.totals || totalsFrom(parsed.timeLog),
       rhythmLog: parsed.rhythmLog || {}
     };
   } catch {
@@ -1976,6 +2143,42 @@ const bookmarksFor = (id) => state.bookmarks[id] || [];
 
 const bookmarksAll = () => state.bookmarks;
 
+/* ---------- passages you have marked ---------- */
+
+const highlightsFor = (id) => state.highlights[id] || [];
+
+const highlightKey = (h) => `${h.page}:${h.para}:${h.start}`;
+
+/**
+ * Mark a passage, or unmark it if the same one is marked again. Overlapping
+ * marks are merged rather than stacked: two passes over the same sentence with
+ * a slightly different selection should leave one mark on it, not two.
+ */
+function addHighlight(id, mark) {
+  const list = state.highlights[id] || [];
+  const same = (a, b) => a.page === b.page && a.para === b.para;
+  const overlapping = list.filter((h) => same(h, mark) && h.start < mark.end && mark.start < h.end);
+  const merged = overlapping.reduce(
+    (acc, h) => ({ ...acc, start: Math.min(acc.start, h.start), end: Math.max(acc.end, h.end) }),
+    { ...mark }
+  );
+  const rest = list.filter((h) => !overlapping.includes(h));
+  state.highlights[id] = [...rest, { ...merged, at: new Date().toISOString() }].sort(
+    (a, b) => a.page - b.page || a.para - b.para || a.start - b.start
+  );
+  persist();
+  return merged;
+}
+
+function removeHighlight(id, key) {
+  const list = state.highlights[id] || [];
+  const next = list.filter((h) => highlightKey(h) !== key);
+  if (next.length === list.length) return false;
+  state.highlights[id] = next;
+  persist();
+  return true;
+}
+
 /* ---------- dates you have arranged yourself ---------- */
 
 const sessionDates = () => state.sessionDates;
@@ -2061,6 +2264,7 @@ function stopTimer() {
       ...state.timeLog,
       { key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
     ].slice(-LOG_LIMIT);
+    state.totals[running.key] = (state.totals[running.key] || 0) + minutes;
   }
   persist();
   return { ...running, minutes };
@@ -2075,10 +2279,24 @@ function cancelTimer() {
 function logTime(key, courseId, minutes) {
   if (!minutes) return;
   state.timeLog = [...state.timeLog, { key, courseId: courseId || null, minutes, at: new Date().toISOString() }].slice(-LOG_LIMIT);
+  state.totals[key] = Math.max(0, (state.totals[key] || 0) + minutes);
   persist();
 }
 
 const timeLog = () => state.timeLog;
+
+/** Everything ever spent on one item, sittings and hand-corrections alike. */
+const totalOn = (key) => state.totals[key] || 0;
+
+const totals = () => state.totals;
+
+/** Set the running total by hand, for a reading you worked on away from the app. */
+function setTotal(key, minutes) {
+  const next = Math.max(0, Math.round(minutes || 0));
+  if (next) state.totals[key] = next;
+  else delete state.totals[key];
+  persist();
+}
 
 /* ---------- the daily rhythm ---------- */
 
@@ -2197,9 +2415,11 @@ function importData(json) {
     fired: parsed.fired || {},
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
+    highlights: parsed.highlights || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+    totals: parsed.totals || totalsFrom(parsed.timeLog),
     rhythmLog: parsed.rhythmLog || {}
   };
   persist();
@@ -2217,7 +2437,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, highlightsFor, highlightKey, addHighlight, removeHighlight, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, totalOn, totals, setTotal, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -3426,6 +3646,7 @@ const store = __mod_store;
 const S = __mod_schedule;
 const notify = __mod_notify;
 const lib = __mod_library;
+const {emphasisRuns} = __mod_text;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
 const BUILD = 'v24 · 2026-08-27';
@@ -3614,6 +3835,30 @@ function timerButton(task) {
 }
 
 /**
+ * Everything ever spent on one reading, kept beside the stopwatch.
+ *
+ * The stopwatch alone only ever answered "how long is this sitting" — the
+ * moment you stopped it, the number was gone into the weekly total and the
+ * reading itself had nothing to show for it. This is the other half: minutes
+ * banked against this item since the first time you opened it, still counting
+ * while the clock runs. Tap it to correct, for the evening you read on the bus
+ * and forgot to start anything.
+ */
+function timeChip(task) {
+  const running = store.runningTimer();
+  const mine = running && running.key === task.key;
+  const banked = store.totalOn(task.key);
+  if (!banked && !mine) {
+    return `<button class="amount clock ghost" data-action="edit-time" data-key="${esc(task.key)}"
+                    title="Say how long you have spent on ${esc(task.title)}">+ time</button>`;
+  }
+  const shown = banked + (mine ? elapsedMinutes(running) : 0);
+  return `<button class="amount clock ${mine ? 'running' : ''}" data-action="edit-time" data-key="${esc(task.key)}"
+                  ${mine ? `data-total-base="${banked}" data-total-since="${esc(running.startedAt)}"` : ''}
+                  title="Time spent on ${esc(task.title)} so far">${S.formatMinutes(shown)}</button>`;
+}
+
+/**
  * A finished sitting counts twice over: toward the week's measured total, which
  * the store has already recorded, and toward the item's own progress, so a paper
  * still shows how much of its estimate is behind you.
@@ -3666,6 +3911,12 @@ function watchTimer() {
   const paint = () => {
     const shown = elapsedClock(running);
     for (const el of document.querySelectorAll('[data-elapsed]')) el.textContent = shown;
+    // The item's own total climbs with it, so the number you are watching is
+    // the one that will still be there when you stop.
+    const minutes = elapsedMinutes(running);
+    for (const el of document.querySelectorAll('[data-total-base]')) {
+      el.textContent = S.formatMinutes(Number(el.dataset.totalBase || 0) + minutes);
+    }
   };
   paint();
   tick = setInterval(paint, 1000);
@@ -3728,6 +3979,7 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
       </div>
       ${materialButton(task)}
       <div class="task-actions">
+        ${withTimer ? timeChip(task) : ''}
         ${withTimer ? timerButton(task) : ''}
         <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
                 ${task.unit === 'pages' && !chunk ? `data-action="edit-pages" data-key="${esc(task.key)}"` : 'disabled'}>
@@ -4772,8 +5024,21 @@ function viewFiles() {
         uses repeatedly is left alone: names and technical terms are safe.
       </p>
       <p class="note">
+        <strong>Italic and bold come across too.</strong> The engine will not tell you which
+        words were emphasised — it reports every word as ordinary — so the app measures the
+        page instead: a word whose stems lean is italic, one whose strokes are thicker than
+        the rest of its line is bold. That keeps the difference between a book's title and a
+        sentence about it, which is most of what italics are doing in a theology text.
+        Copying the text out turns them into markdown.
+      </p>
+      <p class="note">
         When it has finished it says how sure it was, and names the pages it struggled with.
         Those are the ones to check against the PDF.
+      </p>
+      <p class="note">
+        In the reader, <strong>select any passage and tap Highlight</strong>. Highlights are
+        listed under the bookmarks so a chapter's worth can be found again without rereading
+        it, they survive re-reading the same PDF, and tapping one takes it off again.
       </p>
     </section>
 
@@ -5156,10 +5421,55 @@ async function renderReader(id, taskKey) {
   const marked = new Set(marks.map(store.bookmarkKey));
   const where = store.readingPos(id);
 
-  const paragraph = (page, index, text, kind = '') => {
+  const highlights = store.highlightsFor(id);
+
+  /**
+   * One paragraph, with everything laid over it that belongs there.
+   *
+   * Emphasis comes out of the reading as markers; highlights come out of the
+   * store as offsets into the text as it reads. Both are spans over the same
+   * string, so they are resolved together: a flag per character, and a tag
+   * opened wherever the flags change. Done separately, an italic phrase
+   * half-covered by a highlight would need one of the two tags to be closed and
+   * reopened, and the markup would nest wrongly.
+   */
+  const paragraph = (page, index, raw, kind = '') => {
     const key = `${page}:${index}`;
+    const { plain, runs } = emphasisRuns(raw);
+    const mine = highlights.filter((h) => h.page === page && h.para === index);
+
+    const flags = new Array(plain.length).fill(0);
+    const EM_BIT = 1;
+    const STRONG_BIT = 2;
+    for (const run of runs) {
+      const bit = run.kind === 'strong' ? STRONG_BIT : EM_BIT;
+      for (let i = Math.max(0, run.start); i < Math.min(plain.length, run.end); i++) flags[i] |= bit;
+    }
+    // A highlight is identified by where it starts, so each needs its own bit
+    // rather than one shared "highlighted" flag; two abutting marks must stay
+    // two marks, each removable on its own.
+    const marks = new Array(plain.length).fill(null);
+    for (const h of mine) {
+      for (let i = Math.max(0, h.start); i < Math.min(plain.length, h.end); i++) marks[i] = store.highlightKey(h);
+    }
+
+    let html = '';
+    let at = 0;
+    while (at < plain.length) {
+      const flag = flags[at];
+      const mark = marks[at];
+      let to = at + 1;
+      while (to < plain.length && flags[to] === flag && marks[to] === mark) to++;
+      let piece = esc(plain.slice(at, to));
+      if (flag & EM_BIT) piece = `<em>${piece}</em>`;
+      if (flag & STRONG_BIT) piece = `<strong>${piece}</strong>`;
+      if (mark) piece = `<mark data-mark="${esc(mark)}" tabindex="0">${piece}</mark>`;
+      html += piece;
+      at = to;
+    }
+
     return `<p class="${kind} ${marked.has(key) ? 'is-marked' : ''}" id="para-${esc(key)}"
-              data-page="${page}" data-para="${index}">${esc(text)}</p>`;
+              data-page="${page}" data-para="${index}">${html || esc(plain)}</p>`;
   };
 
   main.innerHTML = `
@@ -5189,6 +5499,7 @@ async function renderReader(id, taskKey) {
         <span class="progress-pct" id="reader-place">page ${where?.page || 1} of ${extracted.pageCount}</span>
       </div>
       <div id="bookmark-list">${bookmarkList(marks)}</div>
+      <div id="highlight-list">${highlightList(highlights)}</div>
     </section>
     <section class="card reader" style="--reader-size:${size}px">
       ${extracted.pages
@@ -5214,7 +5525,11 @@ async function renderReader(id, taskKey) {
     </section>
     <button class="fab" data-action="bookmark-here" id="fab-bookmark" title="Bookmark this spot">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
-    </button>`;
+    </button>
+    <div class="selection-bar" id="selection-bar" hidden>
+      <span id="selection-count"></span>
+      <button class="btn small" data-action="highlight-selection">Highlight</button>
+    </div>`;
 
   reading = { id, pages: extracted.pageCount };
   watchReadingPosition();
@@ -5222,6 +5537,91 @@ async function renderReader(id, taskKey) {
   const target = pendingJump || where;
   pendingJump = null;
   if (target) jumpTo(target, { smooth: false });
+}
+
+/**
+ * Where the text you marked can be found again.
+ *
+ * A highlight is worth having twice over: in place, so the page you are reading
+ * shows what struck you, and in a list, so the striking bits can be found again
+ * without reading the chapter for them. Both are the same store; this is the
+ * second view of it.
+ */
+function highlightList(highlights) {
+  if (!highlights.length) return '';
+  return `
+    <details class="marks" open>
+      <summary>Highlights (${highlights.length})</summary>
+      <ul class="mark-list">
+        ${highlights
+          .map((h) => {
+            const key = store.highlightKey(h);
+            const text = h.text.length > 120 ? `${h.text.slice(0, 118)}…` : h.text;
+            return `
+          <li class="mark-row">
+            <button class="linkbtn mark-jump" data-action="goto-highlight" data-key="${esc(key)}"
+                    data-page="${h.page}" data-para="${h.para}">
+              <span class="mark-page">p. ${h.page}</span>
+              <span class="mark-text">${esc(text)}</span>
+            </button>
+            <button class="linkbtn mark-drop" data-action="drop-highlight" data-key="${esc(key)}"
+                    title="Remove this highlight">×</button>
+          </li>`;
+          })
+          .join('')}
+      </ul>
+    </details>`;
+}
+
+/**
+ * What is selected, as an offset into the paragraph it sits in.
+ *
+ * The rendered paragraph is not one text node — emphasis and earlier highlights
+ * have already broken it into several — so the offset has to be counted across
+ * them in order. Nothing is inserted into the text while rendering, so those
+ * lengths add up to exactly the string the offsets are measured against.
+ */
+function selectionInParagraph() {
+  const selection = document.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  const para = range.startContainer.parentElement?.closest('p[data-page]');
+  if (!para || !para.contains(range.endContainer)) return null;
+
+  const offsetOf = (node, offset) => {
+    let total = 0;
+    const walker = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
+    let current = walker.nextNode();
+    while (current) {
+      if (current === node) return total + offset;
+      total += current.textContent.length;
+      current = walker.nextNode();
+    }
+    return null;
+  };
+
+  const start = offsetOf(range.startContainer, range.startOffset);
+  const end = offsetOf(range.endContainer, range.endOffset);
+  if (start === null || end === null || end <= start) return null;
+  return {
+    page: Number(para.dataset.page),
+    para: Number(para.dataset.para),
+    start,
+    end,
+    text: para.textContent.slice(start, end).replace(/\s+/g, ' ').trim()
+  };
+}
+
+/** Show the Highlight button only while there is something to highlight. */
+function watchSelection() {
+  const bar = $('#selection-bar');
+  if (!bar) return;
+  const found = selectionInParagraph();
+  bar.hidden = !found;
+  if (found) {
+    const words = found.text.split(/\s+/).filter(Boolean).length;
+    $('#selection-count').textContent = `${words} word${words === 1 ? '' : 's'} selected`;
+  }
 }
 
 function bookmarkList(marks) {
@@ -5412,6 +5812,12 @@ function go(next) {
 
 /* ---------------- interactions ---------------- */
 
+// The Highlight button follows the selection: there is nothing to offer until
+// something is selected, and nothing to keep once it is not.
+document.addEventListener('selectionchange', () => {
+  if (parseView(view).name === 'read') watchSelection();
+});
+
 document.addEventListener('click', async (e) => {
   const tab = e.target.closest('.tab');
   if (tab) return go(tab.dataset.view);
@@ -5423,6 +5829,18 @@ document.addEventListener('click', async (e) => {
   const fold = e.target.closest('[data-collapse]');
   if (fold) {
     store.setCollapsed(fold.dataset.collapse, Boolean(fold.closest('details')?.open));
+    return;
+  }
+
+  // A mark in the middle of the text is not a button, but it is the obvious
+  // place to tap to be rid of one, so it behaves like one.
+  const mark = e.target.closest('mark[data-mark]');
+  if (mark && !e.target.closest('[data-action]')) {
+    const id = parseView(view).arg;
+    if (id && confirm(`Remove this highlight?\n\n"${mark.textContent.trim().slice(0, 120)}"`)) {
+      store.removeHighlight(id, mark.dataset.mark);
+      return renderReader(id, parseView(view).taskKey);
+    }
     return;
   }
 
@@ -5499,6 +5917,27 @@ document.addEventListener('click', async (e) => {
     $('#bookmark-list').innerHTML = bookmarkList(marks);
     document.getElementById(`para-${mark.page}:${mark.para}`)?.classList.toggle('is-marked', added);
     readerScroll();
+    return;
+  }
+
+  if (action === 'highlight-selection') {
+    const found = selectionInParagraph();
+    const id = parseView(view).arg;
+    if (!found || !id) return;
+    store.addHighlight(id, found);
+    document.getSelection()?.removeAllRanges();
+    return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'drop-highlight') {
+    const id = parseView(view).arg;
+    if (!id) return;
+    store.removeHighlight(id, el.dataset.key);
+    return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'goto-highlight') {
+    jumpTo({ page: Number(el.dataset.page), para: Number(el.dataset.para) });
     return;
   }
 
@@ -5737,6 +6176,7 @@ document.addEventListener('click', async (e) => {
          ${result.repaired ? `Repaired ${result.repaired} misread word${result.repaired === 1 ? '' : 's'}. ` : ''}
          ${result.deskewed ? `Straightened ${result.deskewed} crooked page${result.deskewed === 1 ? '' : 's'}. ` : ''}
          ${result.notePages ? `Footnotes were found on ${result.notePages} page${result.notePages === 1 ? '' : 's'} and kept separate. ` : ''}
+         ${result.emphasised ? `Kept the italics and bold on ${result.emphasised} word${result.emphasised === 1 ? '' : 's'}. ` : ''}
          It reads <strong>English only</strong> — Greek and Hebrew come back as nonsense — and
          still misreads the odd word, so check anything you quote against the PDF.</span>
          ${
@@ -5864,6 +6304,27 @@ document.addEventListener('click', async (e) => {
   if (action === 'stop-timer') {
     const banked = store.stopTimer();
     if (banked) creditTime(banked);
+    return refresh();
+  }
+
+  if (action === 'edit-time') {
+    const task = TASKS.find((t) => t.key === key);
+    if (!task) return;
+    const running = store.runningTimer();
+    if (running?.key === key) {
+      alert('The clock is running on this one. Stop it first and the sitting will be added.');
+      return;
+    }
+    const now = store.totalOn(key);
+    const answer = prompt(
+      `Total minutes spent on "${task.title}" so far?\n\nThe stopwatch adds to this by itself; ` +
+        `set it by hand for time you did not time.`,
+      now || 30
+    );
+    if (answer === null) return;
+    const n = Math.round(Number(answer));
+    if (!Number.isFinite(n) || n < 0) return;
+    store.setTotal(key, n);
     return refresh();
   }
 

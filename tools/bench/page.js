@@ -17,11 +17,55 @@ export function rng(seed) {
 }
 
 /** Lay out justified text on a canvas the way a book page is set. */
+/**
+ * "**bold**" and "*italic*", stripped down to the word and how it is set.
+ *
+ * A run can span several words — "*ad extra*" is two — so the marks are read as
+ * they are met and the face stays open until it is closed again. That is what a
+ * typesetter does with them, and it is what the reader has to recover.
+ */
+let openFace = 'roman';
+export function styleOf(word) {
+  const opens = { '**': 'bold', '*': 'italic' };
+  let style = openFace;
+  let text = word;
+  const lead = text.startsWith('**') ? '**' : text.startsWith('*') ? '*' : null;
+  if (lead) {
+    style = opens[lead];
+    openFace = style;
+    text = text.slice(lead.length);
+  }
+  const tail = text.match(/(\*\*|\*)([.,;:]?)$/);
+  if (tail) {
+    text = text.slice(0, -tail[0].length) + tail[2];
+    openFace = 'roman';
+  }
+  return { text, style };
+}
+
+/** Start a fresh page: nothing is open at the top of one. */
+export function resetFaces() {
+  openFace = 'roman';
+}
+
 export function typeset(ctx, opts) {
   const { text, x, y, width, size, leading, font = 'Liberation Serif, Times New Roman, serif', indent = 0 } = opts;
-  ctx.font = `${size}px ${font}`;
+  const faceFor = (style) =>
+    `${style === 'italic' ? 'italic ' : ''}${style === 'bold' ? 'bold ' : ''}${size}px ${font}`;
+  ctx.font = faceFor('roman');
   ctx.fillStyle = '#111';
   ctx.textBaseline = 'alphabetic';
+
+  const measure = (word) => {
+    const was = openFace;
+    const { text: plain, style } = styleOf(word);
+    openFace = was;
+    ctx.font = faceFor(style);
+    const w = ctx.measureText(plain).width;
+    ctx.font = faceFor('roman');
+    return w;
+  };
+  const measureAll = (words) => words.reduce((sum, w) => sum + measure(w), 0) + (words.length - 1) * ctx.measureText(' ').width;
 
   const paragraphs = text.split('\n\n');
   let cursor = y;
@@ -33,7 +77,7 @@ export function typeset(ctx, opts) {
     const room = () => width - (first ? indent : 0);
     for (let i = 0; i < words.length; i++) {
       const next = [...line, words[i]];
-      if (ctx.measureText(next.join(' ')).width <= room() || !line.length) {
+      if (measureAll(next) <= room() || !line.length) {
         line = next;
         continue;
       }
@@ -47,18 +91,16 @@ export function typeset(ctx, opts) {
   for (const line of lines) {
     const left = x + line.indent;
     const room = width - line.indent;
-    const text = line.words.join(' ');
-    if (line.justify && line.words.length > 1) {
-      // Spread the slack between the words, as a typesetter would.
-      const slack = room - ctx.measureText(text).width;
-      const gap = slack / (line.words.length - 1);
-      let cx = left;
-      for (const word of line.words) {
-        ctx.fillText(word, cx, cursor);
-        cx += ctx.measureText(word).width + ctx.measureText(' ').width + gap;
-      }
-    } else {
-      ctx.fillText(text, left, cursor);
+    const slack = line.justify && line.words.length > 1 ? room - measureAll(line.words) : 0;
+    const gap = line.words.length > 1 ? slack / (line.words.length - 1) : 0;
+    let cx = left;
+    for (const word of line.words) {
+      const { text: plain, style } = styleOf(word);
+      ctx.font = faceFor(style);
+      ctx.fillText(plain, cx, cursor);
+      cx += ctx.measureText(plain).width + gap;
+      ctx.font = faceFor('roman');
+      cx += ctx.measureText(' ').width;
     }
     cursor += leading;
   }

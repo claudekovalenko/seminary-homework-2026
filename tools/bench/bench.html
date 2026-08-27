@@ -4,8 +4,8 @@
   <body>
     <p id="state">idle</p>
     <script type="module">
-      import { typeset, degrade, imageToPdf } from './page.js';
-      import { HEAD, FOLIO, BODY, NOTES } from './truth.js';
+      import { typeset, degrade, imageToPdf, resetFaces } from './page.js';
+      import { HEAD, FOLIO, BODY, NOTES, EMPHASIS } from './truth.js';
       import * as ocr from '../../js/ocr.js';
 
       const state = document.getElementById('state');
@@ -54,14 +54,16 @@
         ctx.font = '30px Liberation Serif, serif';
         ctx.fillStyle = '#111';
         ctx.fillText(HEAD, left, 190);
-        const y = typeset(ctx, { text: BODY, x: left, y: 300, width, size: 38, leading: 62, indent: 60 });
+        resetFaces();
+        const afterBody = typeset(ctx, { text: BODY, x: left, y: 300, width, size: 33, leading: 53, indent: 60 });
+        const y = typeset(ctx, { text: EMPHASIS, x: left, y: afterBody + 12, width, size: 33, leading: 53, indent: 60 });
         // A rule and the footnotes beneath it, set small, as in the books.
         ctx.strokeStyle = '#111';
         ctx.beginPath();
         ctx.moveTo(left, y + 40);
         ctx.lineTo(left + 380, y + 40);
         ctx.stroke();
-        typeset(ctx, { text: NOTES, x: left, y: y + 100, width, size: 26, leading: 42 });
+        typeset(ctx, { text: NOTES, x: left, y: y + 90, width, size: 24, leading: 38 });
         ctx.font = '28px Liberation Serif, serif';
         ctx.fillText(FOLIO, left + width / 2, 2110);
         return canvas;

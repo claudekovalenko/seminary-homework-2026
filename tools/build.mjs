@@ -18,7 +18,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(resolve(ROOT, p), 'utf8');
 
 // Dependency order: each module may only import ones already defined above it.
-const MODULES = ['store', 'schedule', 'notify', 'library'];
+const MODULES = ['text', 'store', 'schedule', 'notify', 'library'];
 
 /** Rewrite one ES module into `const __mod_x = (() => { ... })()`. */
 function moduleToIife(name, source) {

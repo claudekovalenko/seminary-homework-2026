@@ -339,5 +339,123 @@ export function prepare(canvas, ctx, { deskew = true, threshold = true, clean = 
     data[i + 3] = 255;
   }
   ctx.putImageData(image, 0, 0);
-  return { angle, specks: removed };
+  // The binary page goes back with the result: measuring how a word is set
+  // needs the pixels, and thresholding them twice would be silly.
+  return { angle, specks: removed, binary: threshold ? out : null, width, height };
+}
+
+/* ---------- how a word is set ---------- */
+
+/**
+ * Italic and bold are in the picture, and nowhere else.
+ *
+ * Tesseract's LSTM engine reports neither — every word comes back with
+ * `is_bold: false`, `is_italic: false` and no font name at all, because those
+ * fields belong to the old pattern-matching engine that nobody ships any more.
+ * But a scan of a page still plainly shows which words lean and which are
+ * heavy, and both are measurable:
+ *
+ *   italic — the stems lean. Shear the word back through a range of angles and
+ *            the angle at which its vertical strokes line up into the sharpest
+ *            columns is the angle it was set at.
+ *   bold   — the strokes are thicker. Ink runs along each scanline are longer,
+ *            in proportion to the size of the type.
+ *
+ * Both are returned as raw measurements rather than as verdicts, because a
+ * measurement only means something next to the rest of the page: 12 degrees is
+ * italic on a page of upright type and normal on a page set in italic
+ * throughout, and a "thick" stroke is only thick beside its neighbours.
+ */
+const SLANT_ANGLES = { from: -4, to: 22, step: 2 };
+
+export function measureWord(binary, width, height, box) {
+  const x0 = Math.max(0, Math.floor(box.x0));
+  const x1 = Math.min(width, Math.ceil(box.x1));
+  const y0 = Math.max(0, Math.floor(box.y0));
+  const y1 = Math.min(height, Math.ceil(box.y1));
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w < 4 || h < 6) return null;
+
+  // Ink runs along each scanline: their mean length is the horizontal thickness
+  // of the strokes, which is what "bold" means once the type size is divided out.
+  // Histogram of run lengths rather than their mean: most runs cross a stem, so
+  // the middle of the distribution is the stem's width, while the mean is
+  // dragged up by every horizontal bar and every round letter it passes
+  // through — enough that an ordinary "came" measured heavier than a bold
+  // "whole", which is exactly the mistake this avoids.
+  const LONGEST = 64;
+  const histogram = new Uint32Array(LONGEST + 1);
+  let runs = 0;
+  let ink = 0;
+  for (let y = y0; y < y1; y++) {
+    let run = 0;
+    for (let x = x0; x <= x1; x++) {
+      const dark = x < x1 && binary[y * width + x] === 0;
+      if (dark) {
+        ink++;
+        run++;
+      } else if (run) {
+        histogram[Math.min(LONGEST, run)]++;
+        runs++;
+        run = 0;
+      }
+    }
+  }
+  if (ink < 20 || runs < 6) return null;
+
+  let seen = 0;
+  let stem = 1;
+  for (let i = 1; i <= LONGEST; i++) {
+    seen += histogram[i];
+    if (seen * 2 >= runs) {
+      stem = i;
+      break;
+    }
+  }
+
+  // The slant of the stems. Only the middle band of the word is used — the
+  // x-height, where the stems are — since ascenders and descenders are sparse
+  // and the baseline serifs pull every angle towards zero.
+  const bandTop = y0 + Math.round(h * 0.2);
+  const bandBottom = y1 - Math.round(h * 0.2);
+  const mid = (bandTop + bandBottom) / 2;
+  const columns = new Float64Array(w + Math.ceil(h) + 2);
+  const sharpness = (degrees) => {
+    columns.fill(0);
+    const slope = Math.tan((degrees * Math.PI) / 180);
+    for (let y = bandTop; y < bandBottom; y++) {
+      const shift = Math.round((mid - y) * slope);
+      const row = y * width;
+      for (let x = x0; x < x1; x++) {
+        if (binary[row + x] !== 0) continue;
+        const at = x - x0 - shift;
+        if (at >= 0 && at < columns.length) columns[at] += 1;
+      }
+    }
+    let score = 0;
+    for (let i = 0; i < columns.length; i++) score += columns[i] * columns[i];
+    return score;
+  };
+
+  let best = { angle: 0, score: sharpness(0) };
+  for (let a = SLANT_ANGLES.from; a <= SLANT_ANGLES.to; a += SLANT_ANGLES.step) {
+    const score = sharpness(a);
+    if (score > best.score) best = { angle: a, score };
+  }
+  for (let a = best.angle - 1.5; a <= best.angle + 1.5; a += 0.75) {
+    const score = sharpness(a);
+    if (score > best.score) best = { angle: a, score };
+  }
+
+  return {
+    // The stem width in pixels. Deliberately not divided by this word's own
+    // height: "came" and "own" have no ascenders and stand half as tall as
+    // "whole", so dividing by it made every short word look bold. The type size
+    // to divide by is the line's, and only the caller knows that.
+    stem,
+    slant: best.angle,
+    ink,
+    height: h
+  };
 }
