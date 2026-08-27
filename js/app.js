@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v22 · 2026-08-23';
+const BUILD = 'v23 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -557,6 +557,121 @@ function rhythmCard() {
  * explains it, and the place unfinished work from a class that has already met
  * gets picked up rather than quietly dropped.
  */
+/**
+ * The week as one thing, aimed at a day rather than at the classes.
+ *
+ * Both classes meet on Tuesday, so left to itself the plan runs the reading
+ * right up to Tuesday evening — which is how a week ends with Monday night
+ * holding four hours of Bavinck. The finish line is the fix: everything for
+ * both courses lands by Saturday, and Sunday and Monday are what is left over
+ * if it does not. This card is that week in one place — how much is left,
+ * how it falls across the days, and the whole list of it for both courses.
+ */
+function weekAimCard(allPlans) {
+  // The courses that meet every week. What you arrange yourself has its own
+  // checklist further down and is deliberately not part of this number.
+  const plans = allPlans.filter((p) => !p.course.datesUnknown);
+  if (!plans.length) return '';
+  const today = S.startOfToday();
+  const target = plans.map((p) => p.plan.target).sort((a, b) => a - b)[0];
+  const aimed = plans.some((p) => p.plan.finishLine);
+  const all = plans.flatMap((p) => [...p.owed, ...p.tasks]);
+  const w = S.workload(all);
+  const dayName = S.formatDate(target, { weekday: 'long' });
+  const until = S.daysBetween(today, target);
+
+  if (!w.remaining) {
+    return `
+      <section class="card week-aim done">
+        <div class="card-head">
+          <h2>Done by ${esc(dayName)}</h2>
+          <span class="card-when">${esc(S.formatDate(target))}</span>
+        </div>
+        <p class="note">
+          Everything for both classes is ticked off, ${until >= 0 ? `and ${esc(dayName)} has not even arrived` : 'ahead of the class'}.
+          Nothing is owed until the next round of reading opens up.
+        </p>
+      </section>`;
+  }
+
+  // One row per day, both courses added together: the question this answers is
+  // "what does Thursday look like", not "what does Thursday look like for Greek".
+  const byDay = new Map();
+  for (const p of plans) {
+    for (const day of p.plan.plan) {
+      const iso = S.toISO(day.date);
+      const row = byDay.get(iso) || { date: day.date, minutes: 0, block: false };
+      row.minutes += day.minutes;
+      row.block = row.block || day.block;
+      byDay.set(iso, row);
+    }
+  }
+  const strip = [...byDay.values()].sort((a, b) => a.date - b.date);
+  const blocks = strip.filter((d) => d.block).length || 1;
+
+  const outstanding = all.filter((t) => !t.complete);
+  const counts = [
+    [outstanding.filter((t) => t.kind === 'reading').length, 'readings'],
+    [outstanding.filter((t) => t.kind === 'bible').length, 'Bible readings'],
+    [outstanding.filter((t) => t.kind === 'assignment').length, 'assignments']
+  ].filter(([n]) => n > 0);
+
+  return `
+    <section class="card week-aim">
+      <div class="card-head">
+        <h2>Done by ${esc(dayName)}</h2>
+        <span class="card-when">${esc(S.formatDate(target))} · ${esc(S.relativeDay(target).toLowerCase())}</span>
+      </div>
+      <p class="note">
+        ${
+          aimed
+            ? `Everything for both classes, finished by ${esc(dayName)} rather than by the class itself —
+               ${esc(S.formatDate(plans[0].deadline))} is the deadline, this is the plan.`
+            : `${esc(dayName)} is as late as this week goes, so this is what is left of it.`
+        }
+        ${counts.length ? `Still to do: ${esc(counts.map(([n, label]) => `${n} ${label}`).join(', '))}.` : ''}
+      </p>
+      <div class="stats">
+        <div><span class="stat">${S.formatMinutes(w.remaining)}</span><small>left this week</small></div>
+        <div><span class="stat">${S.formatMinutes(w.remaining / blocks)}</span><small>a day to get there</small></div>
+        <div><span class="stat">${blocks}</span><small>reading ${blocks === 1 ? 'day' : 'days'} left</small></div>
+      </div>
+      ${progressBar(w)}
+      <div class="week-strip">
+        ${strip
+          .map((day) => {
+            const isToday = S.daysBetween(day.date, today) === 0;
+            const isTarget = S.daysBetween(day.date, target) === 0;
+            return `
+            <div class="week-day ${isToday ? 'is-today' : ''} ${day.block ? '' : 'is-off'} ${isTarget ? 'is-target' : ''}">
+              <span class="week-day-name">${esc(S.formatDate(day.date, { weekday: 'short' }))}</span>
+              <span class="week-day-mins">${day.minutes ? S.formatMinutes(day.minutes) : '—'}</span>
+            </div>`;
+          })
+          .join('')}
+      </div>
+      <div class="week-courses">
+        ${plans
+          .map(({ course, session, date, owed, tasks }) => {
+            const cw = S.workload([...owed, ...tasks]);
+            return `
+            <div class="course-progress">
+              <div class="course-progress-head">
+                <span>${dot(course.color)}${esc(course.short || course.name)}</span>
+                <span class="muted">${cw.remaining ? `${S.formatMinutes(cw.remaining)} left` : 'done'} · ${esc(S.formatDate(date))}</span>
+              </div>
+              ${progressBar(cw, { size: 'progress-sm' })}
+            </div>`;
+          })
+          .join('')}
+      </div>
+      <details class="all-readings">
+        <summary>Everything to finish by ${esc(dayName)} (${outstanding.length})</summary>
+        <ul class="tasks">${outstanding.map((t) => taskLine(t, { showCourse: true, withTimer: true })).join('')}</ul>
+      </details>
+    </section>`;
+}
+
 function catchUpCard(plans, projects) {
   const slipping = plans.filter((p) => !p.pace.onTrack && p.pace.behind > 0);
   const owed = plans.flatMap((p) => p.owed);
@@ -670,33 +785,14 @@ function viewToday() {
       <div class="hero-sub">${overall.pct}% of this week's work done</div>
     </section>
 
-    ${catchUpCard(plans, activeProjects())}
+    ${weekAimCard(plans)}
 
-    ${
-      plans.length
-        ? `<section class="card">
-             <h2>Progress toward next class</h2>
-             ${plans
-               .map(({ course, session, tasks }) => {
-                 const w = S.workload(tasks);
-                 return `
-                 <div class="course-progress">
-                   <div class="course-progress-head">
-                     <span>${dot(course.color)}${esc(course.short || course.name)}</span>
-                     <span class="muted">${esc(session.topic)}</span>
-                   </div>
-                   ${progressBar(w)}
-                 </div>`;
-               })
-               .join('')}
-           </section>`
-        : ''
-    }
+    ${catchUpCard(plans, activeProjects())}
 
     ${rhythmCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
-    ${unscheduledSection({ collapsible: true })}
+    ${arrangedSection({ collapsible: true })}
 
     ${
       bucket.projects.length
@@ -786,6 +882,15 @@ function viewPlan() {
             <div><span class="stat">${plan.days}</span><small>reading days</small></div>
             <div><span class="stat">${S.formatMinutes(plan.perDay)}</span><small>per day</small></div>
           </div>
+          ${
+            plan.finishLine
+              ? `<p class="note">
+                   Aimed at <strong>${esc(S.formatDate(plan.target))}</strong>, not at the class.
+                   ${esc(S.formatDate(date))} is when it is due; this is when it is meant to be done,
+                   which leaves the days between as margin rather than as the plan.
+                 </p>`
+              : ''
+          }
           <p class="note pace ${pace.onTrack && !owed.length ? 'ok' : 'behind'}">
             ${
               owed.length
@@ -876,7 +981,7 @@ function viewSchedule() {
           .join('')}
       </div>
     </section>
-    ${unscheduledSection()}`;
+    ${arrangedSection()}`;
 }
 
 /** Every distinct work assigned this term, with where it is used. */
@@ -965,57 +1070,100 @@ function redoRow(m, entry) {
  * and the deadline list, which would otherwise have to invent a date for it.
  * Put a date on a meeting here and it joins the rest of the app at once.
  */
-function unscheduledSection({ collapsible = false } = {}) {
-  const waiting = S.unscheduled(TASKS);
-  if (!waiting.length) return '';
+/**
+ * The work you arrange yourself, as a standing checklist.
+ *
+ * Applied Theology has no dates in its syllabus at all — three book
+ * discussions, a preaching slot, three pastoral meetings and two papers, every
+ * one of them arranged between you, the professor and your pastor. That makes
+ * it the easiest course to lose: nothing is ever due, so nothing ever asks. So
+ * it is not planned against the week — it sits here, dated or not, as boxes to
+ * tick eventually, with a date offered for each one inside the window the
+ * syllabus gives. Take the offer and it joins the plan and the reminders like
+ * anything else; ignore it and the box is still here next week.
+ */
+function arrangedSection({ collapsible = false } = {}) {
+  const courses = DATA.courses.filter((c) => c.datesUnknown && (c.sessions || []).length);
+  if (!courses.length) return '';
 
-  // Walk the syllabus rather than the task list. Tasks are sorted by when they
-  // are due and how big they are, so grouping by that order made the meetings
-  // rearrange themselves under your finger as soon as you ticked something off.
-  const byCourse = new Map();
-  for (const course of DATA.courses) {
-    const list = [];
-    for (const session of course.sessions || []) {
-      const items = waiting.filter((t) => t.courseId === course.id && t.sessionId === (session.id || session.date));
-      if (items.length) list.push({ courseId: course.id, sessionId: session.id, task: items[0], items });
-    }
-    if (list.length) byCourse.set(course.id, list);
-  }
+  return courses
+    .map((course) => {
+      // Walk the syllabus, not the task list: tasks re-sort themselves by date
+      // and size, which made the rows shuffle under your finger as you ticked.
+      const groups = (course.sessions || [])
+        .map((session) => {
+          const slot = session.date || session.id;
+          const items = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
+          return { session, slot, items, date: S.sessionDate(course, session) };
+        })
+        .filter((g) => g.items.length);
+      if (!groups.length) return '';
 
-  return [...byCourse.entries()]
-    .map(([courseId, list]) => {
-      const course = DATA.courses.find((c) => c.id === courseId);
-      const count = list.reduce((sum, g) => sum + g.items.length, 0);
-      const id = `unscheduled:${course.id}`;
-      // On the home page this folds away: it is a term's worth of work with no
-      // date on it, and it should not sit above what you are reading tonight.
+      const all = groups.flatMap((g) => g.items);
+      const w = S.workload(all);
+      const left = groups.filter((g) => g.items.some((t) => !t.complete)).length;
+      const undated = groups.filter((g) => !g.date && g.items.some((t) => !t.complete)).length;
+      const id = `arranged:${course.id}`;
       const shut = store.isCollapsed(id);
+
       const head = `
         <span class="fold-title">${dot(course.color)}${esc(course.name)}</span>
-        <span class="card-when">${count} to arrange${collapsible && shut ? '' : ' · nothing dated yet'}</span>`;
+        <span class="card-when">${left ? `${left} to go` : 'all done'}${undated ? ` · ${undated} with no date` : ''}</span>`;
+
       const body = `
         <p class="note">
-          You arrange these yourself with ${esc(course.instructor || 'the professor')} and your pastor.
-          Set a date on one and it joins the day plan, the reminders and everything else.
+          Yours to arrange with ${esc(course.instructor || 'the professor')} and your pastor, so none of it
+          counts toward the weekly target — it waits here until you put a date on it. Each row offers
+          one: tap the date to take it, or pick your own.
         </p>
-        ${list
-          .map(
-            (group) => `
-          <div class="unscheduled">
-            <div class="unscheduled-head">
+        ${progressBar(w)}
+        ${groups
+          .map((group) => {
+            const { session, items } = group;
+            const done = items.every((t) => t.complete);
+            const suggested = session.suggest && !group.date;
+            return `
+          <div class="arranged ${done ? 'is-done' : ''} ${group.date ? 'is-dated' : ''}">
+            <div class="arranged-head">
               <div>
-                <div class="unscheduled-topic">${esc(group.task.topic)}</div>
-                ${group.task.arrangeBy ? `<div class="task-detail">${esc(group.task.arrangeBy)}</div>` : ''}
+                <div class="arranged-topic">${esc(session.topic)}</div>
+                ${session.when ? `<div class="task-detail">${esc(session.when)}</div>` : ''}
+                ${
+                  suggested
+                    ? `<div class="task-detail muted">${esc(session.suggestNote || 'Suggested date, inside the syllabus window.')}</div>`
+                    : ''
+                }
               </div>
-              <label class="visually-hidden" for="date-${esc(group.courseId)}-${esc(group.sessionId)}">Date</label>
-              <input type="date" id="date-${esc(group.courseId)}-${esc(group.sessionId)}"
-                     aria-label="Date for ${esc(group.task.topic)}"
-                     data-sessiondate="${esc(group.courseId)}|${esc(group.sessionId)}">
+              <div class="arranged-date">
+                <label class="visually-hidden" for="date-${esc(course.id)}-${esc(session.id)}">Date</label>
+                <input type="date" id="date-${esc(course.id)}-${esc(session.id)}"
+                       value="${esc(group.date || '')}"
+                       aria-label="Date for ${esc(session.topic)}"
+                       data-sessiondate="${esc(course.id)}|${esc(session.id)}">
+                ${
+                  suggested
+                    ? `<button class="btn small ghost" data-action="use-suggested"
+                               data-session="${esc(course.id)}|${esc(session.id)}" data-date="${esc(session.suggest)}">
+                         Use ${esc(S.formatDate(S.parseDate(session.suggest)))}
+                       </button>`
+                    : group.date
+                      ? `<button class="btn small ghost" data-action="clear-session-date"
+                                 data-session="${esc(course.id)}|${esc(session.id)}">Clear</button>`
+                      : ''
+                }
+              </div>
             </div>
-            <ul class="tasks">${group.items.map((t) => taskLine(t, { withTimer: true })).join('')}</ul>
-          </div>`
-          )
-          .join('')}`;
+            <ul class="tasks">${items.map((t) => taskLine(t, { withTimer: true })).join('')}</ul>
+          </div>`;
+          })
+          .join('')}
+        ${
+          groups.some((g) => !g.date)
+            ? `<button class="btn ghost" data-action="use-all-suggested" data-course="${esc(course.id)}">
+                 Take every suggested date
+               </button>`
+            : ''
+        }`;
 
       return collapsible
         ? `<details class="card fold" ${shut ? '' : 'open'}>
@@ -1316,6 +1464,34 @@ function viewSettings() {
         )
         .join('')}
       <button class="btn ghost" data-action="clear-times">Back to assumed times</button>
+    </section>
+
+    <section class="card">
+      <h2>Finish line</h2>
+      <p class="note">
+        The day a week's work is meant to be <em>done</em>, as opposed to the day it is due. Both
+        classes meet on Tuesday, so without this the plan quite reasonably reads right up to Tuesday
+        evening — and a week ends with Monday night holding four hours of Bavinck. Set it to Saturday
+        and the same reading lands by the weekend, with Sunday and Monday as margin instead of as the
+        plan. Being "behind" is measured against this day too. It never pushes work later than the
+        class, and if this week's finish line has already gone by, the class deadline stands.
+      </p>
+      <div class="chips">
+        ${dayNames
+          .map(
+            (n, i) =>
+              `<button class="chip ${s.finishDay === i ? 'on' : ''}" data-action="set-finish" data-day="${i}">${n}</button>`
+          )
+          .join('')}
+        <button class="chip ${s.finishDay === null || s.finishDay === undefined ? 'on' : ''}" data-action="set-finish" data-day="off">Off</button>
+      </div>
+      <p class="note">
+        ${
+          Number.isInteger(s.finishDay)
+            ? `Aiming to have each week finished by <strong>${esc(dayNames[s.finishDay])}</strong>.`
+            : 'No finish line — the plan runs up to each class.'
+        }
+      </p>
     </section>
 
     <section class="card">
@@ -2297,6 +2473,35 @@ document.addEventListener('click', async (e) => {
     const days = store.settings().studyDays;
     const next = days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort();
     if (next.length) store.updateSettings({ studyDays: next });
+    return refresh();
+  }
+
+  if (action === 'set-finish') {
+    const raw = el.dataset.day;
+    store.updateSettings({ finishDay: raw === 'off' ? null : Number(raw) });
+    return refresh();
+  }
+
+  // A meeting you arrange yourself, taking the date the app offers for it.
+  if (action === 'use-suggested') {
+    const [courseId, sessionId] = el.dataset.session.split('|');
+    store.setSessionDate(courseId, sessionId, el.dataset.date);
+    return refresh();
+  }
+
+  if (action === 'use-all-suggested') {
+    const course = courseById(el.dataset.course);
+    for (const session of course?.sessions || []) {
+      if (session.suggest && !S.sessionDate(course, session)) {
+        store.setSessionDate(course.id, session.id, session.suggest);
+      }
+    }
+    return refresh();
+  }
+
+  if (action === 'clear-session-date') {
+    const [courseId, sessionId] = el.dataset.session.split('|');
+    store.setSessionDate(courseId, sessionId, null);
     return refresh();
   }
 

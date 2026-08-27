@@ -1446,14 +1446,18 @@ summary {
   font-size: 15px;
 }
 
-/* Meetings you arrange yourself, waiting for a date. */
-.unscheduled + .unscheduled {
+/* Meetings you arrange yourself: a standing checklist, dated or not. */
+.arranged + .arranged {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
-.unscheduled-head {
+.arranged.is-done {
+  opacity: 0.55;
+}
+
+.arranged-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1462,11 +1466,18 @@ summary {
   margin-bottom: 4px;
 }
 
-.unscheduled-topic {
+.arranged-topic {
   font-size: 14.5px;
 }
 
-.unscheduled-head input[type='date'] {
+.arranged-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.arranged-head input[type='date'] {
   background: var(--bg-elev-2);
   color: var(--text);
   border: 1px solid var(--line);
@@ -1474,6 +1485,69 @@ summary {
   padding: 6px 8px;
   font: inherit;
   font-size: 13px;
+}
+
+.arranged.is-dated .arranged-head input[type='date'] {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+/* The week at a glance: one column per day between now and the finish line. */
+.week-aim .week-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  margin: 14px 0 12px;
+}
+
+.week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev-2);
+  min-width: 0;
+}
+
+.week-day-name {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.week-day-mins {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.week-day.is-off {
+  opacity: 0.5;
+}
+
+.week-day.is-today {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.week-day.is-target {
+  border-color: color-mix(in srgb, var(--warn) 70%, var(--line));
+}
+
+.week-day.is-target .week-day-name {
+  color: var(--warn);
+}
+
+.week-aim .week-courses {
+  margin-top: 4px;
+}
+
+.week-aim.done .note {
+  color: var(--text);
 }
 
 .visually-hidden {

@@ -5,16 +5,41 @@ home screen and it answers three questions: **what is due, how much reading is
 that, and how much of it should I do today.**
 
 - **Today** — the day's reading target in minutes, the exact pages to read, and
-  everything falling due inside your warning window (7 days by default).
+  everything falling due inside your warning window (7 days by default). At the
+  top of it, the week as one thing: everything for both classes, aimed at the
+  day you want to be finished.
 - **Plan** — for each course's next class: total pages, total time, and a
   day-by-day split of the reading. Long page ranges are cut at real page
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.
 - **Schedule** — the whole term, both syllabi, expandable per class.
-- **Settings** — reminders, study days, and your reading pace.
+- **Settings** — the finish line, reminders, study days, and your reading pace.
 
 Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.
+
+### The finish line
+
+Both classes meet on Tuesday, so left alone the plan reads right up to Tuesday
+evening — which is how a week ends with Monday night holding four hours of
+Bavinck. Settings → **Finish line** sets the day a week is meant to be *done*,
+Saturday by default. The same reading is then spread across the days up to
+Saturday, "behind" is measured against Saturday, and Sunday and Monday become
+margin rather than the plan. It never pushes work past the class, and if this
+week's finish line has already gone by, the class deadline stands. Set it to
+*Off* to plan straight up to each class.
+
+### Work you arrange yourself
+
+Applied Theology III has no dates in its syllabus at all: three book
+discussions, a preaching slot, three pastoral meetings and two papers, each
+arranged between you, the professor and your pastor. That makes it the easiest
+course to lose — nothing is due, so nothing ever asks. It sits on Today and
+Schedule as its own checklist, out of the weekly target, with a date offered
+for each row inside the window the syllabus gives (*"Use Fri, Sep 11"*, or
+**Take every suggested date**). Take one and that meeting joins the plan, the
+deadlines and the reminders like anything else; ignore it and the box is still
+there next week.
 
 ## Downloading it
 

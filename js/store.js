@@ -30,6 +30,11 @@ export const DEFAULT_SETTINGS = {
   // days you block out for the books. Leaving one day ticked puts a whole
   // week's reading into one sitting, which is the point. 0 = Sunday .. 6 = Sat.
   studyDays: [1, 2, 3, 4, 5, 6],
+  // The day a week's work is meant to be finished on, ahead of the classes it
+  // is for. Saturday by default: the reading for Tuesday's classes lands by the
+  // weekend, and Sunday and Monday are margin rather than the plan. null turns
+  // it off and plans right up to the class itself. 0 = Sunday .. 6 = Saturday.
+  finishDay: 6,
   // Daily habits, kept in settings so they travel with an export.
   rhythm: structuredClone(DEFAULT_RHYTHM),
   // How far ahead the app warns you about a deadline.
