@@ -13,7 +13,10 @@ that, and how much of it should I do today.**
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.
 - **Schedule** — the whole term, both syllabi, expandable per class.
 - **Files** — the PDFs you attach, the text pulled out of them, and a reader you
-  can highlight in. Select any passage and tap Highlight; highlights are listed
+  can highlight in. Each book lists the readings inside it, with the chapter and
+  the date it is wanted: a collection is filed under its own title while its
+  chapters are by other people, so *Christian Dogmatics* is where Swain on the
+  Trinity is, and the row says so. Select any passage and tap Highlight; highlights are listed
   under the bookmarks, survive a re-reading of the same PDF, and come off with a
   tap.
 - **Settings** — the finish line, reminders, study days, and your reading pace.

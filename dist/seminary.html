@@ -1564,6 +1564,53 @@ summary {
   color: var(--text);
 }
 
+/* The readings a book holds, listed under the book in Files. */
+.material-readings {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.material-reading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.material-reading:last-child {
+  border-bottom: 0;
+}
+
+.material-reading.is-done {
+  opacity: 0.55;
+}
+
+.material-reading-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.material-reading-title {
+  font-size: 14.5px;
+}
+
+.material-reading-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.material-reading .tags:empty {
+  display: none;
+}
+
+.material-reading .tags {
+  margin-top: 4px;
+}
+
 /* Passages you marked, in the text and in the list beside the bookmarks. */
 .reader mark {
   background: color-mix(in srgb, var(--warn) 34%, transparent);
@@ -3654,7 +3701,7 @@ const lib = __mod_library;
 const {emphasisRuns} = __mod_text;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v25 · 2026-08-27';
+const BUILD = 'v26 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -4672,11 +4719,16 @@ function materials() {
     const name = t.material || t.title;
     const id = lib.materialId(name);
     if (!map.has(id)) {
-      map.set(id, { id, name, courses: new Set(), uses: 0, isPdf: false, nextDue: null });
+      map.set(id, { id, name, courses: new Set(), uses: 0, isPdf: false, nextDue: null, items: [] });
     }
     const m = map.get(id);
     m.courses.add(t.course);
     m.uses += 1;
+    // Which readings are actually inside this book. Without them a row says
+    // only "Christian Dogmatics, used in 3 classes", and the chapter you have
+    // been told to read for Tuesday — Swain's, chapter four — is nowhere on the
+    // page you attach it from.
+    m.items.push(t);
     if (t.format === 'pdf') m.isPdf = true;
     // Undated work has no "next" — it stays out of this ordering entirely.
     const due = t.due ? S.parseDate(t.due) : null;
@@ -4695,6 +4747,76 @@ function materials() {
 let extractedIds = new Set();
 
 /** "Read text" once text exists, "Get text" for a PDF we could read. */
+/**
+ * The readings a book holds, listed on the book.
+ *
+ * A collection is filed under its own title, and the chapters inside it are
+ * filed under the people who wrote them — so the volume called "Christian
+ * Dogmatics" is where you find Swain on the Trinity, and nothing on the shelf
+ * says so. That is fine in a library, where you have the book in your hand, and
+ * useless here, where this row is the only thing standing between the syllabus
+ * and the PDF you are about to attach and read.
+ *
+ * Ordered by when each is wanted, so the one you are reading for Tuesday is at
+ * the top rather than in syllabus order.
+ */
+function materialReadings(m, entry) {
+  if (!m.items.length) return '';
+  const today = S.startOfToday();
+  const when = (t) => (t.due ? S.parseDate(t.due).getTime() : Infinity);
+  const items = m.items.slice().sort((a, b) => {
+    const past = (t) => (t.due && S.parseDate(t.due) < today ? 1 : 0);
+    return past(a) - past(b) || when(a) - when(b) || a.order - b.order;
+  });
+  const readable = entry?.kind === 'file' && extractedIds.has(m.id);
+
+  // A Greek grammar is assigned fourteen times over a term. The next few are
+  // what anyone is looking at this row for; the rest fold away.
+  const SHOWN = 4;
+  const line = (t) => {
+    const due = t.due ? S.dueAt(t) : null;
+    const late = due && due < new Date() && !t.complete;
+    return `
+        <li class="material-reading ${t.complete ? 'is-done' : ''}">
+          <div class="material-reading-body">
+            ${
+              // A book filed under its own author says its name twice otherwise.
+              t.title.toLowerCase() === m.name.toLowerCase()
+                ? ''
+                : `<div class="material-reading-title">${esc(t.title)}</div>`
+            }
+            <div class="material-reading-meta">
+              ${esc(t.detail || '')}${t.detail ? ' · ' : ''}${esc(t.course)}
+              ${due ? ` · ${late ? 'was due ' : 'due '}${esc(S.formatDate(due))}` : ' · no date yet'}
+            </div>
+            <div class="tags">
+              ${t.driver ? pill('drives discussion', 'accent') : ''}
+              ${late ? pill('overdue', 'warn') : ''}
+              ${t.complete ? pill('read', 'muted') : ''}
+            </div>
+          </div>
+          ${
+            readable
+              ? `<button class="btn small ghost" data-action="read-here"
+                         data-mat="${esc(m.id)}" data-key="${esc(t.key)}">Read</button>`
+              : ''
+          }
+        </li>`;
+  };
+
+  const rest = items.slice(SHOWN);
+  return `
+    <ul class="material-readings">${items.slice(0, SHOWN).map(line).join('')}</ul>
+    ${
+      rest.length
+        ? `<details class="material-more">
+             <summary>${rest.length} more from this book</summary>
+             <ul class="material-readings">${rest.map(line).join('')}</ul>
+           </details>`
+        : ''
+    }`;
+}
+
 function readButton(m, entry) {
   if (entry.kind !== 'file') return '';
   if (!/\.pdf$/i.test(entry.fileName || '')) return '';
@@ -4999,7 +5121,10 @@ function viewFiles() {
       <h2>Your materials</h2>
       <p class="note">
         Attach each book or PDF once and it opens from every class that assigns it —
-        tap the <span class="inline-icon">${ICON_OPEN}</span> next to any reading.
+        tap the <span class="inline-icon">${ICON_OPEN}</span> next to any reading. Each book
+        lists the readings inside it, because a collection is filed under its own title while
+        the chapters in it are by other people: Swain on the Trinity lives in
+        <em>Christian Dogmatics</em>, and this is where that is said.
       </p>
       <div class="progress ${attached === list.length ? 'is-complete' : ''}">
         <div class="progress-track"><div class="progress-fill" style="width:${Math.round((attached / list.length) * 100)}%"></div></div>
@@ -5088,6 +5213,7 @@ function viewFiles() {
                      <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>`
               }
             </div>
+            ${materialReadings(m, e)}
             ${redoRow(m, e)}
             <div class="material-extract" id="extract-${esc(m.id)}"></div>
           </div>`;

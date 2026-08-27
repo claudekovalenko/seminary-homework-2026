@@ -1550,6 +1550,53 @@ summary {
   color: var(--text);
 }
 
+/* The readings a book holds, listed under the book in Files. */
+.material-readings {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.material-reading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.material-reading:last-child {
+  border-bottom: 0;
+}
+
+.material-reading.is-done {
+  opacity: 0.55;
+}
+
+.material-reading-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.material-reading-title {
+  font-size: 14.5px;
+}
+
+.material-reading-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.material-reading .tags:empty {
+  display: none;
+}
+
+.material-reading .tags {
+  margin-top: 4px;
+}
+
 /* Passages you marked, in the text and in the list beside the bookmarks. */
 .reader mark {
   background: color-mix(in srgb, var(--warn) 34%, transparent);
