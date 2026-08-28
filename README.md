@@ -7,7 +7,9 @@ that, and how much of it should I do today.**
 - **Today** — the day's reading target in minutes, the exact pages to read, and
   everything falling due inside your warning window (7 days by default). At the
   top of it, the week as one thing: everything for both classes, aimed at the
-  day you want to be finished.
+  day you want to be finished, and beneath that the reading the syllabus
+  underlines — the one the seminar is built on — whatever day the plan has put
+  it on, with the stopwatch on it.
 - **Plan** — for each course's next class: total pages, total time, and a
   day-by-day split of the reading. Long page ranges are cut at real page
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.

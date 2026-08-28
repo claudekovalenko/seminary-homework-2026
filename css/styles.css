@@ -1550,6 +1550,21 @@ summary {
   color: var(--text);
 }
 
+/* The underlined reading, given a place of its own on the home page. */
+.card.driver {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.driver-group + .driver-group {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.driver-group .course-progress-head {
+  margin-bottom: 4px;
+}
+
 /* Text struck out of a reading: hidden while you read, shown to be judged. */
 .reader .cut[hidden] {
   display: none;

@@ -1830,7 +1830,7 @@ const lib = __mod_library;
 const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v27 · 2026-08-27';
+const BUILD = 'v28 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -2106,7 +2106,7 @@ function watchTimer() {
   tick = setInterval(paint, 1000);
 }
 
-function taskLine(task, { showCourse = false, chunk = null, asPassage = false, withTimer = false } = {}) {
+function taskLine(task, { showCourse = false, chunk = null, asPassage = false, withTimer = false, note = '', hideDriver = false } = {}) {
   const done = task.complete;
   // A part-way chunk is ticked once you have read past its last page. A whole
   // item is ticked only when it is marked done — page arithmetic cannot answer
@@ -2133,7 +2133,7 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
   const partial = !chunk && task.read > 0 && !done;
   const flags = [
     task.overdue ? pill('overdue', 'warn') : '',
-    task.driver ? pill('drives discussion', 'accent') : '',
+    task.driver && !hideDriver ? pill('drives discussion', 'accent') : '',
     task.format === 'pdf' ? pill('PDF') : '',
     task.kind === 'assignment' && !task.project ? pill(task.type || 'assignment', 'warn') : '',
     task.project ? pill('project', 'warn') : '',
@@ -2158,6 +2158,7 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
             ? `<div class="task-detail muted">${task.read} of ${task.pages} ${task.unit === 'chapters' ? 'chapters' : 'pp.'} read</div>${progressBar(S.itemPct(task), { size: 'progress-sm' })}`
             : ''
         }
+        ${note ? `<div class="task-detail muted">${esc(note)}</div>` : ''}
         ${task.flag ? `<div class="task-flag">⚠ ${esc(task.flag)}</div>` : ''}
         <div class="tags">${flags}</div>
       </div>
@@ -2531,6 +2532,66 @@ function weekAimCard(allPlans) {
     </section>`;
 }
 
+/**
+ * The reading the class is actually built on.
+ *
+ * The syllabus underlines one reading a week — the one the seminar discusses,
+ * the one you will be asked about. The plan, quite correctly, does not care: it
+ * spreads the week's pages over the days you have, puts what you already owe
+ * ahead of what you do not yet, and if that leaves the underlined reading on
+ * Friday then Friday is where it goes. Which is fine as arithmetic and useless
+ * on a Thursday evening, when the thing you want is not "what does the plan say
+ * to do now" but "where is the Swain chapter, so I can start".
+ *
+ * So it gets a place of its own, whatever day it has been planned for, with the
+ * stopwatch on it.
+ */
+function driverCard(plans) {
+  const groups = plans
+    .filter((p) => !p.course.datesUnknown)
+    .map(({ course, session, date, tasks, plan }) => {
+      const drivers = tasks.filter((t) => t.driver && !t.complete);
+      // Which day the plan has put each one on, so the two do not contradict
+      // each other: this is a shortcut to the reading, not a second schedule.
+      const dayOf = (task) => {
+        const day = plan.plan.find((d) => d.items.some((a) => a.task.key === task.key));
+        if (!day) return null;
+        return S.daysBetween(day.date, S.startOfToday()) === 0 ? 'today' : S.formatDate(day.date);
+      };
+      return { course, session, date, drivers, dayOf };
+    })
+    .filter((g) => g.drivers.length);
+  if (!groups.length) return '';
+
+  return `
+    <section class="card driver">
+      <div class="card-head">
+        <h2>Drives the discussion</h2>
+        <span class="card-when">underlined in the syllabus</span>
+      </div>
+      ${groups
+        .map(
+          ({ course, session, date, drivers, dayOf }) => `
+        <div class="driver-group">
+          <div class="course-progress-head">
+            <span>${dot(course.color)}${esc(course.short || course.name)} — ${esc(session.topic)}</span>
+            <span class="muted">${esc(S.relativeDay(date))}</span>
+          </div>
+          <ul class="tasks">
+            ${drivers
+              .map((t) => {
+                const day = dayOf(t);
+                // The pill would only repeat the heading it is sitting under.
+                return taskLine(t, { withTimer: true, hideDriver: true, note: day ? `planned for ${day}` : '' });
+              })
+              .join('')}
+          </ul>
+        </div>`
+        )
+        .join('')}
+    </section>`;
+}
+
 function catchUpCard(plans, projects) {
   const slipping = plans.filter((p) => !p.pace.onTrack && p.pace.behind > 0);
   const owed = plans.flatMap((p) => p.owed);
@@ -2645,6 +2706,8 @@ function viewToday() {
     </section>
 
     ${weekAimCard(plans)}
+
+    ${driverCard(plans)}
 
     ${catchUpCard(plans, activeProjects())}
 
