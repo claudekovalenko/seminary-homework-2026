@@ -1550,6 +1550,29 @@ summary {
   color: var(--text);
 }
 
+/* Text struck out of a reading: hidden while you read, shown to be judged. */
+.reader .cut[hidden] {
+  display: none;
+}
+
+.reader .cut.is-shown {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--danger) 70%, transparent);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.reader .cut.is-shown:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.mark-text.cut-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 /* The readings a book holds, listed under the book in Files. */
 .material-readings {
   list-style: none;

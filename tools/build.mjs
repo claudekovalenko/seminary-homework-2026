@@ -30,7 +30,17 @@ function moduleToIife(name, source) {
       return '';
     })
     .replace(/^import\s+\{([^}]+)\}\s+from\s+'\.\/(\w+)\.js';$/gm, (_, names, mod) => {
-      bindings.push(`const {${names.trim()}} = __mod_${mod};`);
+      // "EM as EM_MARK" is an import alias, and destructuring spells the same
+      // thing "EM: EM_MARK". Passed through unchanged it is a syntax error, and
+      // one that only shows up in the built bundle — the modules themselves run
+      // fine — so it is worth the three lines to translate here.
+      const bound = names
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => part.replace(/^(\S+)\s+as\s+(\S+)$/, '$1: $2'))
+        .join(', ');
+      bindings.push(`const {${bound}} = __mod_${mod};`);
       return '';
     });
 

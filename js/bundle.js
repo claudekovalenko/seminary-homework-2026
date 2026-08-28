@@ -127,6 +127,12 @@ const EMPTY = {
   // Offsets are into the paragraph as it reads, so they survive a re-reading of
   // the same PDF as long as the words themselves do.
   highlights: {},
+  // materialId -> [{ page, para, start, end, text, at }] — passages struck out
+  // of a reading. OCR leaves wreckage on a bad page: a caption read as a
+  // sentence, a line of a table, the ghost of a facing page. These are hidden
+  // rather than cut, so the offsets everything else is measured against do not
+  // move and nothing is ever actually lost.
+  removals: {},
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
   timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
@@ -174,6 +180,7 @@ function read() {
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
       highlights: parsed.highlights || {},
+      removals: parsed.removals || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
@@ -316,6 +323,38 @@ function removeHighlight(id, key) {
   const next = list.filter((h) => highlightKey(h) !== key);
   if (next.length === list.length) return false;
   state.highlights[id] = next;
+  persist();
+  return true;
+}
+
+/* ---------- passages struck out of a reading ---------- */
+
+const removalsFor = (id) => state.removals[id] || [];
+
+const removalKey = (h) => `${h.page}:${h.para}:${h.start}`;
+
+/** Strike a passage out. Neighbouring strikes join, as with highlights. */
+function addRemoval(id, cut) {
+  const list = state.removals[id] || [];
+  const same = (a, b) => a.page === b.page && a.para === b.para;
+  const touching = list.filter((h) => same(h, cut) && h.start <= cut.end && cut.start <= h.end);
+  const merged = touching.reduce(
+    (acc, h) => ({ ...acc, start: Math.min(acc.start, h.start), end: Math.max(acc.end, h.end) }),
+    { ...cut }
+  );
+  const rest = list.filter((h) => !touching.includes(h));
+  state.removals[id] = [...rest, { ...merged, at: new Date().toISOString() }].sort(
+    (a, b) => a.page - b.page || a.para - b.para || a.start - b.start
+  );
+  persist();
+  return merged;
+}
+
+function restoreRemoval(id, key) {
+  const list = state.removals[id] || [];
+  const next = list.filter((h) => removalKey(h) !== key);
+  if (next.length === list.length) return false;
+  state.removals[id] = next;
   persist();
   return true;
 }
@@ -557,6 +596,7 @@ function importData(json) {
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
     highlights: parsed.highlights || {},
+    removals: parsed.removals || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
@@ -578,7 +618,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, highlightsFor, highlightKey, addHighlight, removeHighlight, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, totalOn, totals, setTotal, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, highlightsFor, highlightKey, addHighlight, removeHighlight, removalsFor, removalKey, addRemoval, restoreRemoval, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, totalOn, totals, setTotal, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -1787,10 +1827,10 @@ const store = __mod_store;
 const S = __mod_schedule;
 const notify = __mod_notify;
 const lib = __mod_library;
-const {emphasisRuns} = __mod_text;
+const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v26 · 2026-08-27';
+const BUILD = 'v27 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -1800,6 +1840,9 @@ let focusMaterial = null;
 // The material an OCR run is working on, if any. Re-rendering mid-run would
 // throw away the progress line it is writing into, so redraws wait for it.
 let ocrRunning = null;
+// Whether text struck out of a reading is shown in place, greyed and crossed
+// through, so it can be judged and put back.
+let showCut = false;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) =>
@@ -3267,6 +3310,14 @@ function viewFiles() {
         listed under the bookmarks so a chapter's worth can be found again without rereading
         it, they survive re-reading the same PDF, and tapping one takes it off again.
       </p>
+      <p class="note">
+        The same selection can be <strong>Removed</strong>, which is for what OCR leaves
+        behind on a bad page: a caption read as a sentence, a line of a table, the ghost of
+        the facing page. Struck-out text disappears from the reading and from anything you
+        copy out — but it is hidden, never deleted. It is listed under "Struck out", where
+        opening the list shows it back in place, crossed through, and one tap puts any of it
+        back.
+      </p>
     </section>
 
     <section class="card">
@@ -3672,6 +3723,7 @@ async function renderReader(id, taskKey) {
   const where = store.readingPos(id);
 
   const highlights = store.highlightsFor(id);
+  const removals = store.removalsFor(id);
 
   /**
    * One paragraph, with everything laid over it that belongs there.
@@ -3702,18 +3754,33 @@ async function renderReader(id, taskKey) {
     for (const h of mine) {
       for (let i = Math.max(0, h.start); i < Math.min(plain.length, h.end); i++) marks[i] = store.highlightKey(h);
     }
+    // Struck-out text stays in the paragraph and is hidden, rather than being
+    // cut out of it. Everything else here — highlights, bookmarks, the place
+    // you had got to — is an offset into this string, and cutting it would
+    // shift all of them; hiding it moves nothing and loses nothing.
+    const cuts = new Array(plain.length).fill(null);
+    for (const c of removals.filter((c) => c.page === page && c.para === index)) {
+      for (let i = Math.max(0, c.start); i < Math.min(plain.length, c.end); i++) cuts[i] = store.removalKey(c);
+    }
 
     let html = '';
     let at = 0;
     while (at < plain.length) {
       const flag = flags[at];
       const mark = marks[at];
+      const cut = cuts[at];
       let to = at + 1;
-      while (to < plain.length && flags[to] === flag && marks[to] === mark) to++;
+      while (to < plain.length && flags[to] === flag && marks[to] === mark && cuts[to] === cut) to++;
       let piece = esc(plain.slice(at, to));
       if (flag & EM_BIT) piece = `<em>${piece}</em>`;
       if (flag & STRONG_BIT) piece = `<strong>${piece}</strong>`;
-      if (mark) piece = `<mark data-mark="${esc(mark)}" tabindex="0">${piece}</mark>`;
+      if (mark && !cut) piece = `<mark data-mark="${esc(mark)}" tabindex="0">${piece}</mark>`;
+      if (cut) {
+        piece = showCut
+          ? `<span class="cut is-shown" data-cut="${esc(cut)}" tabindex="0"
+                   title="Struck out — tap to put it back">${piece}</span>`
+          : `<span class="cut" data-cut="${esc(cut)}" hidden>${piece}</span>`;
+      }
       html += piece;
       at = to;
     }
@@ -3750,6 +3817,7 @@ async function renderReader(id, taskKey) {
       </div>
       <div id="bookmark-list">${bookmarkList(marks)}</div>
       <div id="highlight-list">${highlightList(highlights)}</div>
+      <div id="removal-list">${removalList(removals)}</div>
     </section>
     <section class="card reader" style="--reader-size:${size}px">
       ${extracted.pages
@@ -3779,6 +3847,7 @@ async function renderReader(id, taskKey) {
     <div class="selection-bar" id="selection-bar" hidden>
       <span id="selection-count"></span>
       <button class="btn small" data-action="highlight-selection">Highlight</button>
+      <button class="btn small ghost" data-action="remove-selection" title="Strike this out of the reading">Remove</button>
     </div>`;
 
   reading = { id, pages: extracted.pageCount };
@@ -3816,6 +3885,87 @@ function highlightList(highlights) {
             </button>
             <button class="linkbtn mark-drop" data-action="drop-highlight" data-key="${esc(key)}"
                     title="Remove this highlight">×</button>
+          </li>`;
+          })
+          .join('')}
+      </ul>
+    </details>`;
+}
+
+/**
+ * The same reading with the struck-out passages actually taken out.
+ *
+ * The screen hides them; anything leaving the app has to lose them, or copying
+ * a chapter would paste back the very lines you struck. The cut is made on the
+ * stored text, where emphasis is still marked, so the markers survive it: the
+ * offsets are counted over the text as it reads, and the markers are simply
+ * carried across.
+ */
+function cutFromStored(raw, ranges) {
+  if (!ranges.length) return raw;
+  let plainAt = 0;
+  let out = '';
+  for (const ch of String(raw)) {
+    if (ch === EM_MARK || ch === STRONG_MARK) {
+      out += ch;
+      continue;
+    }
+    if (!ranges.some((r) => plainAt >= r.start && plainAt < r.end)) out += ch;
+    plainAt++;
+  }
+  return out.replace(/[ \t]{2,}/g, ' ').replace(/\s+([,;:.!?])/g, '$1').trim();
+}
+
+/** A whole extraction with every struck passage removed, for copying out. */
+function withoutRemovals(extracted, removals) {
+  if (!removals.length) return extracted;
+  const cut = (text, page, from) =>
+    String(text || '')
+      .split('\n\n')
+      .map((para, i) => cutFromStored(para, removals.filter((r) => r.page === page && r.para === from + i)))
+      .filter(Boolean)
+      .join('\n\n');
+  return {
+    ...extracted,
+    pages: extracted.pages.map((p) => {
+      const bodyCount = String(p.text || '').split('\n\n').filter(Boolean).length;
+      return { ...p, text: cut(p.text, p.page, 0), notes: cut(p.notes, p.page, bodyCount) };
+    })
+  };
+}
+
+/**
+ * What has been struck out of a reading, and the way back.
+ *
+ * OCR on a bad page leaves wreckage: a caption read as a sentence, a line of a
+ * table, the ghost of the facing page. Striking it out makes the reading
+ * readable — but silently deleting text a machine produced from a book you own
+ * is not something an app should do, so nothing is deleted. It is hidden, it is
+ * listed here, and any of it comes back with one tap.
+ */
+function removalList(removals) {
+  if (!removals.length) return '';
+  return `
+    <details class="marks" ${showCut ? 'open' : ''}>
+      <summary data-action="toggle-cut">
+        Struck out (${removals.length})${showCut ? ' — showing in place' : ''}
+      </summary>
+      <p class="note">
+        Nothing here is deleted. It is hidden from the reading and from anything you copy out.
+      </p>
+      <ul class="mark-list">
+        ${removals
+          .map((c) => {
+            const key = store.removalKey(c);
+            const text = c.text.length > 120 ? `${c.text.slice(0, 118)}…` : c.text;
+            return `
+          <li class="mark-row">
+            <span class="mark-jump">
+              <span class="mark-page">p. ${c.page}</span>
+              <span class="mark-text cut-text">${esc(text)}</span>
+            </span>
+            <button class="linkbtn mark-drop" data-action="restore-removal" data-key="${esc(key)}"
+                    title="Put this back">↩</button>
           </li>`;
           })
           .join('')}
@@ -4082,6 +4232,16 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  const cut = e.target.closest('span.cut.is-shown');
+  if (cut && !e.target.closest('[data-action]')) {
+    const id = parseView(view).arg;
+    if (id) {
+      store.restoreRemoval(id, cut.dataset.cut);
+      return renderReader(id, parseView(view).taskKey);
+    }
+    return;
+  }
+
   // A mark in the middle of the text is not a button, but it is the obvious
   // place to tap to be rid of one, so it behaves like one.
   const mark = e.target.closest('mark[data-mark]');
@@ -4149,7 +4309,7 @@ document.addEventListener('click', async (e) => {
     if (!extracted) return;
     const { toPlainText } = await import('./pdftext.js');
     try {
-      await navigator.clipboard.writeText(toPlainText(extracted));
+      await navigator.clipboard.writeText(toPlainText(withoutRemovals(extracted, store.removalsFor(id))));
       el.textContent = 'Copied';
       setTimeout(() => (el.textContent = 'Copy all'), 1500);
     } catch {
@@ -4177,6 +4337,30 @@ document.addEventListener('click', async (e) => {
     store.addHighlight(id, found);
     document.getSelection()?.removeAllRanges();
     return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'remove-selection') {
+    const found = selectionInParagraph();
+    const id = parseView(view).arg;
+    if (!found || !id) return;
+    store.addRemoval(id, found);
+    document.getSelection()?.removeAllRanges();
+    return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'restore-removal') {
+    const id = parseView(view).arg;
+    if (!id) return;
+    store.restoreRemoval(id, el.dataset.key);
+    return renderReader(id, parseView(view).taskKey);
+  }
+
+  if (action === 'toggle-cut') {
+    // The click lands before <details> flips, so this is the state it is going to.
+    showCut = !el.closest('details')?.open;
+    const id = parseView(view).arg;
+    if (id) renderReader(id, parseView(view).taskKey);
+    return;
   }
 
   if (action === 'drop-highlight') {

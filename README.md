@@ -13,7 +13,9 @@ that, and how much of it should I do today.**
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.
 - **Schedule** — the whole term, both syllabi, expandable per class.
 - **Files** — the PDFs you attach, the text pulled out of them, and a reader you
-  can highlight in. Each book lists the readings inside it, with the chapter and
+  can highlight in — or strike lines out of, for what OCR leaves behind on a bad
+  page. Struck text is hidden rather than deleted: it goes from the reading and
+  from anything you copy, it is listed, and one tap puts it back. Each book lists the readings inside it, with the chapter and
   the date it is wanted: a collection is filed under its own title while its
   chapters are by other people, so *Christian Dogmatics* is where Swain on the
   Trinity is, and the row says so. Select any passage and tap Highlight; highlights are listed

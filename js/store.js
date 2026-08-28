@@ -75,6 +75,12 @@ const EMPTY = {
   // Offsets are into the paragraph as it reads, so they survive a re-reading of
   // the same PDF as long as the words themselves do.
   highlights: {},
+  // materialId -> [{ page, para, start, end, text, at }] — passages struck out
+  // of a reading. OCR leaves wreckage on a bad page: a caption read as a
+  // sentence, a line of a table, the ghost of a facing page. These are hidden
+  // rather than cut, so the offsets everything else is measured against do not
+  // move and nothing is ever actually lost.
+  removals: {},
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
   timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
@@ -122,6 +128,7 @@ function read() {
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
       highlights: parsed.highlights || {},
+      removals: parsed.removals || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
@@ -264,6 +271,38 @@ export function removeHighlight(id, key) {
   const next = list.filter((h) => highlightKey(h) !== key);
   if (next.length === list.length) return false;
   state.highlights[id] = next;
+  persist();
+  return true;
+}
+
+/* ---------- passages struck out of a reading ---------- */
+
+export const removalsFor = (id) => state.removals[id] || [];
+
+export const removalKey = (h) => `${h.page}:${h.para}:${h.start}`;
+
+/** Strike a passage out. Neighbouring strikes join, as with highlights. */
+export function addRemoval(id, cut) {
+  const list = state.removals[id] || [];
+  const same = (a, b) => a.page === b.page && a.para === b.para;
+  const touching = list.filter((h) => same(h, cut) && h.start <= cut.end && cut.start <= h.end);
+  const merged = touching.reduce(
+    (acc, h) => ({ ...acc, start: Math.min(acc.start, h.start), end: Math.max(acc.end, h.end) }),
+    { ...cut }
+  );
+  const rest = list.filter((h) => !touching.includes(h));
+  state.removals[id] = [...rest, { ...merged, at: new Date().toISOString() }].sort(
+    (a, b) => a.page - b.page || a.para - b.para || a.start - b.start
+  );
+  persist();
+  return merged;
+}
+
+export function restoreRemoval(id, key) {
+  const list = state.removals[id] || [];
+  const next = list.filter((h) => removalKey(h) !== key);
+  if (next.length === list.length) return false;
+  state.removals[id] = next;
   persist();
   return true;
 }
@@ -505,6 +544,7 @@ export function importData(json) {
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
     highlights: parsed.highlights || {},
+    removals: parsed.removals || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
