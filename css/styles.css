@@ -1550,6 +1550,27 @@ summary {
   color: var(--text);
 }
 
+/* Classes after the one being planned: folded away until wanted. */
+details.fold.ahead {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+  margin-top: 6px;
+}
+
+details.fold.ahead > summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px 0;
+  list-style: none;
+}
+
+details.fold.ahead > summary::-webkit-details-marker {
+  display: none;
+}
+
 /* The underlined reading, given a place of its own on the home page. */
 .card.driver {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));

@@ -13,6 +13,9 @@ that, and how much of it should I do today.**
 - **Plan** — for each course's next class: total pages, total time, and a
   day-by-day split of the reading. Long page ranges are cut at real page
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.
+  Beneath it, **Working ahead**: the classes after that one, folded away, with
+  the same ticks and stopwatches — unpaced and not counted toward this week, for
+  the evening you want next week's reading out of the way too.
 - **Schedule** — the whole term, both syllabi, expandable per class.
 - **Files** — the PDFs you attach, the text pulled out of them, and a reader you
   can highlight in — or strike lines out of, for what OCR leaves behind on a bad

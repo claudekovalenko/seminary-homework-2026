@@ -1830,7 +1830,9 @@ const lib = __mod_library;
 const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v28 · 2026-08-27';
+const AHEAD = 3;
+
+const BUILD = 'v29 · 2026-08-27';
 
 let DATA = null;
 let TASKS = [];
@@ -2863,7 +2865,74 @@ function viewPlan() {
             </ul>
           </section>`
         : ''
-    }`;
+    }
+
+    ${laterClassesCard()}`;
+}
+
+/**
+ * The classes after the one being planned for.
+ *
+ * The plan deliberately looks exactly one class ahead per course: that is the
+ * work that has a deadline you can be behind on, and pacing anything further
+ * would be pretending to know how the week goes. But looking ahead and working
+ * ahead are different things, and an evening when the week's reading is done —
+ * or when you simply want it out of the way — had nowhere to go. Next week's
+ * reading existed only in the Schedule, which lists it and lets you do nothing
+ * with it: no tick, no stopwatch, no way in to the PDF.
+ *
+ * So here it is, foldable and out of the way, with everything a reading carries
+ * anywhere else. It is not paced and does not count toward the week's target;
+ * ticking something off here simply means it is done when its week arrives.
+ */
+function laterClassesCard() {
+  const perCourse = new Map();
+  for (const { course, session, date } of S.upcomingSessions(DATA)) {
+    if (course.datesUnknown) continue;
+    const list = perCourse.get(course.id) || [];
+    // The first upcoming class per course is the one planned in full above.
+    if (list.length <= AHEAD) list.push({ course, session, date });
+    perCourse.set(course.id, list);
+  }
+
+  const later = [...perCourse.values()]
+    .flatMap((list) => list.slice(1))
+    .sort((a, b) => a.date - b.date || a.course.id.localeCompare(b.course.id));
+  if (!later.length) return '';
+
+  return `
+    <section class="card">
+      <div class="card-head">
+        <h2>Working ahead</h2>
+        <span class="card-when">not counted toward this week</span>
+      </div>
+      <p class="note">
+        The classes after the one above. Nothing here is paced or owed yet — it is here so a
+        good evening can be spent on next week rather than stopping at the edge of this one.
+        Tick it off and it stays ticked off when its week comes round.
+      </p>
+      ${later
+        .map(({ course, session, date }) => {
+          const slot = session.date || session.id;
+          const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
+          if (!tasks.length) return '';
+          const w = S.workload(tasks);
+          const id = `ahead:${course.id}:${slot}`;
+          const shut = store.isCollapsed(id);
+          return `
+        <details class="fold ahead" ${shut ? '' : 'open'}>
+          <summary data-collapse="${esc(id)}">
+            <span class="fold-title">${dot(course.color)}${esc(course.short || course.name)} — ${esc(session.topic)}</span>
+            <span class="card-when">
+              ${esc(S.formatDate(date))}${w.remaining ? ` · ${S.formatMinutes(w.remaining)}` : ' · done'}
+            </span>
+          </summary>
+          <ul class="tasks">${tasks.map((t) => taskLine(t, { withTimer: true })).join('')}</ul>
+        </details>`;
+        })
+        .join('')}
+      <p class="note">The whole term is in the Schedule tab.</p>
+    </section>`;
 }
 
 function viewSchedule() {
