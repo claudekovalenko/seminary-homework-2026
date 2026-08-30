@@ -1832,7 +1832,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v30 · 2026-08-29';
+const BUILD = 'v31 · 2026-08-30';
 
 let DATA = null;
 let TASKS = [];
@@ -4406,23 +4406,67 @@ document.addEventListener('selectionchange', () => {
   if (parseView(view).name === 'read') watchSelection();
 });
 
-// Touching a button is touching outside the selection, and a touch outside a
-// selection collapses it — before the click that was meant to act on it ever
-// runs. Refusing the default on the way down keeps the selection where it is,
-// and the click still fires.
-for (const event of ['pointerdown', 'mousedown', 'touchstart']) {
+/**
+ * Do what the selection bar offers, from whichever event gets there first.
+ *
+ * On a touch device the tap that acts on a selection is also the thing that
+ * destroys it, and browsers differ on what they deliver afterwards — sometimes
+ * a click, sometimes only the touch, sometimes the first tap is swallowed
+ * dismissing the selection and nothing reaches the button at all. So both
+ * touchend and click run this, and whichever arrives first wins; the other is
+ * ignored as a repeat.
+ */
+let lastBarAction = 0;
+function runSelectionAction(action) {
+  const now = Date.now();
+  // Both events firing for one tap is the normal case, not the exception.
+  if (now - lastBarAction < 800) return;
+  const id = parseView(view).arg;
+  const found = selectionToUse();
+  if (!id) return;
+  if (!found.length) {
+    // Better than a button that silently does nothing, which is what this
+    // looked like from the outside for two rounds of trying to fix it.
+    const count = $('#selection-count');
+    if (count) count.textContent = 'select some text first';
+    return;
+  }
+  lastBarAction = now;
+  for (const span of found) {
+    if (action === 'remove-selection') store.addRemoval(id, span);
+    else store.addHighlight(id, span);
+  }
+  dismissSelectionBar();
+  document.getSelection()?.removeAllRanges();
+  renderReader(id, parseView(view).taskKey);
+}
+
+// A touch that lands on the bar acts at once, without waiting for a click that
+// may never come. Deliberately NOT preventing the default here: on iOS,
+// preventDefault on a touch event cancels the click the browser would have
+// synthesised — which is how the last attempt at this left the button
+// completely untappable rather than merely ineffective.
+document.addEventListener('touchend', (e) => {
+  const button = e.target.closest?.('#selection-bar [data-action]');
+  if (button) runSelectionAction(button.dataset.action);
+});
+
+// With a mouse there is no such hazard, and refusing the default on the way
+// down keeps the selection visible while you click it.
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest?.('#selection-bar')) e.preventDefault();
+});
+
+// A touch or click anywhere else is the end of the offer — including the one
+// that begins the next selection, which will put the bar back itself.
+for (const event of ['pointerdown', 'touchstart']) {
   document.addEventListener(
     event,
     (e) => {
-      if (e.target.closest?.('#selection-bar')) {
-        e.preventDefault();
-        return;
-      }
-      // A touch anywhere else is the end of that offer — including the touch
-      // that begins the next selection, which will put the bar back itself.
+      if (e.target.closest?.('#selection-bar')) return;
       if (parseView(view).name === 'read') dismissSelectionBar();
     },
-    { passive: false }
+    { passive: true }
   );
 }
 
@@ -4538,25 +4582,9 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  if (action === 'highlight-selection') {
-    const found = selectionToUse();
-    const id = parseView(view).arg;
-    if (!found.length || !id) return;
-    for (const span of found) store.addHighlight(id, span);
-    dismissSelectionBar();
-    document.getSelection()?.removeAllRanges();
-    return renderReader(id, parseView(view).taskKey);
-  }
+  if (action === 'highlight-selection') return runSelectionAction(action);
 
-  if (action === 'remove-selection') {
-    const found = selectionToUse();
-    const id = parseView(view).arg;
-    if (!found.length || !id) return;
-    for (const span of found) store.addRemoval(id, span);
-    dismissSelectionBar();
-    document.getSelection()?.removeAllRanges();
-    return renderReader(id, parseView(view).taskKey);
-  }
+  if (action === 'remove-selection') return runSelectionAction(action);
 
   if (action === 'restore-removal') {
     const id = parseView(view).arg;

@@ -46,6 +46,8 @@ async function reader() {
   return page;
 }
 
+const tapHighlight = (page) => page.locator('[data-action="highlight-selection"]').tap();
+
 const drag = async (page, fromPara, toPara, toX = 180) => {
   const a = await page.locator('.reader p').nth(fromPara).boundingBox();
   const b = await page.locator('.reader p').nth(toPara).boundingBox();
@@ -61,7 +63,7 @@ const stored = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem('s
 {
   const page = await reader();
   await drag(page, 0, 0, 200);
-  await page.locator('[data-action="highlight-selection"]').click();
+  await page.locator('[data-action="highlight-selection"]').tap();
   await page.waitForTimeout(300);
   console.log('inside one paragraph  : bar offered, highlights stored =', await stored(page), '| marks on screen =', await page.locator('.reader mark').count());
   await page.context().close();
@@ -73,7 +75,7 @@ const stored = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem('s
   await drag(page, 0, 1, 150);
   const offered = (await page.locator('#selection-bar').getAttribute('hidden')) === null;
   console.log('across two paragraphs : bar offered =', offered, '| says "' + (await page.locator('#selection-count').innerText()) + '"');
-  await page.locator('[data-action="highlight-selection"]').click();
+  await page.locator('[data-action="highlight-selection"]').tap();
   await page.waitForTimeout(300);
   console.log('                        highlights stored =', await stored(page), '| marks on screen =', await page.locator('.reader mark').count());
   await page.context().close();
@@ -86,7 +88,7 @@ const stored = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem('s
   await page.evaluate(() => document.getSelection().removeAllRanges());
   await page.waitForTimeout(150);
   const stillOffered = (await page.locator('#selection-bar').getAttribute('hidden')) === null;
-  await page.locator('[data-action="highlight-selection"]').click();
+  await page.locator('[data-action="highlight-selection"]').tap();
   await page.waitForTimeout(300);
   console.log('selection lost at tap : bar still offered =', stillOffered, '| highlights stored =', await stored(page));
   await page.context().close();
