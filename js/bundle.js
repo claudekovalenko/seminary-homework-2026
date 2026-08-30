@@ -2110,6 +2110,10 @@ function paintRunningStrip() {
   const strip = $('#running-strip');
   if (!strip) return;
   const running = store.runningTimer();
+  // No compensating for the header growing by the height of this strip: the
+  // browser's own scroll anchoring already holds the content still and moves
+  // the scroll offset to match, and adjusting it again on top of that moves the
+  // page by exactly the amount it was supposed to be holding.
   if (!running) {
     strip.hidden = true;
     strip.innerHTML = '';
@@ -3807,6 +3811,10 @@ function parseView(hash) {
   return { name, arg: mat, taskKey: key.length ? key.join('|') : null };
 }
 
+// The view the screen is currently showing, so a redraw of the same one can be
+// told apart from a move to a different one.
+let showing = null;
+
 function render() {
   const main = $('#app');
   const { name, arg } = parseView(view);
@@ -3817,9 +3825,17 @@ function render() {
   } else {
     window.removeEventListener('scroll', readerScroll);
     reading = null;
+    // Every tick, every stopwatch, every date set redraws the whole view — and
+    // this used to jump to the top each time it happened. Halfway down a list
+    // of readings, ticking one off threw you back to the top to find your place
+    // again, on every single one. Going to the top belongs to arriving at a
+    // view, not to redrawing the view you are already reading.
+    const arriving = name !== showing;
+    const wasAt = window.scrollY;
     main.innerHTML = (VIEWS[name] || viewToday)();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, arriving ? 0 : wasAt);
   }
+  showing = name;
   document.querySelectorAll('.tab').forEach((el) =>
     el.classList.toggle('on', el.dataset.view === name || (name === 'read' && el.dataset.view === 'files'))
   );
@@ -3874,6 +3890,24 @@ let pendingJump = null;
 
 /** The reader: extracted text, laid out to be read rather than skimmed. */
 async function renderReader(id, taskKey) {
+  /**
+   * Redrawing the page you are already reading — after a highlight, or after
+   * striking something out — must leave the words where they were.
+   *
+   * Not the scroll offset: the first highlight adds a "Highlights" list to the
+   * card above the text, which pushes everything down by the height of it, and
+   * restoring the same offset then shows you a different part of the chapter.
+   * So the anchor is a paragraph and where it sat on the screen, and after the
+   * redraw it is put back exactly there.
+   */
+  const anchor = (() => {
+    if (reading?.id !== id) return null;
+    for (const el of document.querySelectorAll('.reader p[data-page]')) {
+      const top = el.getBoundingClientRect().top;
+      if (top > -el.offsetHeight) return { id: el.id, top };
+    }
+    return null;
+  })();
   const entry = store.libraryEntry(id);
   const extracted = await lib.getText(id).catch(() => null);
   const main = $('#app');
@@ -4025,9 +4059,14 @@ async function renderReader(id, taskKey) {
   reading = { id, pages: extracted.pageCount };
   watchReadingPosition();
   // A bookmark you tapped wins over where you happened to stop reading.
-  const target = pendingJump || where;
+  const target = pendingJump || (anchor ? null : where);
   pendingJump = null;
-  if (target) jumpTo(target, { smooth: false });
+  if (target) {
+    jumpTo(target, { smooth: false });
+  } else if (anchor) {
+    const el = document.getElementById(anchor.id);
+    if (el) window.scrollTo(0, window.scrollY + el.getBoundingClientRect().top - anchor.top);
+  }
 }
 
 /**
