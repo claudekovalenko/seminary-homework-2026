@@ -1609,6 +1609,13 @@ details.fold.ahead > summary::-webkit-details-marker {
   text-decoration: line-through;
 }
 
+/* Striking text out is not the same kind of act as highlighting it, and the
+   button should not look as though it is. */
+.selection-bar .btn.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+}
+
 /* The running stopwatch, riding along in the sticky header. */
 .running-strip {
   display: flex;

@@ -8,7 +8,7 @@ import { emphasisRuns, EM as EM_MARK, STRONG as STRONG_MARK } from './text.js';
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v34 · 2026-08-30';
+const BUILD = 'v35 · 2026-08-30';
 
 let DATA = null;
 let TASKS = [];
@@ -1653,15 +1653,17 @@ function viewFiles() {
       <p class="note">
         In the reader, <strong>select any passage and tap Highlight</strong>. Highlights are
         listed under the bookmarks so a chapter's worth can be found again without rereading
-        it, they survive re-reading the same PDF, and tapping one takes it off again.
+        it, and they survive re-reading the same PDF. Select highlighted words again and the
+        same button offers <strong>Unhighlight</strong>, which takes the colour off and
+        leaves every word where it is; tapping a highlight in the text does the same.
       </p>
       <p class="note">
-        The same selection can be <strong>Removed</strong>, which is for what OCR leaves
-        behind on a bad page: a caption read as a sentence, a line of a table, the ghost of
-        the facing page. Struck-out text disappears from the reading and from anything you
-        copy out — but it is hidden, never deleted. It is listed under "Struck out", where
-        opening the list shows it back in place, crossed through, and one tap puts any of it
-        back.
+        <strong>Strike out</strong> is the other thing, and a different kind of thing: it
+        hides text, for what OCR leaves behind on a bad page — a caption read as a sentence,
+        a line of a table, the ghost of the facing page. It asks before it does it. Even
+        then nothing is deleted: struck text goes from the reading and from anything you copy
+        out, but it is listed under "Struck out", where opening the list shows it back in
+        place, crossed through, and one tap puts any of it back.
       </p>
     </section>
 
@@ -2222,8 +2224,9 @@ async function renderReader(id, taskKey) {
     </button>
     <div class="selection-bar" id="selection-bar" hidden>
       <span id="selection-count"></span>
-      <button class="btn small" data-action="highlight-selection">Highlight</button>
-      <button class="btn small ghost" data-action="remove-selection" title="Strike this out of the reading">Remove</button>
+      <button class="btn small" id="highlight-button" data-action="highlight-selection">Highlight</button>
+      <button class="btn small ghost danger" data-action="strike-selection"
+              title="Hide this text from the reading — for what OCR got wrong">Strike out</button>
     </div>`;
 
   reading = { id, pages: extracted.pageCount };
@@ -2446,6 +2449,17 @@ function watchSelection() {
   const words = found.reduce((sum, s) => sum + s.text.split(/\s+/).filter(Boolean).length, 0);
   const across = found.length > 1 ? ` across ${found.length} paragraphs` : '';
   $('#selection-count').textContent = `${words} word${words === 1 ? '' : 's'}${across}`;
+
+  // Select something already highlighted and the obvious thing to want is the
+  // highlighting off it again. Offering "Highlight" there, next to a button
+  // that hides text, is how you end up hiding the text instead.
+  const id = parseView(view).arg;
+  const marked = id && found.some((span) => store.isHighlighted(id, span));
+  const button = $('#highlight-button');
+  if (button) {
+    button.textContent = marked ? 'Unhighlight' : 'Highlight';
+    button.dataset.action = marked ? 'unhighlight-selection' : 'highlight-selection';
+  }
 }
 
 /** Put the bar away, once whatever it was offered for is over. */
@@ -2680,9 +2694,22 @@ function runSelectionAction(action) {
     if (count) count.textContent = 'select some text first';
     return;
   }
+
+  // Striking out takes words off the page. It is the right thing for what OCR
+  // invented and the wrong thing for everything else, and it sits one button
+  // away from Highlight — so it asks first, and says where the text goes.
+  if (action === 'strike-selection') {
+    const sample = found[0].text.slice(0, 90);
+    if (!confirm(`Hide this from the reading?\n\n"${sample}"\n\nThe text is not deleted — it is listed under "Struck out", and one tap puts it back.`)) {
+      dismissSelectionBar();
+      return;
+    }
+  }
+
   lastBarAction = now;
   for (const span of found) {
-    if (action === 'remove-selection') store.addRemoval(id, span);
+    if (action === 'strike-selection') store.addRemoval(id, span);
+    else if (action === 'unhighlight-selection') store.unhighlight(id, span);
     else store.addHighlight(id, span);
   }
   dismissSelectionBar();
@@ -2833,7 +2860,9 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'highlight-selection') return runSelectionAction(action);
 
-  if (action === 'remove-selection') return runSelectionAction(action);
+  if (action === 'strike-selection') return runSelectionAction(action);
+
+  if (action === 'unhighlight-selection') return runSelectionAction(action);
 
   if (action === 'restore-removal') {
     const id = parseView(view).arg;

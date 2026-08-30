@@ -266,6 +266,39 @@ export function addHighlight(id, mark) {
   return merged;
 }
 
+/**
+ * Take the highlighting off a stretch of text, whether or not it lines up with
+ * how the highlights were made. A mark that is only partly covered is trimmed
+ * rather than dropped, and one covered in the middle becomes two — the same as
+ * dragging a highlighter's eraser across a page.
+ */
+export function unhighlight(id, span) {
+  const list = state.highlights[id] || [];
+  const out = [];
+  let changed = false;
+  for (const h of list) {
+    const same = h.page === span.page && h.para === span.para;
+    if (!same || h.end <= span.start || span.end <= h.start) {
+      out.push(h);
+      continue;
+    }
+    changed = true;
+    if (h.start < span.start) out.push({ ...h, end: span.start, text: h.text });
+    if (span.end < h.end) out.push({ ...h, start: span.end, text: h.text });
+  }
+  if (!changed) return false;
+  state.highlights[id] = out.sort((a, b) => a.page - b.page || a.para - b.para || a.start - b.start);
+  persist();
+  return true;
+}
+
+/** True when any of this stretch is already highlighted. */
+export function isHighlighted(id, span) {
+  return (state.highlights[id] || []).some(
+    (h) => h.page === span.page && h.para === span.para && h.start < span.end && span.start < h.end
+  );
+}
+
 export function removeHighlight(id, key) {
   const list = state.highlights[id] || [];
   const next = list.filter((h) => highlightKey(h) !== key);

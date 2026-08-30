@@ -18,9 +18,11 @@ that, and how much of it should I do today.**
   the evening you want next week's reading out of the way too.
 - **Schedule** — the whole term, both syllabi, expandable per class.
 - **Files** — the PDFs you attach, the text pulled out of them, and a reader you
-  can highlight in — or strike lines out of, for what OCR leaves behind on a bad
-  page. Struck text is hidden rather than deleted: it goes from the reading and
-  from anything you copy, it is listed, and one tap puts it back. Each book lists the readings inside it, with the chapter and
+  can highlight in. Select highlighted words again and the button offers to take
+  the highlighting off, leaving the words alone. Striking a line out — for what
+  OCR leaves behind on a bad page — is a separate button that asks first, and
+  hides rather than deletes: struck text goes from the reading and from anything
+  you copy, it is listed, and one tap puts it back. Each book lists the readings inside it, with the chapter and
   the date it is wanted: a collection is filed under its own title while its
   chapters are by other people, so *Christian Dogmatics* is where Swain on the
   Trinity is, and the row says so. Select any passage and tap Highlight; highlights are listed
