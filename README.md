@@ -28,6 +28,9 @@ that, and how much of it should I do today.**
   tap.
 - **Settings** — the finish line, reminders, study days, and your reading pace.
 
+Scripture is listed a chapter at a time — "Ps 1", then "Ps 27" — each its own
+line, its own tick and its own stopwatch, however many of them a day carries.
+
 Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.

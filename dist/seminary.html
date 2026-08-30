@@ -3415,27 +3415,33 @@ function planFor(tasks, deadline, opts = {}) {
     plan[i].minutes += atom.minutes;
   }
 
-  // A chapter a day, as far as it goes. With more chapters left than days the
-  // extra are clumped onto the earliest days and named together — "Gen 1, Gen
-  // 2" — rather than one day being handed the lot at the end.
+  // A chapter a day, as far as it goes — and one line per chapter, never
+  // several welded into one. With more chapters left than days the extra fall
+  // on the earliest days, but they are still listed and ticked off singly:
+  // "Isa 40, Isa 41, Isa 42" on one line behind one box can only be finished
+  // all at once, and a chapter is not read all at once. Each passage is its
+  // own row, its own tick and its own stopwatch.
   for (const task of scripture) {
     const left = task.units.slice(task.read);
     const share = spread(left.length, days.length);
     let taken = 0;
     share.forEach((count, i) => {
-      if (!count) return;
-      const passages = left.slice(taken, taken + count);
-      plan[i].items.push({
-        task,
-        minutes: count * s.minsPerBibleChapter,
-        ranges: null,
-        label: passages.join(', '),
-        passages,
-        whole: task.read + taken + count >= task.pages && task.read + taken === 0,
-        from: task.read + taken,
-        through: task.read + taken + count
-      });
-      plan[i].minutes += count * s.minsPerBibleChapter;
+      for (let n = 0; n < count; n += 1) {
+        const at = task.read + taken + n;
+        plan[i].items.push({
+          task,
+          minutes: s.minsPerBibleChapter,
+          ranges: null,
+          label: left[taken + n],
+          passages: [left[taken + n]],
+          // True only where the week's Bible reading is a single chapter, which
+          // is the one case where this row is the whole of it.
+          whole: task.pages === 1 && at === 0,
+          from: at,
+          through: at + 1
+        });
+        plan[i].minutes += s.minsPerBibleChapter;
+      }
       taken += count;
     });
   }
@@ -3802,7 +3808,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v31 · 2026-08-30';
+const BUILD = 'v32 · 2026-08-30';
 
 let DATA = null;
 let TASKS = [];
