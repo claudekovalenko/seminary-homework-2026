@@ -1609,6 +1609,65 @@ details.fold.ahead > summary::-webkit-details-marker {
   text-decoration: line-through;
 }
 
+/* The running stopwatch, riding along in the sticky header. */
+.running-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 8px 7px 10px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.running-strip[hidden] {
+  display: none;
+}
+
+.running-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+  animation: running-pulse 2s ease-in-out infinite;
+}
+
+@keyframes running-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* The reading being timed. It gives way before the clock does. */
+.running-what {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+}
+
+.running-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  flex: none;
+}
+
+.running-strip .running-stop {
+  flex: none;
+  padding: 4px 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running-pulse {
+    animation: none;
+  }
+}
+
 /* The readings a book holds, listed under the book in Files. */
 .material-readings {
   list-style: none;

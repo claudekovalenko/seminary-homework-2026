@@ -35,6 +35,10 @@ Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.
 
+While a stopwatch is running it rides in the header, on every tab and in the
+reader — what it is on, how long it has been going, and a Stop button — so it is
+never left running out of sight.
+
 Every reading carries its own clock. The stopwatch beside it banks each sitting
 against that reading for good, so the number next to a chapter is how long you
 have actually spent on it, across every evening you have picked it up — tap it

@@ -1838,7 +1838,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v32 · 2026-08-30';
+const BUILD = 'v33 · 2026-08-30';
 
 let DATA = null;
 let TASKS = [];
@@ -2067,13 +2067,17 @@ function creditTime(banked) {
 }
 
 /** What the stopwatch is on, in words — a reading's title, or which burst. */
-function runningLabel(running) {
+function runningLabel(running, { withCourse = false } = {}) {
   if (store.isRhythmKey(running.key)) {
     const [, habitId, slot] = running.key.split('|');
     const habit = store.rhythm().find((h) => h.id === habitId);
     return `${habit?.title || 'memorisation'} · ${(store.SLOT_LABELS[slot] || slot).toLowerCase()}`;
   }
-  return TASKS.find((t) => t.key === running.key)?.title || 'something';
+  const task = TASKS.find((t) => t.key === running.key);
+  if (!task) return 'something';
+  // Away from the row it was started on, "Bible reading" alone does not say
+  // whose. The course is the one word that settles it.
+  return withCourse && task.course ? `${task.title} · ${task.course}` : task.title;
 }
 
 /** Whole minutes on the clock for a running timer. */
@@ -2088,6 +2092,35 @@ function elapsedClock(running) {
   const h = Math.floor(secs / 3600);
   const m = Math.floor((secs % 3600) / 60);
   return h ? `${h}:${pad(m)}:${pad(secs % 60)}` : `${m}:${pad(secs % 60)}`;
+}
+
+/**
+ * The stopwatch, at the top of the screen, wherever you are.
+ *
+ * It used to live only on the row it was started from — so the moment you
+ * scrolled past that row, changed tab, or opened the reader to actually do the
+ * reading, there was nothing to tell you the clock was running or to stop it
+ * with. Which is precisely when it matters: a stopwatch you cannot see is one
+ * you leave running all night and one you forget to start again.
+ *
+ * The header is sticky already, so this rides along with it and is painted by
+ * the same tick that moves every other elapsed figure.
+ */
+function paintRunningStrip() {
+  const strip = $('#running-strip');
+  if (!strip) return;
+  const running = store.runningTimer();
+  if (!running) {
+    strip.hidden = true;
+    strip.innerHTML = '';
+    return;
+  }
+  strip.hidden = false;
+  strip.innerHTML = `
+    <span class="running-pulse" aria-hidden="true"></span>
+    <span class="running-what">${esc(runningLabel(running, { withCourse: true }))}</span>
+    <span class="running-clock" data-elapsed="${esc(running.startedAt)}">${esc(elapsedClock(running))}</span>
+    <button class="btn small running-stop" data-action="stop-timer" data-key="${esc(running.key)}">Stop</button>`;
 }
 
 /**
@@ -3817,6 +3850,7 @@ function render() {
 
   if (name === 'settings') showDiagnostics();
 
+  paintRunningStrip();
   watchTimer();
 }
 
