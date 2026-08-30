@@ -63,7 +63,7 @@ const EMPTY = {
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
-  timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  timeLog: [], // [{ id, key, courseId, minutes, at }] — sittings, for weekly totals
   rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
 
@@ -77,6 +77,16 @@ function mergeSettings(raw) {
   merged.rhythm = Array.isArray(raw?.rhythm) ? raw.rhythm : structuredClone(DEFAULT_RHYTHM);
   return merged;
 }
+
+// Every sitting carries an id so a wrong one can be picked out and corrected
+// later. Position will not do: the list is shown newest-first and trimmed from
+// the front, so an index means something different five sittings from now.
+let sittingSeq = 0;
+const sittingId = () => `s${Date.now().toString(36)}${(sittingSeq++).toString(36)}`;
+
+/** Sittings recorded before ids existed still need one to be editable. */
+const withIds = (list) =>
+  (Array.isArray(list) ? list : []).map((e) => (e && e.id ? e : { ...e, id: sittingId() }));
 
 function read() {
   try {
@@ -94,10 +104,13 @@ function read() {
       bookmarks: parsed.bookmarks || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
-      timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+      timeLog: withIds(parsed.timeLog),
       rhythmLog: parsed.rhythmLog || {}
     };
-  } catch {
+  } catch (err) {
+    // Corrupt or unreadable storage. Starting empty is the only option, but it
+    // costs the reader everything they had ticked, so it is never silent.
+    console.warn('Could not read saved progress; starting empty', err);
     return structuredClone(EMPTY);
   }
 }
@@ -284,7 +297,7 @@ export function stopTimer() {
   if (minutes > 0) {
     state.timeLog = [
       ...state.timeLog,
-      { key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
+      { id: sittingId(), key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
     ].slice(-LOG_LIMIT);
   }
   persist();
@@ -299,8 +312,39 @@ export function cancelTimer() {
 /** Record time worked away from the app, or corrected by hand. */
 export function logTime(key, courseId, minutes) {
   if (!minutes) return;
-  state.timeLog = [...state.timeLog, { key, courseId: courseId || null, minutes, at: new Date().toISOString() }].slice(-LOG_LIMIT);
+  state.timeLog = [
+    ...state.timeLog,
+    { id: sittingId(), key, courseId: courseId || null, minutes, at: new Date().toISOString() }
+  ].slice(-LOG_LIMIT);
   persist();
+}
+
+export const sitting = (id) => state.timeLog.find((e) => e.id === id) || null;
+
+/**
+ * Correct a sitting after the fact — the fix for a clock left running through
+ * dinner. Returns the entry as it was, as it now is, and the difference, so
+ * whatever those minutes were credited to can be moved by the same amount.
+ */
+export function editSitting(id, minutes) {
+  const before = sitting(id);
+  if (!before) return null;
+  const n = Math.min(LONGEST_SITTING, Math.round(minutes));
+  // Correcting a sitting down to nothing is how you say it never happened.
+  if (!Number.isFinite(n) || n <= 0) return deleteSitting(id);
+  const after = { ...before, minutes: n };
+  state.timeLog = state.timeLog.map((e) => (e.id === id ? after : e));
+  persist();
+  return { before, after, delta: after.minutes - before.minutes };
+}
+
+/** Throw a sitting away: the clock ran, but you were not at it. */
+export function deleteSitting(id) {
+  const before = sitting(id);
+  if (!before) return null;
+  state.timeLog = state.timeLog.filter((e) => e.id !== id);
+  persist();
+  return { before, after: null, delta: -before.minutes };
 }
 
 export const timeLog = () => state.timeLog;
@@ -424,7 +468,7 @@ export function importData(json) {
     bookmarks: parsed.bookmarks || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
-    timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+    timeLog: withIds(parsed.timeLog),
     rhythmLog: parsed.rhythmLog || {}
   };
   persist();

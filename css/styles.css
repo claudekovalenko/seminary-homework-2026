@@ -1635,3 +1635,57 @@ summary {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- correcting a sitting ---------- */
+
+.sittings {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.sitting-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.sitting-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.sitting-what {
+  min-width: 0;
+  flex: 1;
+}
+
+.sitting-what small {
+  display: block;
+  font-size: 11.5px;
+}
+
+.sitting-list .linkbtn {
+  font-variant-numeric: tabular-nums;
+  /* A comfortable tap target on a phone, without moving the row's baseline. */
+  padding: 4px 2px;
+  white-space: nowrap;
+}
+
+.sitting-drop {
+  background: none;
+  border: 0;
+  padding: 4px 6px;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.sitting-drop:hover {
+  color: var(--warn);
+  background: var(--bg-elev-2);
+}

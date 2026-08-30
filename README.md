@@ -94,6 +94,26 @@ True scheduled push (arriving with the app closed) needs a push server. That is
 the natural next step if the current behaviour is not enough — as is the Google
 Calendar export you mentioned.
 
+## About the stopwatch
+
+**▶ Start** on any reading, paper or memorisation burst times it, and the clock
+keeps running while the app is shut. What it records lands in **Time this week**
+on the Today tab — the only measured number in the app; everything else is an
+estimate of how long something *ought* to take.
+
+Because a clock you forget about is worse than no clock:
+
+- **Every sitting can be corrected.** Open *N sittings* under the weekly total,
+  tap the time, and type what it really was. Blank or `0` throws the sitting
+  away, as does the **×**.
+- **Stopping a clock that ran over three hours asks first**, with the measured
+  figure filled in — cancel and it keeps what it measured.
+- A sitting is capped at six hours, so a clock left running overnight cannot
+  claim a whole day.
+
+Corrections follow the work: a paper's progress moves by the same amount, and
+deleting a memorisation burst's sitting unticks the box that stopping it ticked.
+
 ## Your data
 
 Progress, page corrections and settings live in `localStorage` on the device —
@@ -154,6 +174,10 @@ Rules of thumb:
 - An assignment with `effortMinutes` and `startPlanning` is treated as a project:
   instead of landing in the week it is due, it is paced from the start date, and
   you log time against it from the Today screen.
+- An assignment's `note` says what the work actually is (*"Nominative &
+  accusative categories, the nominative pecking order"*). It is shown alongside
+  the deadline line, not instead of it, so writing one never hides *due before
+  class*.
 - Deleting or reordering readings inside a session shifts the keys that progress
   is stored under, so old ticks may land on the wrong line. Adding at the end is
   safe.

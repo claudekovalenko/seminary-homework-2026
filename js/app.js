@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v23 · 2026-08-26';
+const BUILD = 'v24 · 2026-08-26';
 
 let DATA = null;
 let TASKS = [];
@@ -206,15 +206,64 @@ function creditTime(banked) {
   if (task?.unit === 'project') store.setProgress(banked.key, store.progressFor(banked.key) + banked.minutes);
 }
 
-/** What the stopwatch is on, in words — a reading's title, or which burst. */
-function runningLabel(running) {
-  if (store.isRhythmKey(running.key)) {
-    const [, habitId, slot] = running.key.split('|');
+/** What a sitting was on, in words — a reading's title, or which burst. */
+function labelForKey(key) {
+  if (store.isRhythmKey(key)) {
+    const [, habitId, slot] = key.split('|');
     const habit = store.rhythm().find((h) => h.id === habitId);
     return `${habit?.title || 'memorisation'} · ${(store.SLOT_LABELS[slot] || slot).toLowerCase()}`;
   }
-  return TASKS.find((t) => t.key === running.key)?.title || 'something';
+  return TASKS.find((t) => t.key === key)?.title || 'something';
 }
+
+/** What the stopwatch is on, in words. */
+const runningLabel = (running) => labelForKey(running.key);
+
+/**
+ * Move whatever a sitting was credited to by the amount it just changed.
+ *
+ * A sitting is not only a number in the weekly total: stopping the clock also
+ * ticks a memorisation burst and adds to a project's progress. Correcting the
+ * minutes without correcting those would leave the two telling different
+ * stories about the same afternoon.
+ */
+function recreditTime(change) {
+  if (!change) return;
+  const { before, after, delta } = change;
+  if (store.isRhythmKey(before.key)) {
+    // The burst's box was ticked because the clock ran. Deleting the sitting
+    // says it never happened, so the tick goes with it.
+    if (!after) store.setRhythmDone(before.key, false);
+    return;
+  }
+  if (!delta) return;
+  const task = TASKS.find((t) => t.key === before.key);
+  if (task?.unit === 'project') store.setProgress(before.key, store.progressFor(before.key) + delta);
+}
+
+/**
+ * Correct one recorded sitting, by hand.
+ *
+ * The whole point of the stopwatch is that it measures rather than guesses, and
+ * a clock left running all evening breaks exactly that. Blank or zero throws
+ * the sitting away; cancelling leaves it alone.
+ */
+function correctSitting(id, question) {
+  const entry = store.sitting(id);
+  if (!entry) return refresh();
+  const answer = prompt(
+    question || `${labelForKey(entry.key)}\n${sittingWhen(entry.at)}\n\nHow many minutes were you actually at it?`,
+    entry.minutes
+  );
+  if (answer === null) return refresh();
+  const n = parseInt(answer, 10);
+  recreditTime(Number.isFinite(n) && n > 0 ? store.editSitting(id, n) : store.deleteSitting(id));
+  return refresh();
+}
+
+// Past this, a sitting is far likelier to be a forgotten clock than a long
+// afternoon, so stopping it offers the correction rather than banking it quietly.
+const LEFT_RUNNING = 3 * 60;
 
 /** Whole minutes on the clock for a running timer. */
 function elapsedMinutes(running) {
@@ -399,7 +448,48 @@ function weekOfWorkCard() {
              </ul>`
           : ''
       }
+      ${sittingsList(week.entries)}
     </section>`;
+}
+
+/** A sitting's day and time, so two on the same afternoon can be told apart. */
+const sittingWhen = (iso) => {
+  const at = new Date(iso);
+  return `${S.formatDate(at, { weekday: 'short' })}, ${at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+};
+
+/**
+ * Every sitting behind the weekly total, and a way to correct one.
+ *
+ * This is the only measured number in the app, which is exactly why it has to
+ * be editable: a clock started before dinner and remembered at bedtime banks
+ * hours nobody worked, and with no way to fix it the total is quietly wrong
+ * for the rest of the week. Folded away, because on a normal week there is
+ * nothing here to do.
+ */
+function sittingsList(entries) {
+  if (!entries.length) return '';
+  return `
+    <details class="sittings">
+      <summary>${entries.length} sitting${entries.length === 1 ? '' : 's'} — tap a time to correct it</summary>
+      <ul class="sitting-list">
+        ${entries
+          .map(
+            (e) => `
+          <li>
+            <div class="sitting-what">
+              ${esc(labelForKey(e.key))}
+              <small class="muted">${esc(sittingWhen(e.at))}</small>
+            </div>
+            <button class="linkbtn" data-action="edit-sitting" data-id="${esc(e.id)}"
+                    title="Correct this sitting">${esc(S.formatMinutes(e.minutes))}</button>
+            <button class="sitting-drop" data-action="delete-sitting" data-id="${esc(e.id)}"
+                    title="Remove this sitting" aria-label="Remove this sitting">&times;</button>
+          </li>`
+          )
+          .join('')}
+      </ul>
+    </details>`;
 }
 
 const courseById = (id) => DATA?.courses.find((c) => c.id === id) || null;
@@ -2242,6 +2332,31 @@ document.addEventListener('click', async (e) => {
   if (action === 'stop-timer') {
     const banked = store.stopTimer();
     if (banked) creditTime(banked);
+    // A clock this long is somebody who forgot to stop it, not somebody who
+    // read all afternoon. It is banked either way — cancelling the question
+    // keeps the measured figure — but the correction is offered now, while
+    // you still remember when you actually got up.
+    if (banked && banked.minutes >= LEFT_RUNNING) {
+      const last = store.timeLog()[store.timeLog().length - 1];
+      if (last?.key === banked.key) {
+        return correctSitting(
+          last.id,
+          `${labelForKey(banked.key)}\n\nThe clock ran for ${S.formatMinutes(banked.minutes)}. ` +
+            'How many minutes were you actually at it?'
+        );
+      }
+    }
+    return refresh();
+  }
+
+  if (action === 'edit-sitting') return correctSitting(el.dataset.id);
+
+  if (action === 'delete-sitting') {
+    const entry = store.sitting(el.dataset.id);
+    if (!entry) return refresh();
+    const what = `${labelForKey(entry.key)}\n${sittingWhen(entry.at)} — ${S.formatMinutes(entry.minutes)}`;
+    if (!confirm(`Remove this sitting?\n\n${what}`)) return;
+    recreditTime(store.deleteSitting(el.dataset.id));
     return refresh();
   }
 
