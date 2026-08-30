@@ -1832,7 +1832,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v29 · 2026-08-27';
+const BUILD = 'v30 · 2026-08-29';
 
 let DATA = null;
 let TASKS = [];
@@ -4106,55 +4106,111 @@ function removalList(removals) {
 }
 
 /**
- * What is selected, as an offset into the paragraph it sits in.
+ * What is selected, as offsets into the paragraphs it covers.
  *
- * The rendered paragraph is not one text node — emphasis and earlier highlights
- * have already broken it into several — so the offset has to be counted across
- * them in order. Nothing is inserted into the text while rendering, so those
- * lengths add up to exactly the string the offsets are measured against.
+ * Two things make this harder than reading the selection out.
+ *
+ * A selection is not one paragraph's worth. On a phone a drag runs past the end
+ * of a paragraph and into the next about as often as it stops neatly inside
+ * one, and this used to answer "nothing selected" to anything that crossed a
+ * boundary — so the button never appeared and the feature looked broken. Every
+ * paragraph the range touches is returned, clipped to the part inside it.
+ *
+ * And the rendered paragraph is not one text node: emphasis, earlier
+ * highlights, struck-out passages have all broken it into several. Offsets are
+ * counted across them in document order. Nothing is inserted into the text
+ * while rendering, so those lengths add up to exactly the string the offsets
+ * are stored against.
  */
-function selectionInParagraph() {
+function selectionSpans() {
   const selection = document.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return [];
   const range = selection.getRangeAt(0);
-  const para = range.startContainer.parentElement?.closest('p[data-page]');
-  if (!para || !para.contains(range.endContainer)) return null;
+  const reader = document.querySelector('.reader');
+  if (!reader) return [];
 
-  const offsetOf = (node, offset) => {
-    let total = 0;
+  const spans = [];
+  for (const para of reader.querySelectorAll('p[data-page]')) {
+    if (!range.intersectsNode(para)) continue;
+
+    // Where this paragraph's own text starts and stops inside the selection.
+    let at = 0;
+    let from = null;
+    let to = null;
     const walker = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
-    let current = walker.nextNode();
-    while (current) {
-      if (current === node) return total + offset;
-      total += current.textContent.length;
-      current = walker.nextNode();
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const length = node.textContent.length;
+      const startsHere = node === range.startContainer;
+      const endsHere = node === range.endContainer;
+      // A node entirely inside the range counts whole; the two ends are clipped.
+      const covered = range.intersectsNode(node);
+      if (covered) {
+        const lo = startsHere ? range.startOffset : 0;
+        const hi = endsHere ? range.endOffset : length;
+        if (hi > lo) {
+          if (from === null) from = at + lo;
+          to = at + hi;
+        }
+      }
+      at += length;
     }
-    return null;
-  };
-
-  const start = offsetOf(range.startContainer, range.startOffset);
-  const end = offsetOf(range.endContainer, range.endOffset);
-  if (start === null || end === null || end <= start) return null;
-  return {
-    page: Number(para.dataset.page),
-    para: Number(para.dataset.para),
-    start,
-    end,
-    text: para.textContent.slice(start, end).replace(/\s+/g, ' ').trim()
-  };
+    if (from === null || to === null || to <= from) continue;
+    spans.push({
+      page: Number(para.dataset.page),
+      para: Number(para.dataset.para),
+      start: from,
+      end: to,
+      text: para.textContent.slice(from, to).replace(/\s+/g, ' ').trim()
+    });
+  }
+  return spans.filter((s) => s.text);
 }
 
-/** Show the Highlight button only while there is something to highlight. */
+/**
+ * The last selection worth acting on, kept because the tap that acts on it may
+ * be the very thing that destroys it: on a touch device, touching anything
+ * outside a selection collapses it, and the click handler then finds nothing
+ * there. Remembering it is what makes the button work with a thumb.
+ */
+let pendingSelection = [];
+
+/**
+ * Show the Highlight button while there is something to highlight — and take it
+ * away only when you touch something else.
+ *
+ * Not when the selection collapses, which is the obvious rule and the wrong
+ * one: a selection collapses for two very different reasons, because you
+ * dismissed it, or because you touched the Highlight button and the browser
+ * cleared it on the way down. Hiding on collapse makes the second case
+ * unwinnable — the button leaves while the tap is still travelling, and nothing
+ * happens, which is exactly what "the button is there but it does nothing"
+ * looks like from the outside. So the bar goes when a touch lands outside it,
+ * which is unambiguous, and no timer has to guess how fast a thumb is.
+ */
 function watchSelection() {
   const bar = $('#selection-bar');
   if (!bar) return;
-  const found = selectionInParagraph();
-  bar.hidden = !found;
-  if (found) {
-    const words = found.text.split(/\s+/).filter(Boolean).length;
-    $('#selection-count').textContent = `${words} word${words === 1 ? '' : 's'} selected`;
-  }
+  const found = selectionSpans();
+  if (!found.length) return;
+  pendingSelection = found;
+  bar.hidden = false;
+  const words = found.reduce((sum, s) => sum + s.text.split(/\s+/).filter(Boolean).length, 0);
+  const across = found.length > 1 ? ` across ${found.length} paragraphs` : '';
+  $('#selection-count').textContent = `${words} word${words === 1 ? '' : 's'}${across}`;
 }
+
+/** Put the bar away, once whatever it was offered for is over. */
+function dismissSelectionBar() {
+  const bar = $('#selection-bar');
+  if (bar) bar.hidden = true;
+  pendingSelection = [];
+}
+
+/** What the buttons act on: what is selected now, or the last thing that was. */
+const selectionToUse = () => {
+  const live = selectionSpans();
+  return live.length ? live : pendingSelection;
+};
 
 function bookmarkList(marks) {
   if (!marks.length) return '';
@@ -4350,6 +4406,26 @@ document.addEventListener('selectionchange', () => {
   if (parseView(view).name === 'read') watchSelection();
 });
 
+// Touching a button is touching outside the selection, and a touch outside a
+// selection collapses it — before the click that was meant to act on it ever
+// runs. Refusing the default on the way down keeps the selection where it is,
+// and the click still fires.
+for (const event of ['pointerdown', 'mousedown', 'touchstart']) {
+  document.addEventListener(
+    event,
+    (e) => {
+      if (e.target.closest?.('#selection-bar')) {
+        e.preventDefault();
+        return;
+      }
+      // A touch anywhere else is the end of that offer — including the touch
+      // that begins the next selection, which will put the bar back itself.
+      if (parseView(view).name === 'read') dismissSelectionBar();
+    },
+    { passive: false }
+  );
+}
+
 document.addEventListener('click', async (e) => {
   const tab = e.target.closest('.tab');
   if (tab) return go(tab.dataset.view);
@@ -4463,19 +4539,21 @@ document.addEventListener('click', async (e) => {
   }
 
   if (action === 'highlight-selection') {
-    const found = selectionInParagraph();
+    const found = selectionToUse();
     const id = parseView(view).arg;
-    if (!found || !id) return;
-    store.addHighlight(id, found);
+    if (!found.length || !id) return;
+    for (const span of found) store.addHighlight(id, span);
+    dismissSelectionBar();
     document.getSelection()?.removeAllRanges();
     return renderReader(id, parseView(view).taskKey);
   }
 
   if (action === 'remove-selection') {
-    const found = selectionInParagraph();
+    const found = selectionToUse();
     const id = parseView(view).arg;
-    if (!found || !id) return;
-    store.addRemoval(id, found);
+    if (!found.length || !id) return;
+    for (const span of found) store.addRemoval(id, span);
+    dismissSelectionBar();
     document.getSelection()?.removeAllRanges();
     return renderReader(id, parseView(view).taskKey);
   }
