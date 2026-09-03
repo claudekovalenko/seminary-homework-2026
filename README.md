@@ -77,6 +77,12 @@ for each row inside the window the syllabus gives (*"Use Fri, Sep 11"*, or
 deadlines and the reminders like anything else; ignore it and the box is still
 there next week.
 
+A reading that has already been read can be carried rather than re-read. **Save
+text** on a material downloads the extraction; **Text** on an unattached one
+loads it back. A sixty-page scan is twenty minutes of a phone holding its screen
+awake and the result is only text, so it travels — from the desktop copy to the
+phone, or from wherever the OCR was quickest.
+
 ### Reading a scan
 
 Half the course reading arrives as a photograph of a page rather than as text.

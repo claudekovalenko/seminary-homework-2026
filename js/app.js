@@ -8,7 +8,7 @@ import { emphasisRuns, EM as EM_MARK, STRONG as STRONG_MARK } from './text.js';
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v37 · 2026-09-03';
+const BUILD = 'v38 · 2026-09-03';
 
 let DATA = null;
 let TASKS = [];
@@ -1338,8 +1338,13 @@ function materialReadings(m, entry) {
 }
 
 function readButton(m, entry) {
-  if (entry.kind !== 'file') return '';
-  if (!/\.pdf$/i.test(entry.fileName || '')) return '';
+  // Text is the thing the reader needs, and it does not always come from a PDF
+  // sitting here: a reading can be brought in already read, from the desktop
+  // copy or from a machine that did the OCR faster.
+  if (!extractedIds.has(m.id)) {
+    if (entry.kind !== 'file') return '';
+    if (!/\.pdf$/i.test(entry.fileName || '')) return '';
+  }
   if (extractedIds.has(m.id)) {
     const where = store.readingPos(m.id);
     const marks = store.bookmarksFor(m.id).length;
@@ -1655,6 +1660,11 @@ function viewFiles() {
         across your devices and costs no space here.
         <strong>File</strong> copies a PDF into this app so it opens instantly and works
         offline, but it lives on this device only.
+        <strong>Text</strong> loads a reading that has already been read — the result of an
+        OCR run done somewhere else. A sixty-page scan is twenty minutes of a phone holding
+        its screen awake, and the result is only text, so it travels: read it once, use
+        <strong>Save text</strong> to keep a copy, and load it on the other device rather than
+        doing the work twice.
       </p>
       <p class="note">
         For any PDF you have copied in, <strong>Get text</strong> pulls the words out and
@@ -1736,11 +1746,13 @@ function viewFiles() {
             <div class="material-actions">
               ${
                 e
-                  ? `<button class="btn small" data-action="open-material" data-mat="${esc(m.id)}">Open</button>
+                  ? `${e.kind === 'text' ? '' : `<button class="btn small" data-action="open-material" data-mat="${esc(m.id)}">Open</button>`}
                      ${readButton(m, e)}
+                     ${extractedIds.has(m.id) ? `<button class="btn small ghost" data-action="export-text" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">Save text</button>` : ''}
                      <button class="btn small ghost" data-action="detach" data-mat="${esc(m.id)}">Remove</button>`
                   : `<button class="btn small ghost" data-action="attach-link" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">Link</button>
-                     <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>`
+                     <button class="btn small ghost" data-action="attach-file" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">File</button>
+                     <button class="btn small ghost" data-action="import-text" data-mat="${esc(m.id)}" data-title="${esc(m.name)}">Text</button>`
               }
             </div>
             ${materialReadings(m, e)}
@@ -3298,7 +3310,7 @@ document.addEventListener('click', async (e) => {
     const entry = store.libraryEntry(el.dataset.mat);
     if (!entry) return;
     if (!confirm(`Remove the attachment for "${entry.title}"?`)) return;
-    if (entry.kind === 'file') {
+    if (entry.kind === 'file' || entry.kind === 'text') {
       await lib.deleteFile(el.dataset.mat).catch(() => {});
       await lib.deleteText(el.dataset.mat).catch(() => {});
       extractedIds.delete(el.dataset.mat);
@@ -3459,6 +3471,90 @@ document.addEventListener('click', async (e) => {
   if (action === 'test-notif') {
     const ok = await notify.testNotification();
     if (!ok) alert('Notifications are not permitted yet — turn them on above.');
+    return;
+  }
+
+  /**
+   * A reading someone has already read for you.
+   *
+   * OCR is the expensive part of this app by a distance — a scanned chapter is
+   * ten to twenty seconds a page on a phone, and a sixty-page one is twenty
+   * minutes of it holding the screen awake. The result is just text, so it
+   * travels: read it once anywhere, save it, and load it here. Which is also
+   * how a chapter gets from the desktop copy to the phone without either of
+   * them doing the work twice.
+   */
+  if (action === 'import-text') {
+    const { mat: id, title } = el.dataset;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const pages = Array.isArray(parsed?.pages) ? parsed.pages : null;
+        if (!pages?.length || typeof pages[0]?.text !== 'string') {
+          throw new Error('that file does not hold a reading');
+        }
+        const extracted = {
+          pages: pages.map((p, i) => ({
+            page: Number(p.page) || i + 1,
+            text: String(p.text || ''),
+            ...(p.notes ? { notes: String(p.notes) } : {}),
+            ...(typeof p.confidence === 'number' ? { confidence: p.confidence } : {})
+          })),
+          chars: Number(parsed.chars) || pages.reduce((sum, p) => sum + String(p.text || '').length, 0),
+          pageCount: pages.length,
+          totalPages: Number(parsed.totalPages) || pages.length,
+          ocr: Boolean(parsed.ocr),
+          complete: parsed.complete !== false,
+          nextPage: pages.length + 1,
+          confidence: typeof parsed.confidence === 'number' ? parsed.confidence : null,
+          poorPages: Array.isArray(parsed.poorPages) ? parsed.poorPages : []
+        };
+        await lib.putText(id, extracted);
+        extractedIds.add(id);
+        // There is no file behind this, and the reader needs an entry to open
+        // from — so the reading itself becomes the entry.
+        const current = store.libraryEntry(id);
+        store.setLibraryEntry(id, {
+          ...(current || {}),
+          title: current?.title || title,
+          kind: current?.kind || 'text',
+          fileName: current?.fileName || file.name,
+          text: {
+            chars: extracted.chars,
+            pageCount: extracted.pageCount,
+            totalPages: extracted.totalPages,
+            complete: extracted.complete,
+            nextPage: extracted.nextPage,
+            confidence: extracted.confidence,
+            poorPages: extracted.poorPages,
+            ocr: extracted.ocr
+          }
+        });
+        refresh();
+        go(`read:${id}`);
+      } catch (err) {
+        alert(`Could not load that reading: ${err.message}`);
+      }
+    };
+    input.click();
+    return;
+  }
+
+  if (action === 'export-text') {
+    const { mat: id, title } = el.dataset;
+    const extracted = await lib.getText(id).catch(() => null);
+    if (!extracted) return;
+    const blob = new Blob([JSON.stringify(extracted)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${lib.materialId(title || id)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
     return;
   }
 
