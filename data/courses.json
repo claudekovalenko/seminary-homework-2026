@@ -7,7 +7,7 @@
     "pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.",
     "classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".",
     "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.",
-    "material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week.",
+    "material: names the physical thing a reading lives in, when that differs from \"source\" — so a book assigned four times is attached once. A chapter photocopied out of a collection is its own thing, not the collection: the three Christian Dogmatics chapters are by three different authors and arrive as three separate PDFs, so each carries its own material and its own attachment.",
     "suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own."
   ],
   "courses": [
@@ -137,7 +137,7 @@
               "estPages": 25,
               "estimated": true,
               "driver": true,
-              "material": "Christian Dogmatics (Allen & Swain)"
+              "material": "Swain, \"Divine Trinity\" — Christian Dogmatics ch. 4"
             },
             {
               "order": 2,
@@ -207,7 +207,7 @@
               "estPages": 25,
               "estimated": true,
               "driver": true,
-              "material": "Christian Dogmatics (Allen & Swain)"
+              "material": "Swain, \"Covenant of Redemption\" — Christian Dogmatics ch. 5"
             }
           ],
           "bible": {
@@ -302,7 +302,7 @@
               "ref": "ch. 2 in Christian Dogmatics",
               "estPages": 25,
               "estimated": true,
-              "material": "Christian Dogmatics (Allen & Swain)"
+              "material": "Vanhoozer, \"Holy Scripture\" — Christian Dogmatics ch. 2"
             },
             {
               "order": 3,

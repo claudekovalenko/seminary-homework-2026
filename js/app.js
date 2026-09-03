@@ -8,7 +8,7 @@ import { emphasisRuns, EM as EM_MARK, STRONG as STRONG_MARK } from './text.js';
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v36 · 2026-09-03';
+const BUILD = 'v37 · 2026-09-03';
 
 let DATA = null;
 let TASKS = [];
