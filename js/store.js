@@ -45,6 +45,18 @@ export const DEFAULT_SETTINGS = {
   minsPerBibleChapter: 5,
   // Default guess when a reading is given as "ch. 4" with no page numbers.
   defaultChapterPages: 22,
+  // Whether reading set for a class that has already met is carried forward into
+  // the plan, ahead of this week's work.
+  //
+  // Off by default, which is the opposite of what it was. Carrying it forward is
+  // right while you mean to catch up, and the moment you do not it is the
+  // cruellest thing the app can do: a fortnight of it fills every day between
+  // now and the next class, the chapter the seminar is actually on ends up
+  // behind all of it, and the honest advice a planner gives — here is today's
+  // reading — becomes a wall you cannot see past. Set aside, it is still listed
+  // on the home page and still tickable. Nothing is deleted, and one button
+  // brings it all back.
+  carryOverdue: false,
   // Read Greek as well as English when a scan is OCR'd. On by default: the
   // course reading is full of it, and a page of Koine read as though it were
   // English comes back as nonsense rather than as Greek. Costs another 2 MB the

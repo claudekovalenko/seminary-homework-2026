@@ -97,6 +97,18 @@ const DEFAULT_SETTINGS = {
   minsPerBibleChapter: 5,
   // Default guess when a reading is given as "ch. 4" with no page numbers.
   defaultChapterPages: 22,
+  // Whether reading set for a class that has already met is carried forward into
+  // the plan, ahead of this week's work.
+  //
+  // Off by default, which is the opposite of what it was. Carrying it forward is
+  // right while you mean to catch up, and the moment you do not it is the
+  // cruellest thing the app can do: a fortnight of it fills every day between
+  // now and the next class, the chapter the seminar is actually on ends up
+  // behind all of it, and the honest advice a planner gives — here is today's
+  // reading — becomes a wall you cannot see past. Set aside, it is still listed
+  // on the home page and still tickable. Nothing is deleted, and one button
+  // brings it all back.
+  carryOverdue: false,
   // Read Greek as well as English when a scan is OCR'd. On by default: the
   // course reading is full of it, and a page of Koine read as though it were
   // English comes back as nonsense rather than as Greek. Costs another 2 MB the
@@ -1871,7 +1883,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v35 · 2026-08-30';
+const BUILD = 'v36 · 2026-09-03';
 
 let DATA = null;
 let TASKS = [];
@@ -1921,8 +1933,13 @@ function lateWork(from = new Date()) {
   ).map((t) => ({ ...t, overdue: true }));
 }
 
+/** ...and the part of it the plan is currently being asked to carry. */
+function carriedWork(from = new Date()) {
+  return store.settings().carryOverdue ? lateWork(from) : [];
+}
+
 function currentPlans() {
-  const late = lateWork();
+  const late = carriedWork();
   return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
     const slot = session.date || session.id;
     const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
@@ -2670,6 +2687,40 @@ function driverCard(plans) {
     </section>`;
 }
 
+/**
+ * What has been set aside, and how to get it back.
+ *
+ * Deciding not to catch up is a legitimate decision — a fortnight of reading
+ * from classes that have already met will otherwise fill every day between here
+ * and Tuesday and bury the chapter the seminar is actually on. But work that
+ * has quietly stopped being mentioned is work you cannot trust the app about,
+ * so nothing is deleted and nothing goes unsaid: it is counted here, listed
+ * behind one tap, still tickable, and one button brings all of it back.
+ */
+function setAsideCard() {
+  if (store.settings().carryOverdue) return '';
+  const late = lateWork();
+  if (!late.length) return '';
+  const minutes = late.reduce((sum, t) => sum + t.remaining, 0);
+  const id = 'set-aside';
+  // Shut unless you have opened it before: out of the way is the point of it.
+  const shut = store.settings().collapsed?.[id] !== false;
+
+  return `
+    <details class="card fold set-aside" ${shut ? '' : 'open'}>
+      <summary data-collapse="${esc(id)}">
+        <span class="fold-title">Set aside</span>
+        <span class="card-when">${late.length} from classes already past · ${S.formatMinutes(minutes)}</span>
+      </summary>
+      <p class="note">
+        Out of the plan and out of this week's total, but not gone: tick any of it off here, or
+        bring the lot back into the plan.
+      </p>
+      <ul class="tasks">${late.map((t) => taskLine(t, { showCourse: true, withTimer: true })).join('')}</ul>
+      <button class="btn ghost" data-action="toggle-carry">Bring these back into the plan</button>
+    </details>`;
+}
+
 function catchUpCard(plans, projects) {
   const slipping = plans.filter((p) => !p.pace.onTrack && p.pace.behind > 0);
   const owed = plans.flatMap((p) => p.owed);
@@ -2701,7 +2752,10 @@ function catchUpCard(plans, projects) {
                planned ahead of this week's work — or tick ${owed.length === 1 ? 'it' : 'them'} off here if
                you are letting ${owed.length === 1 ? 'it' : 'them'} go.
              </p>
-             <ul class="tasks">${owed.map((t) => taskLine(t, { showCourse: true })).join('')}</ul>`
+             <ul class="tasks">${owed.map((t) => taskLine(t, { showCourse: true })).join('')}</ul>
+             <button class="btn ghost" data-action="toggle-carry">
+               Set these aside and plan only what is ahead
+             </button>`
           : ''
       }
       ${
@@ -2792,6 +2846,7 @@ function viewToday() {
     ${rhythmCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
+    ${setAsideCard()}
     ${arrangedSection({ collapsible: true })}
 
     ${
@@ -3651,6 +3706,28 @@ function viewSettings() {
         )
         .join('')}
       <button class="btn ghost" data-action="clear-times">Back to assumed times</button>
+    </section>
+
+    <section class="card">
+      <h2>Work already past</h2>
+      <p class="note">
+        Reading set for a class that has already met is normally carried forward and planned
+        ahead of this week's, so it is not quietly forgotten. That is right while you mean to
+        catch up. Once you have decided you are not going to, it is the opposite of helpful:
+        a fortnight of it fills every day between now and Tuesday, and the chapter the seminar
+        is actually on ends up behind all of it.
+      </p>
+      <div class="chips">
+        <button class="chip ${s.carryOverdue ? 'on' : ''}" data-action="toggle-carry">Carry it forward</button>
+        <button class="chip ${s.carryOverdue ? '' : 'on'}" data-action="toggle-carry">Set it aside</button>
+      </div>
+      <p class="note">
+        ${
+          s.carryOverdue
+            ? 'Anything owed is planned first, before this week\'s reading.'
+            : 'Only what is still ahead is planned. What is past is listed on the home page under "Set aside", where it can still be ticked off — nothing is deleted.'
+        }
+      </p>
     </section>
 
     <section class="card">
@@ -5193,6 +5270,11 @@ document.addEventListener('click', async (e) => {
         return slots.length ? { ...h, slots } : h;
       })
     );
+    return refresh();
+  }
+
+  if (action === 'toggle-carry') {
+    store.updateSettings({ carryOverdue: !store.settings().carryOverdue });
     return refresh();
   }
 

@@ -37,6 +37,14 @@ Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.
 
+Reading set for a class that has already met is **set aside** rather than
+carried forward: it is listed on the home page under *Set aside*, still tickable
+and still timed, but kept out of the plan and out of the week's total. Carrying
+it forward is right while you mean to catch up and unbearable once you do not —
+a fortnight of it fills every day between now and the next class and buries the
+chapter the seminar is actually on. One button in that card, or the switch in
+Settings, brings it all back.
+
 While a stopwatch is running it rides in the header, on every tab and in the
 reader — what it is on, how long it has been going, and a Stop button — so it is
 never left running out of sight.
