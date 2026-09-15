@@ -508,10 +508,16 @@
               "note": "Subject, Predicate nominative, Apposition; Address, Appellation, Absolute, Hanging."
             },
             {
-              "label": "Accusative — Echo, Two, Sub, Alias + MMR",
+              "label": "Vocative — say the name",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/vocative",
+              "tag": "mnemonics",
+              "note": "One case, one job."
+            },
+            {
+              "label": "Accusative — CADETS + MMR",
               "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/accusative",
               "tag": "mnemonics",
-              "note": "One object with four twists, then Measure, Manner, Respect."
+              "note": "Complement, Alias, Direct object, Echo, Two, Sub — then Measure, Manner, Respect."
             },
             {
               "label": "Spot it — quiz yourself",
@@ -552,6 +558,26 @@
               "type": "quiz",
               "atClass": true
             }
+          ],
+          "links": [
+            {
+              "label": "Genitive — SWAMP RD + PACTS",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/genitive",
+              "tag": "mnemonics",
+              "note": "Seven that describe a noun, two that hide a verb, five that modify one, two oddities."
+            },
+            {
+              "label": "Swamp Road — the picture",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/picture/genitive",
+              "tag": "mnemonics",
+              "note": "Every genitive use as one place you can walk."
+            },
+            {
+              "label": "Drill the genitive",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/drill/genitive",
+              "tag": "mnemonics",
+              "note": "Flashcards, this case only."
+            }
           ]
         },
         {
@@ -585,6 +611,26 @@
               "type": "quiz",
               "atClass": true
             }
+          ],
+          "links": [
+            {
+              "label": "Dative — PORT, HIT, MAMA, BEAD",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/dative",
+              "tag": "mnemonics",
+              "note": "Three old cases wearing one coat: to/for, in/at, with/by — and the leftovers."
+            },
+            {
+              "label": "The Harbour — the picture",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/picture/dative",
+              "tag": "mnemonics",
+              "note": "Every dative use as one place you can walk."
+            },
+            {
+              "label": "Ch. 4's practice exercises",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/test/dative",
+              "tag": "mnemonics",
+              "note": "The chapter's thirteen, asked once each."
+            }
           ]
         },
         {
@@ -617,6 +663,26 @@
               "title": "Quiz: ch. 4",
               "type": "quiz",
               "atClass": true
+            }
+          ],
+          "links": [
+            {
+              "label": "Article — Point, Pronoun, Poof",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/article",
+              "tag": "mnemonics",
+              "note": "It points, stands in, or vanishes — plus Sharp, Colwell and Apollonius."
+            },
+            {
+              "label": "Adjective — ASAP in SPECS",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/adjective",
+              "tag": "mnemonics",
+              "note": "Four jobs, five degrees."
+            },
+            {
+              "label": "Drill this week",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/drill/week",
+              "tag": "mnemonics",
+              "note": "Whichever chapter is next up, from the timetable."
             }
           ]
         },
@@ -732,6 +798,32 @@
               "title": "T&D: John 1:8",
               "type": "translation",
               "verses": 1
+            }
+          ],
+          "links": [
+            {
+              "label": "Voice — I do it, for me, to me",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/voice",
+              "tag": "mnemonics",
+              "note": "Active points out, middle bends back, passive comes in."
+            },
+            {
+              "label": "Mood — WAIFS and PHONIC",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/mood",
+              "tag": "mnemonics",
+              "note": "Indicative, subjunctive, imperative, optative — it is, it might, do it, I wish."
+            },
+            {
+              "label": "Tense — Am, Will, Was, Did, Have, Had",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/tense",
+              "tag": "mnemonics",
+              "note": "The six forms of λύω, and the marks that give them away."
+            },
+            {
+              "label": "Ch. 6's practice exercises",
+              "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/test/mood",
+              "tag": "mnemonics",
+              "note": "The chapter's thirteen, asked once each."
             }
           ]
         },
@@ -938,16 +1030,28 @@
       "credits": 3,
       "links": [
         {
+          "label": "The whole street",
+          "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/picture",
+          "tag": "mnemonics",
+          "note": "Every case as a stop on one street, and everything standing in it."
+        },
+        {
           "label": "Case mnemonics",
           "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/map",
           "tag": "mnemonics",
-          "note": "The acrostics for every case use covered so far."
+          "note": "The acrostics for every use covered so far."
         },
         {
           "label": "Drill",
           "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/drill",
           "tag": "mnemonics",
           "note": "Flashcards on Leitner boxes."
+        },
+        {
+          "label": "The book's practice test",
+          "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/test",
+          "tag": "mnemonics",
+          "note": "The chapters' own exercises, asked once each."
         }
       ]
     },

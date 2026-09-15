@@ -5,7 +5,7 @@ import * as lib from './library.js';
 
 // Shown in Settings so you can tell at a glance which version a device is
 // actually running. Bump it alongside the service worker's CACHE.
-const BUILD = 'v23 · 2026-08-27';
+const BUILD = 'v24 · 2026-09-15';
 
 let DATA = null;
 let TASKS = [];
