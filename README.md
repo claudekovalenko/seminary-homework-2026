@@ -172,9 +172,24 @@ python3 -m http.server 8000
 
 ## Putting it on your home screen
 
-Push this branch and turn on GitHub Pages for the repo
-(**Settings → Pages → Source: GitHub Actions**). The included workflow
-publishes the site on every push to `main`. Then:
+Pages is set to **Deploy from a branch**, pointed at
+`claude/greek-nominative-accusative-mnemonics-bfjr98` at `/ (root)`, so GitHub
+publishes the repository contents of that branch on every push to it. There is
+no build step to wait for — the app is plain files, and `.nojekyll` keeps Jekyll
+from touching them.
+
+Two things follow from that, and both bite quietly:
+
+- **`main` is not the published branch.** Work that lands on `main` will not
+  appear on the site until it is merged into the branch above. Merge `main` in
+  rather than cherry-picking, so the branch stays a superset of it.
+- **`.github/workflows/pages.yml` no longer publishes anything.** It uses
+  `deploy-pages`, which only works when the source is *GitHub Actions*, so
+  running it now fails at the deploy step. It is left in place because
+  switching the source back is one dropdown; just do not expect it to be what
+  ships the site.
+
+Then: 
 
 - **iPhone/iPad** — open the page in Safari → Share → *Add to Home Screen*.
   This step is required before notifications will work at all on iOS.
