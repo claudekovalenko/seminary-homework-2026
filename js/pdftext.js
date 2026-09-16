@@ -8,6 +8,8 @@
 // The library is ~1.6 MB, so it is imported on first use rather than up front,
 // and cached by the service worker afterwards.
 
+import { toMarkdown } from './text.js';
+
 const PDFJS_URL = '../vendor/pdfjs/pdf.min.mjs';
 const WORKER_URL = '../vendor/pdfjs/pdf.worker.min.mjs';
 
@@ -129,10 +131,10 @@ function layOutPage(items) {
 }
 
 // U+002D hyphen-minus, U+2010 hyphen, U+2011 non-breaking hyphen, U+00AD soft.
-const HYPHEN_AT_END = /[-‐‑­]$/;
+export const HYPHEN_AT_END = /[-‐‑­]$/;
 // A private-use codepoint: it cannot occur in real text, so the marker is
 // unambiguous and survives the whitespace collapsing above.
-const JOIN = '\uE000';
+export const JOIN = '\uE000';
 
 /**
  * Decide what each line-break hyphen meant, using the document's own vocabulary.
@@ -143,11 +145,13 @@ const JOIN = '\uE000';
  * With no evidence either way we join, since typeset prose breaks words far more
  * often than it hyphenates them.
  */
-function resolveHyphens(pages) {
+export function resolveHyphens(pages, fields = ['text']) {
   const vocab = new Set();
   for (const p of pages) {
-    for (const word of p.text.split(/[^\p{L}\p{N}'’-]+/u)) {
-      if (word && !word.includes(JOIN)) vocab.add(word.toLowerCase().replace(/^['’-]+|['’-]+$/g, ''));
+    for (const field of fields) {
+      for (const word of String(p[field] || '').split(/[^\p{L}\p{N}'’-]+/u)) {
+        if (word && !word.includes(JOIN)) vocab.add(word.toLowerCase().replace(/^['’-]+|['’-]+$/g, ''));
+      }
     }
   }
 
@@ -157,10 +161,38 @@ function resolveHyphens(pages) {
     return `${left}${right}`;
   };
 
-  return pages.map((p) => ({
-    ...p,
-    text: p.text.replace(/([\p{L}\p{N}]+)\uE000([\p{L}\p{N}]+)/gu, (_, l, r) => decide(l, r)).replaceAll(JOIN, '')
-  }));
+  const out = pages.map((p) => ({ ...p }));
+  for (const page of out) {
+    for (const field of fields) {
+      if (typeof page[field] !== 'string') continue;
+      page[field] = page[field].replace(/([\p{L}\p{N}]+)\uE000([\p{L}\p{N}]+)/gu, (_, l, r) => decide(l, r));
+    }
+  }
+
+  // A word broken by the page break itself. The tail is on the next page, so
+  // the join can only be made once both are in hand — and the word goes to the
+  // page it started on, since that is where the reader will be looking for it.
+  for (let i = 0; i < out.length - 1; i++) {
+    const field = fields.find((f) => typeof out[i][f] === 'string' && out[i][f].trimEnd().endsWith(JOIN));
+    if (!field) continue;
+    const head = out[i][field].trimEnd();
+    const stem = head.match(/([\p{L}\p{N}]+)\uE000$/u);
+    if (!stem) continue;
+    const nextField = fields.find((f) => typeof out[i + 1][f] === 'string' && out[i + 1][f].trim());
+    if (!nextField) continue;
+    const tail = out[i + 1][nextField].trimStart().match(/^([\p{L}\p{N}]+)([\s\S]*)$/u);
+    if (!tail) continue;
+    out[i][field] = head.slice(0, -stem[0].length) + decide(stem[1], tail[1]);
+    out[i + 1][nextField] = tail[2].replace(/^\s+/, '');
+  }
+
+  return out.map((p) => {
+    const fixed = { ...p };
+    for (const field of fields) {
+      if (typeof fixed[field] === 'string') fixed[field] = fixed[field].replaceAll(JOIN, '').replace(/\n{3,}/g, '\n\n').trim();
+    }
+    return fixed;
+  });
 }
 
 /**
@@ -204,11 +236,14 @@ export async function extractText(blob, onProgress) {
 
 /** Whole document as one string, with page markers for orientation. */
 export function toPlainText(extracted) {
+  // Out of the app the markers mean nothing, so they leave as markdown, which
+  // is the one notation every note-taking app already understands.
+  const asMarkdown = toMarkdown;
   return extracted.pages
     .filter((p) => p.text || p.notes)
     .map((p) => {
-      const notes = p.notes ? `\n\nFootnotes\n\n${p.notes}` : '';
-      return `— page ${p.page} —\n\n${p.text}${notes}`;
+      const notes = p.notes ? `\n\nFootnotes\n\n${asMarkdown(p.notes)}` : '';
+      return `— page ${p.page} —\n\n${asMarkdown(p.text)}${notes}`;
     })
     .join('\n\n');
 }

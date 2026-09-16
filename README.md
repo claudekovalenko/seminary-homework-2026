@@ -5,16 +5,132 @@ home screen and it answers three questions: **what is due, how much reading is
 that, and how much of it should I do today.**
 
 - **Today** — the day's reading target in minutes, the exact pages to read, and
-  everything falling due inside your warning window (7 days by default).
+  everything falling due inside your warning window (7 days by default). At the
+  top of it, the week as one thing: everything for both classes, aimed at the
+  day you want to be finished, and beneath that the reading the syllabus
+  underlines — the one the seminar is built on — whatever day the plan has put
+  it on, with the stopwatch on it.
 - **Plan** — for each course's next class: total pages, total time, and a
   day-by-day split of the reading. Long page ranges are cut at real page
   numbers, so a day says *"Bavinck pp. 530–546"*, not *"a third of Bavinck"*.
+  Beneath it, **Working ahead**: the classes after that one, folded away, with
+  the same ticks and stopwatches — unpaced and not counted toward this week, for
+  the evening you want next week's reading out of the way too.
 - **Schedule** — the whole term, both syllabi, expandable per class.
-- **Settings** — reminders, study days, and your reading pace.
+- **Files** — the PDFs you attach, the text pulled out of them, and a reader you
+  can highlight in. Select highlighted words again and the button offers to take
+  the highlighting off, leaving the words alone. Striking a line out — for what
+  OCR leaves behind on a bad page — is a separate button that asks first, and
+  hides rather than deletes: struck text goes from the reading and from anything
+  you copy, it is listed, and one tap puts it back. Each book lists the readings inside it, with the chapter and
+  the date it is wanted: a collection is filed under its own title while its
+  chapters are by other people, so *Christian Dogmatics* is where Swain on the
+  Trinity is, and the row says so. Select any passage and tap Highlight; highlights are listed
+  under the bookmarks, survive a re-reading of the same PDF, and come off with a
+  tap.
+- **Settings** — the finish line, reminders, study days, and your reading pace.
+
+Scripture is listed a chapter at a time — "Ps 1", then "Ps 27" — each its own
+line, its own tick and its own stopwatch, however many of them a day carries.
 
 Tick items off as you go. The plan recalculates every time, so falling a day
 behind quietly re-spreads the rest over the days you have left instead of
 leaving you to work it out.
+
+Reading set for a class that has already met is **set aside** rather than
+carried forward: it is listed on the home page under *Set aside*, still tickable
+and still timed, but kept out of the plan and out of the week's total. Carrying
+it forward is right while you mean to catch up and unbearable once you do not —
+a fortnight of it fills every day between now and the next class and buries the
+chapter the seminar is actually on. One button in that card, or the switch in
+Settings, brings it all back.
+
+While a stopwatch is running it rides in the header, on every tab and in the
+reader — what it is on, how long it has been going, and a Stop button — so it is
+never left running out of sight.
+
+Every reading carries its own clock. The stopwatch beside it banks each sitting
+against that reading for good, so the number next to a chapter is how long you
+have actually spent on it, across every evening you have picked it up — tap it
+to correct, for the reading you did on the bus without starting anything.
+
+### The finish line
+
+Both classes meet on Tuesday, so left alone the plan reads right up to Tuesday
+evening — which is how a week ends with Monday night holding four hours of
+Bavinck. Settings → **Finish line** sets the day a week is meant to be *done*,
+Saturday by default. The same reading is then spread across the days up to
+Saturday, "behind" is measured against Saturday, and Sunday and Monday become
+margin rather than the plan. It never pushes work past the class, and if this
+week's finish line has already gone by, the class deadline stands. Set it to
+*Off* to plan straight up to each class.
+
+### Work you arrange yourself
+
+Applied Theology III has no dates in its syllabus at all: three book
+discussions, a preaching slot, three pastoral meetings and two papers, each
+arranged between you, the professor and your pastor. That makes it the easiest
+course to lose — nothing is due, so nothing ever asks. It sits on Today and
+Schedule as its own checklist, out of the weekly target, with a date offered
+for each row inside the window the syllabus gives (*"Use Fri, Sep 11"*, or
+**Take every suggested date**). Take one and that meeting joins the plan, the
+deadlines and the reminders like anything else; ignore it and the box is still
+there next week.
+
+A reading that has already been read can be carried rather than re-read. **Save
+text** on a material downloads the extraction; **Text** on an unattached one
+loads it back. A sixty-page scan is twenty minutes of a phone holding its screen
+awake and the result is only text, so it travels — from the desktop copy to the
+phone, or from wherever the OCR was quickest.
+
+### Reading a scan
+
+Half the course reading arrives as a photograph of a page rather than as text.
+For those, **OCR** reads the picture — on the device, with no upload and no
+account — and the difference between a usable reading and an unusable one is
+mostly what happens before the engine sees the page. So the page is cleaned
+first: straightened if it is crooked by more than a degree, thresholded a patch
+at a time so the shadow down a book's gutter cannot swallow a column, and
+cleared of the dust the copier photographed. Then the layout is rebuilt: columns
+read as columns rather than straight across the gutter, footnotes stay at the
+foot, the running head and the page number go, and every word is checked against
+an English word list without touching the vocabulary the book itself keeps using.
+
+**Greek is read as Greek.** The reading for this term is full of Koine, and an
+English-only OCR renders a line of it as Latin gibberish — which is worse than
+leaving it out, because it looks like text. A Greek model is loaded alongside
+the English one, so <span lang="grc">ἐν ἀρχῇ ἦν ὁ λόγος</span> comes back as
+that, breathings and accents included, whether it is a whole quotation or one
+word inside an English sentence. On the benchmark's Greek page: 100% of the
+Greek characters lost before, 5% character error after, with the English on the
+same run completely unchanged. It costs about 2 MB more the first time and
+roughly a second more per page; Settings → Languages turns it off.
+
+**Italic and bold survive.** The engine will not say which words were
+emphasised — its modern model reports every word as ordinary and every font name
+as blank — so the app measures the page instead: a word whose stems lean is
+italic, a word whose strokes are thicker than the rest of its line is bold. In
+a theology text that is most of what italics are doing, and losing them loses
+the difference between a book's title and a sentence about it.
+
+None of that is guesswork. `tools/bench` prints a page of known text, puts it
+through what a photocopier and a phone camera do to it, reads it back and scores
+the result, so each of those decisions was made against a number:
+
+| page                          | before          | after           |
+| ----------------------------- | --------------- | --------------- |
+| photocopy, tilted 0.9 degrees | 18.78% / 70.03% | 0.26% / 3.26%   |
+| photocopy, tilted 3 degrees   | 25.95% / 100%   | 0.26% / 3.58%   |
+| two columns                   | 82.23% / 100%   | 5.54% / 28.34%  |
+| a clean scan                  | 2.09% / 6.51%   | 0.00% / 2.28%   |
+| a page of Greek               | 100%            | 5.36%           |
+
+Character error rate on the body text, then on the footnotes; the Greek page is
+scored on its Greek. Emphasis is scored separately, and comes back at 5 of 5
+italic words and 1 of 1 bold with nothing else marked. See
+`tools/bench/README.md` to run it. `node tools/test.mjs` checks the parts that
+need no browser — hyphens broken across lines and pages, word repair, and the
+image passes.
 
 ## Downloading it
 

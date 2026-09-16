@@ -164,6 +164,41 @@ export function lastStudyDay(deadline, from) {
   return daysBetween(from, deadline) >= 1 ? addDays(deadline, -1) : from;
 }
 
+/* ---------- the weekly finish line ---------- */
+
+/**
+ * The weekday a week's work is meant to be finished on, or null when the
+ * finish line is switched off. 0 = Sunday .. 6 = Saturday.
+ */
+export function finishDay() {
+  const d = settings().finishDay;
+  return Number.isInteger(d) && d >= 0 && d <= 6 ? d : null;
+}
+
+/**
+ * The day the plan actually aims at.
+ *
+ * Class sets the hard deadline, but a deadline is not a plan: reading that may
+ * legally be done up to Tuesday evening gets done on Tuesday evening. The
+ * finish line pulls the week forward onto the last Saturday before class, so
+ * Sunday and Monday are slack instead of being the plan. It only ever moves the
+ * target earlier, and never behind today — a Saturday already gone is no use to
+ * anyone, so in that case the class cutoff stands.
+ */
+export function targetDay(deadline, from = startOfToday()) {
+  const last = lastStudyDay(deadline, from);
+  const day = finishDay();
+  if (day === null) return last;
+  const back = (parseDay(last).getDay() - day + 7) % 7;
+  const aim = addDays(last, -back);
+  return daysBetween(from, aim) >= 0 ? aim : last;
+}
+
+/** True when it is the finish line, rather than the class, setting the target. */
+export function finishLineApplies(deadline, from = startOfToday()) {
+  return daysBetween(targetDay(deadline, from), lastStudyDay(deadline, from)) > 0;
+}
+
 /* ---------- Bible readings, passage by passage ---------- */
 
 /**
@@ -388,7 +423,16 @@ export function buildTasks(data) {
           unit: isProject ? 'project' : 'task',
           order: 100 + i,
           title: a.title,
-          detail: a.note || (a.atClass ? 'At the beginning of class' : 'Due before class'),
+          // A meeting you arrange yourself has no class to be before.
+          detail:
+            a.note ||
+            (course.datesUnknown
+              ? a.atClass
+                ? 'When you meet'
+                : 'Before you meet'
+              : a.atClass
+                ? 'At the beginning of class'
+                : 'Due before class'),
           atClass: Boolean(a.atClass),
           startPlanning: a.startPlanning || null,
           raw: a,
@@ -474,8 +518,10 @@ export function pace(tasks, deadline, { from = startOfToday(), windowStart = nul
   const total = tasks.reduce((sum, t) => sum + t.minutes, 0);
   const remaining = tasks.reduce((sum, t) => sum + t.remaining, 0);
   const start = windowStart && windowStart < from ? windowStart : from;
-  const whole = studyDaysBetween(start, lastStudyDay(deadline, start), s.studyDays);
-  const left = studyDaysBetween(from, lastStudyDay(deadline, from), s.studyDays);
+  // Measured against the finish line, not the class: if the aim is Saturday,
+  // being "on pace" on Sunday night has to mean finished, not nearly there.
+  const whole = studyDaysBetween(start, targetDay(deadline, start), s.studyDays);
+  const left = studyDaysBetween(from, targetDay(deadline, from), s.studyDays);
 
   const evenPerDay = total / whole.length;
   const perDayNow = remaining / left.length;
@@ -635,11 +681,6 @@ export function rhythmProgress(log, habits, { from = startOfToday(), days = 7, t
   return { today, todayDone, todayTotal, todayMinutes, todayTarget, week, streak };
 }
 
-/** Work that exists but has no date yet, because you arrange it yourself. */
-export function unscheduled(tasks) {
-  return tasks.filter((t) => t.undated && !t.complete);
-}
-
 /* ---------- the day-by-day plan ---------- */
 
 function allDaysBetween(from, to) {
@@ -687,8 +728,10 @@ export function planFor(tasks, deadline, opts = {}) {
   const pending = tasks.filter((t) => !t.complete && t.remaining > 0 && t.unit !== 'project');
 
   // Work is due before class, so the last useful study day is normally the day
-  // before — but an evening class leaves that day open too.
-  const until = lastStudyDay(deadline, today);
+  // before — but an evening class leaves that day open too. A weekly finish
+  // line pulls that in further, to the last Saturday (or whichever day you set)
+  // before the class.
+  const until = targetDay(deadline, today);
   // Two different rhythms share one plan. Books are read in blocks: whatever
   // days you have set aside, even if that is only Monday, and the whole week's
   // reading lands there in one sitting. Scripture is read a chapter a day, so
@@ -778,27 +821,33 @@ export function planFor(tasks, deadline, opts = {}) {
     plan[i].minutes += atom.minutes;
   }
 
-  // A chapter a day, as far as it goes. With more chapters left than days the
-  // extra are clumped onto the earliest days and named together — "Gen 1, Gen
-  // 2" — rather than one day being handed the lot at the end.
+  // A chapter a day, as far as it goes — and one line per chapter, never
+  // several welded into one. With more chapters left than days the extra fall
+  // on the earliest days, but they are still listed and ticked off singly:
+  // "Isa 40, Isa 41, Isa 42" on one line behind one box can only be finished
+  // all at once, and a chapter is not read all at once. Each passage is its
+  // own row, its own tick and its own stopwatch.
   for (const task of scripture) {
     const left = task.units.slice(task.read);
     const share = spread(left.length, days.length);
     let taken = 0;
     share.forEach((count, i) => {
-      if (!count) return;
-      const passages = left.slice(taken, taken + count);
-      plan[i].items.push({
-        task,
-        minutes: count * s.minsPerBibleChapter,
-        ranges: null,
-        label: passages.join(', '),
-        passages,
-        whole: task.read + taken + count >= task.pages && task.read + taken === 0,
-        from: task.read + taken,
-        through: task.read + taken + count
-      });
-      plan[i].minutes += count * s.minsPerBibleChapter;
+      for (let n = 0; n < count; n += 1) {
+        const at = task.read + taken + n;
+        plan[i].items.push({
+          task,
+          minutes: s.minsPerBibleChapter,
+          ranges: null,
+          label: left[taken + n],
+          passages: [left[taken + n]],
+          // True only where the week's Bible reading is a single chapter, which
+          // is the one case where this row is the whole of it.
+          whole: task.pages === 1 && at === 0,
+          from: at,
+          through: at + 1
+        });
+        plan[i].minutes += s.minsPerBibleChapter;
+      }
       taken += count;
     });
   }
@@ -807,7 +856,18 @@ export function planFor(tasks, deadline, opts = {}) {
   // on it is: it says the block is clear.
   const shown = plan.filter((day) => day.block || day.items.length);
 
-  return { plan: shown, totalMinutes, perDay, days: blocks.length, blocks, pending, deadline };
+  return {
+    plan: shown,
+    totalMinutes,
+    perDay,
+    days: blocks.length,
+    blocks,
+    pending,
+    deadline,
+    // What the plan is aimed at, and whether that is the finish line or class.
+    target: until,
+    finishLine: finishLineApplies(deadline, today)
+  };
 }
 
 /* ---------- deadlines & reminders ---------- */

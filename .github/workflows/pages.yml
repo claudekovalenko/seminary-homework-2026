@@ -16,16 +16,32 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    # No `environment:` block on purpose. Declaring one is the conventional way
+    # to write this workflow, and it is what was failing: GitHub evaluates the
+    # environment gate *before* it allocates a runner, so a rule that rejects
+    # kills the job in about four seconds with no runner, no steps and no log to
+    # read — the least diagnosable failure a workflow can have. Without it the
+    # job actually starts, and anything that goes wrong now goes wrong somewhere
+    # with a name attached.
     steps:
       - uses: actions/checkout@v4
+
+      # enablement: true turns Pages on for the repository through the API if it
+      # is not on already, using the `pages: write` permission above. That
+      # removes the other half of the problem: a workflow that can only work
+      # once somebody has found the right switch in Settings.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       # The site is static — publish the repository root as-is.
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Say where it went
+        run: echo "Published to ${{ steps.deployment.outputs.page_url }}"

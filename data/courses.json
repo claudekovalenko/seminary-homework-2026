@@ -7,8 +7,8 @@
     "pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.",
     "classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".",
     "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.",
-    "material: names the physical book/PDF a reading belongs to, when that differs from \"source\" (e.g. three Christian Dogmatics chapters by different authors). Attachments in the Files tab are keyed by material, so attaching a book once covers every week.",
-    "links: a course or a session may carry links[] — {label, url, tag, note}. A course's links show every week; a session's show from a week before its class until a week after it. They are for somewhere to go and DO the work, not somewhere to read it."
+    "material: names the physical thing a reading lives in, when that differs from \"source\" — so a book assigned four times is attached once. A chapter photocopied out of a collection is its own thing, not the collection: the three Christian Dogmatics chapters are by three different authors and arrive as three separate PDFs, so each carries its own material and its own attachment.",
+    "suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own."
   ],
   "courses": [
     {
@@ -137,7 +137,7 @@
               "estPages": 25,
               "estimated": true,
               "driver": true,
-              "material": "Christian Dogmatics (Allen & Swain)"
+              "material": "Swain, \"Divine Trinity\" — Christian Dogmatics ch. 4"
             },
             {
               "order": 2,
@@ -207,7 +207,7 @@
               "estPages": 25,
               "estimated": true,
               "driver": true,
-              "material": "Christian Dogmatics (Allen & Swain)"
+              "material": "Swain, \"Covenant of Redemption\" — Christian Dogmatics ch. 5"
             }
           ],
           "bible": {
@@ -302,7 +302,7 @@
               "ref": "ch. 2 in Christian Dogmatics",
               "estPages": 25,
               "estimated": true,
-              "material": "Christian Dogmatics (Allen & Swain)"
+              "material": "Vanhoozer, \"Holy Scripture\" — Christian Dogmatics ch. 2"
             },
             {
               "order": 3,
@@ -667,10 +667,10 @@
           ],
           "links": [
             {
-              "label": "Article — Point, Pronoun, Poof",
+              "label": "Article — MAGPIE, five pronouns, three Poofs",
               "url": "https://claudekovalenko.github.io/going-deeper-greek-concepts/#/learn/article",
               "tag": "mnemonics",
-              "note": "It points, stands in, or vanishes — plus Sharp, Colwell and Apollonius."
+              "note": "Monadic, Abstract, Generic, Par excellence, Identification, Earlier — then the pronoun kinds and what a missing article means."
             },
             {
               "label": "Adjective — ASAP in SPECS",
@@ -1073,6 +1073,8 @@
           "date": null,
           "topic": "Book discussion 1",
           "when": "Schedule within the first half of term",
+          "suggest": "2026-09-11",
+          "suggestNote": "Three weeks in: early enough that discussion 2 still fits before the midpoint.",
           "readings": [
             {
               "source": "Perkins, The Art of Prophesying",
@@ -1095,6 +1097,8 @@
           "date": null,
           "topic": "Book discussion 2",
           "when": "Schedule within the first half of term",
+          "suggest": "2026-10-09",
+          "suggestNote": "Just before the midpoint of term, which is where \"the first half\" runs out.",
           "readings": [
             {
               "source": "Perkins, The Art of Prophesying",
@@ -1117,6 +1121,8 @@
           "date": null,
           "topic": "Book discussion 3",
           "when": "Schedule as close to the end of term as possible",
+          "suggest": "2026-12-04",
+          "suggestNote": "The last Friday of term — the syllabus asks for this one as late as possible.",
           "readings": [
             {
               "source": "Perkins, The Calling of the Ministry",
@@ -1140,6 +1146,8 @@
           "date": null,
           "topic": "Preaching opportunity",
           "when": "Arrange with your pastor as soon as you can",
+          "suggest": "2026-10-25",
+          "suggestNote": "A Sunday, and far enough out that your pastor has a service to give you.",
           "assignments": [
             {
               "title": "Preach to or on behalf of your church",
@@ -1155,19 +1163,41 @@
           ]
         },
         {
-          "id": "pastoral",
+          "id": "pastoral-1",
           "date": null,
-          "topic": "Pastoral meetings",
+          "topic": "Pastoral meeting 1 of 3",
           "when": "Three times across the term, whenever suits",
+          "suggest": "2026-09-04",
+          "suggestNote": "Early, so the other two are not squeezed into December.",
           "assignments": [
             {
               "title": "Meet your pastor (1 of 3)",
               "type": "meeting"
-            },
+            }
+          ]
+        },
+        {
+          "id": "pastoral-2",
+          "date": null,
+          "topic": "Pastoral meeting 2 of 3",
+          "when": "Three times across the term, whenever suits",
+          "suggest": "2026-10-23",
+          "suggestNote": "Mid-term, roughly halfway between the other two.",
+          "assignments": [
             {
               "title": "Meet your pastor (2 of 3)",
               "type": "meeting"
-            },
+            }
+          ]
+        },
+        {
+          "id": "pastoral-3",
+          "date": null,
+          "topic": "Pastoral meeting 3 of 3",
+          "when": "Three times across the term, whenever suits",
+          "suggest": "2026-11-20",
+          "suggestNote": "Before finals week swallows the calendar.",
+          "assignments": [
             {
               "title": "Meet your pastor (3 of 3)",
               "type": "meeting",
@@ -1180,6 +1210,8 @@
           "date": null,
           "topic": "Final reflection paper",
           "when": "Due within a week of the last day of term",
+          "suggest": "2026-12-15",
+          "suggestNote": "A week after the last day of term, which is the deadline the syllabus sets.",
           "assignments": [
             {
               "title": "Final reflection paper (~750 words)",

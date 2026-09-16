@@ -30,6 +30,11 @@ export const DEFAULT_SETTINGS = {
   // days you block out for the books. Leaving one day ticked puts a whole
   // week's reading into one sitting, which is the point. 0 = Sunday .. 6 = Sat.
   studyDays: [1, 2, 3, 4, 5, 6],
+  // The day a week's work is meant to be finished on, ahead of the classes it
+  // is for. Saturday by default: the reading for Tuesday's classes lands by the
+  // weekend, and Sunday and Monday are margin rather than the plan. null turns
+  // it off and plans right up to the class itself. 0 = Sunday .. 6 = Saturday.
+  finishDay: 6,
   // Daily habits, kept in settings so they travel with an export.
   rhythm: structuredClone(DEFAULT_RHYTHM),
   // How far ahead the app warns you about a deadline.
@@ -40,6 +45,23 @@ export const DEFAULT_SETTINGS = {
   minsPerBibleChapter: 5,
   // Default guess when a reading is given as "ch. 4" with no page numbers.
   defaultChapterPages: 22,
+  // Whether reading set for a class that has already met is carried forward into
+  // the plan, ahead of this week's work.
+  //
+  // Off by default, which is the opposite of what it was. Carrying it forward is
+  // right while you mean to catch up, and the moment you do not it is the
+  // cruellest thing the app can do: a fortnight of it fills every day between
+  // now and the next class, the chapter the seminar is actually on ends up
+  // behind all of it, and the honest advice a planner gives — here is today's
+  // reading — becomes a wall you cannot see past. Set aside, it is still listed
+  // on the home page and still tickable. Nothing is deleted, and one button
+  // brings it all back.
+  carryOverdue: false,
+  // Read Greek as well as English when a scan is OCR'd. On by default: the
+  // course reading is full of it, and a page of Koine read as though it were
+  // English comes back as nonsense rather than as Greek. Costs another 2 MB the
+  // first time, and a little time per page.
+  readGreek: true,
   // Confirmed class times, keyed by course id — overrides whatever the
   // syllabus data says. Empty until you know when a class actually meets.
   classTimes: {},
@@ -61,11 +83,36 @@ const EMPTY = {
   fired: {}, // reminderKey -> ISO timestamp
   reading: {}, // materialId -> { page, para } — where you had got to
   bookmarks: {}, // materialId -> [{ page, para, text, at }]
+  // materialId -> [{ page, para, start, end, text, at }] — passages you marked.
+  // Offsets are into the paragraph as it reads, so they survive a re-reading of
+  // the same PDF as long as the words themselves do.
+  highlights: {},
+  // materialId -> [{ page, para, start, end, text, at }] — passages struck out
+  // of a reading. OCR leaves wreckage on a bad page: a caption read as a
+  // sentence, a line of a table, the ghost of a facing page. These are hidden
+  // rather than cut, so the offsets everything else is measured against do not
+  // move and nothing is ever actually lost.
+  removals: {},
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
   timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
+  // itemKey -> minutes, for good. The log above is trimmed to the last few
+  // hundred sittings so it cannot grow without limit, which makes it the wrong
+  // place to ask how long a reading has taken in total: by December the
+  // September sittings would have quietly fallen off the end of the answer.
+  totals: {},
   rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
+
+/** The per-item totals, rebuilt from the sittings still on record. */
+function totalsFrom(log) {
+  const totals = {};
+  for (const entry of log || []) {
+    if (!entry?.key) continue;
+    totals[entry.key] = (totals[entry.key] || 0) + (Number(entry.minutes) || 0);
+  }
+  return totals;
+}
 
 /**
  * Settings saved before a field existed come back without it. Merging over the
@@ -92,9 +139,12 @@ function read() {
       fired: parsed.fired || {},
       reading: parsed.reading || {},
       bookmarks: parsed.bookmarks || {},
+      highlights: parsed.highlights || {},
+      removals: parsed.removals || {},
       sessionDates: parsed.sessionDates || {},
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+      totals: parsed.totals || totalsFrom(parsed.timeLog),
       rhythmLog: parsed.rhythmLog || {}
     };
   } catch {
@@ -201,6 +251,107 @@ export const bookmarksFor = (id) => state.bookmarks[id] || [];
 
 export const bookmarksAll = () => state.bookmarks;
 
+/* ---------- passages you have marked ---------- */
+
+export const highlightsFor = (id) => state.highlights[id] || [];
+
+export const highlightKey = (h) => `${h.page}:${h.para}:${h.start}`;
+
+/**
+ * Mark a passage, or unmark it if the same one is marked again. Overlapping
+ * marks are merged rather than stacked: two passes over the same sentence with
+ * a slightly different selection should leave one mark on it, not two.
+ */
+export function addHighlight(id, mark) {
+  const list = state.highlights[id] || [];
+  const same = (a, b) => a.page === b.page && a.para === b.para;
+  const overlapping = list.filter((h) => same(h, mark) && h.start < mark.end && mark.start < h.end);
+  const merged = overlapping.reduce(
+    (acc, h) => ({ ...acc, start: Math.min(acc.start, h.start), end: Math.max(acc.end, h.end) }),
+    { ...mark }
+  );
+  const rest = list.filter((h) => !overlapping.includes(h));
+  state.highlights[id] = [...rest, { ...merged, at: new Date().toISOString() }].sort(
+    (a, b) => a.page - b.page || a.para - b.para || a.start - b.start
+  );
+  persist();
+  return merged;
+}
+
+/**
+ * Take the highlighting off a stretch of text, whether or not it lines up with
+ * how the highlights were made. A mark that is only partly covered is trimmed
+ * rather than dropped, and one covered in the middle becomes two — the same as
+ * dragging a highlighter's eraser across a page.
+ */
+export function unhighlight(id, span) {
+  const list = state.highlights[id] || [];
+  const out = [];
+  let changed = false;
+  for (const h of list) {
+    const same = h.page === span.page && h.para === span.para;
+    if (!same || h.end <= span.start || span.end <= h.start) {
+      out.push(h);
+      continue;
+    }
+    changed = true;
+    if (h.start < span.start) out.push({ ...h, end: span.start, text: h.text });
+    if (span.end < h.end) out.push({ ...h, start: span.end, text: h.text });
+  }
+  if (!changed) return false;
+  state.highlights[id] = out.sort((a, b) => a.page - b.page || a.para - b.para || a.start - b.start);
+  persist();
+  return true;
+}
+
+/** True when any of this stretch is already highlighted. */
+export function isHighlighted(id, span) {
+  return (state.highlights[id] || []).some(
+    (h) => h.page === span.page && h.para === span.para && h.start < span.end && span.start < h.end
+  );
+}
+
+export function removeHighlight(id, key) {
+  const list = state.highlights[id] || [];
+  const next = list.filter((h) => highlightKey(h) !== key);
+  if (next.length === list.length) return false;
+  state.highlights[id] = next;
+  persist();
+  return true;
+}
+
+/* ---------- passages struck out of a reading ---------- */
+
+export const removalsFor = (id) => state.removals[id] || [];
+
+export const removalKey = (h) => `${h.page}:${h.para}:${h.start}`;
+
+/** Strike a passage out. Neighbouring strikes join, as with highlights. */
+export function addRemoval(id, cut) {
+  const list = state.removals[id] || [];
+  const same = (a, b) => a.page === b.page && a.para === b.para;
+  const touching = list.filter((h) => same(h, cut) && h.start <= cut.end && cut.start <= h.end);
+  const merged = touching.reduce(
+    (acc, h) => ({ ...acc, start: Math.min(acc.start, h.start), end: Math.max(acc.end, h.end) }),
+    { ...cut }
+  );
+  const rest = list.filter((h) => !touching.includes(h));
+  state.removals[id] = [...rest, { ...merged, at: new Date().toISOString() }].sort(
+    (a, b) => a.page - b.page || a.para - b.para || a.start - b.start
+  );
+  persist();
+  return merged;
+}
+
+export function restoreRemoval(id, key) {
+  const list = state.removals[id] || [];
+  const next = list.filter((h) => removalKey(h) !== key);
+  if (next.length === list.length) return false;
+  state.removals[id] = next;
+  persist();
+  return true;
+}
+
 /* ---------- dates you have arranged yourself ---------- */
 
 export const sessionDates = () => state.sessionDates;
@@ -286,6 +437,7 @@ export function stopTimer() {
       ...state.timeLog,
       { key: running.key, courseId: running.courseId, minutes, at: new Date().toISOString() }
     ].slice(-LOG_LIMIT);
+    state.totals[running.key] = (state.totals[running.key] || 0) + minutes;
   }
   persist();
   return { ...running, minutes };
@@ -300,10 +452,24 @@ export function cancelTimer() {
 export function logTime(key, courseId, minutes) {
   if (!minutes) return;
   state.timeLog = [...state.timeLog, { key, courseId: courseId || null, minutes, at: new Date().toISOString() }].slice(-LOG_LIMIT);
+  state.totals[key] = Math.max(0, (state.totals[key] || 0) + minutes);
   persist();
 }
 
 export const timeLog = () => state.timeLog;
+
+/** Everything ever spent on one item, sittings and hand-corrections alike. */
+export const totalOn = (key) => state.totals[key] || 0;
+
+export const totals = () => state.totals;
+
+/** Set the running total by hand, for a reading you worked on away from the app. */
+export function setTotal(key, minutes) {
+  const next = Math.max(0, Math.round(minutes || 0));
+  if (next) state.totals[key] = next;
+  else delete state.totals[key];
+  persist();
+}
 
 /* ---------- the daily rhythm ---------- */
 
@@ -422,9 +588,12 @@ export function importData(json) {
     fired: parsed.fired || {},
     reading: parsed.reading || {},
     bookmarks: parsed.bookmarks || {},
+    highlights: parsed.highlights || {},
+    removals: parsed.removals || {},
     sessionDates: parsed.sessionDates || {},
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
+    totals: parsed.totals || totalsFrom(parsed.timeLog),
     rhythmLog: parsed.rhythmLog || {}
   };
   persist();
