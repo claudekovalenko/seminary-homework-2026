@@ -61,12 +61,27 @@ body {
 
 /* ---------- top bar ---------- */
 
+/*
+ * Both bars are solid. They used to be translucent with a backdrop-filter
+ * behind them, which is what made the app flicker on an iPhone.
+ *
+ * iOS re-runs a backdrop-filter whenever anything inside the filtered element
+ * repaints, and the running stopwatch lives in this bar: a dot that pulses on
+ * a loop and a clock whose digits are rewritten every second. Every tick
+ * re-blurred the full width of the header, which reads as the whole bar
+ * strobing once a second for as long as a timer is going.
+ *
+ * Isolating the blur onto its own layer is the usual fix, but it is a bet on
+ * how a particular iOS version schedules compositing, and it cannot be
+ * verified anywhere except on the phone that has the problem. An opaque bar
+ * has nothing to recompute, so there is nothing left to flicker. At the 88%
+ * and 92% mixes these already used, the difference is barely visible.
+ */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(12px);
+  background: var(--bg);
   border-bottom: 1px solid var(--line);
   padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
 }
@@ -874,8 +889,7 @@ summary {
   z-index: 10;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: color-mix(in srgb, var(--bg-elev) 92%, transparent);
-  backdrop-filter: blur(14px);
+  background: var(--bg-elev);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -1632,6 +1646,9 @@ details.fold.ahead > summary::-webkit-details-marker {
 
 /* The running stopwatch, riding along in the sticky header. */
 .running-strip {
+  /* The clock changes every second; nothing outside this box needs redrawing
+     when it does. */
+  contain: layout paint style;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1653,6 +1670,16 @@ details.fold.ahead > summary::-webkit-details-marker {
   background: var(--accent);
   flex: none;
   animation: running-pulse 2s ease-in-out infinite;
+  /* Promoted so the fade runs on the compositor instead of repainting the
+     header around it, which is what dragged the blur into every frame. */
+  will-change: opacity;
+  transform: translateZ(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running-pulse {
+    animation: none;
+  }
 }
 
 @keyframes running-pulse {
@@ -3921,7 +3948,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v38 · 2026-09-03';
+const BUILD = 'v39 · 2026-10-21';
 
 let DATA = null;
 let TASKS = [];
