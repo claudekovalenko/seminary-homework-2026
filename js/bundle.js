@@ -1883,7 +1883,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v38 · 2026-09-03';
+const BUILD = 'v39 · 2026-10-21';
 
 let DATA = null;
 let TASKS = [];
