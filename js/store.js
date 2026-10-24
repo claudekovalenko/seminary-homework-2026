@@ -39,6 +39,13 @@ export const DEFAULT_SETTINGS = {
   rhythm: structuredClone(DEFAULT_RHYTHM),
   // How far ahead the app warns you about a deadline.
   leadDays: 7,
+  // The grade you are actually trying to clear. 60 is the bottom of a D- in all
+  // the syllabi; a programme that wants a C for the course to count wants 70.
+  gradeTarget: 60,
+  // How many classes beyond the next one to fold into the paced plan. 0 plans
+  // the next class only, which is what the app has always done. 1 means being a
+  // week ahead is the plan rather than a good evening's luck.
+  aheadClasses: 0,
   // Effort model, used to turn mixed units into a daily time target.
   minsPerPage: 3,
   minsPerGreekVerse: 5,
@@ -101,6 +108,8 @@ const EMPTY = {
   // place to ask how long a reading has taken in total: by December the
   // September sittings would have quietly fallen off the end of the answer.
   totals: {},
+  grades: {}, // "courseId|categoryId" -> the percentage you were actually given
+  gradeEffort: {}, // "courseId|categoryId" -> minutes you reckon the rest will take
   rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
 };
 
@@ -145,7 +154,9 @@ function read() {
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
       totals: parsed.totals || totalsFrom(parsed.timeLog),
-      rhythmLog: parsed.rhythmLog || {}
+      rhythmLog: parsed.rhythmLog || {},
+      grades: parsed.grades || {},
+      gradeEffort: parsed.gradeEffort || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -458,6 +469,28 @@ export function logTime(key, courseId, minutes) {
 
 export const timeLog = () => state.timeLog;
 
+/* ---------- marks, and what the rest of a course will cost ---------- */
+
+export const gradeKey = (courseId, categoryId) => `${courseId}|${categoryId}`;
+export const grades = () => state.grades;
+export const gradeEffort = () => state.gradeEffort;
+
+/** A mark you were actually given, as a percentage. Null clears it. */
+export function setGrade(courseId, categoryId, percent) {
+  const key = gradeKey(courseId, categoryId);
+  if (percent === null || percent === undefined || Number.isNaN(percent)) delete state.grades[key];
+  else state.grades[key] = Math.max(0, Math.min(100, percent));
+  persist();
+}
+
+/** Your own estimate of what is left in a category, replacing the syllabus's. */
+export function setGradeEffort(courseId, categoryId, minutes) {
+  const key = gradeKey(courseId, categoryId);
+  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) delete state.gradeEffort[key];
+  else state.gradeEffort[key] = Math.max(0, Math.round(minutes));
+  persist();
+}
+
 /** Everything ever spent on one item, sittings and hand-corrections alike. */
 export const totalOn = (key) => state.totals[key] || 0;
 
@@ -594,7 +627,9 @@ export function importData(json) {
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
     totals: parsed.totals || totalsFrom(parsed.timeLog),
-    rhythmLog: parsed.rhythmLog || {}
+    rhythmLog: parsed.rhythmLog || {},
+    grades: parsed.grades || {},
+    gradeEffort: parsed.gradeEffort || {}
   };
   persist();
 }
