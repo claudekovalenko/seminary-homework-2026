@@ -8,7 +8,8 @@
     "classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".",
     "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.",
     "material: names the physical thing a reading lives in, when that differs from \"source\" — so a book assigned four times is attached once. A chapter photocopied out of a collection is its own thing, not the collection: the three Christian Dogmatics chapters are by three different authors and arrive as three separate PDFs, so each carries its own material and its own attachment.",
-    "suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own."
+    "suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own.",
+    "grading: per-course weights read off the syllabi. basis 'completion' means the syllabus gives credit for doing the work, so ticks drive the figure; 'performance' means only a real mark counts and the app will not guess one. watch: the things in a syllabus that cost people marks."
   ],
   "courses": [
     {
@@ -433,6 +434,470 @@
       "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
       "syllabus": "./syllabi/theology-1-theo-7003-fall-2026.pdf",
       "credits": 3
+    },
+    {
+      "id": "theo2",
+      "name": "Systematic Theology 2",
+      "short": "Theo 2",
+      "color": "#c2683d",
+      "meetingDay": "Tuesday",
+      "classTime": "19:00",
+      "code": "THEO 7004",
+      "endTime": "20:45",
+      "instructor": "David Larson",
+      "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
+      "syllabus": "./syllabi/systematic-theology-2-theo-7004-fall-2026.pdf",
+      "credits": 3,
+      "sessions": [
+        {
+          "date": "2026-10-20",
+          "topic": "Context & Metaphysics of the Incarnation",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Athanasius, On the Incarnation",
+              "ref": "§§1–18",
+              "estPages": 38,
+              "estimated": true
+            },
+            {
+              "order": 2,
+              "source": "Wellum, God the Son Incarnate",
+              "ref": "pp. 278–311",
+              "ranges": [
+                [
+                  278,
+                  311
+                ]
+              ]
+            },
+            {
+              "order": 3,
+              "source": "Sanders, “Introduction to Christology”",
+              "ref": "the whole essay",
+              "estPages": 20,
+              "estimated": true,
+              "format": "pdf"
+            }
+          ],
+          "bible": {
+            "ref": "John 1",
+            "chapters": 1
+          },
+          "assignments": [
+            {
+              "title": "Student Questions",
+              "type": "assignment"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-27",
+          "topic": "Metaphysics & Hermeneutics of the Incarnation",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Duby, Jesus and the God of Classical Theism",
+              "ref": "141–153",
+              "ranges": [
+                [
+                  141,
+                  153
+                ]
+              ],
+              "format": "pdf"
+            },
+            {
+              "order": 2,
+              "source": "Wellum, God the Son Incarnate",
+              "ref": "chs. 9 & 13",
+              "estPages": 60,
+              "estimated": true
+            },
+            {
+              "order": 3,
+              "source": "Jamieson & Wittman, Biblical Reasoning",
+              "ref": "chs. 7–8",
+              "estPages": 40,
+              "estimated": true
+            }
+          ],
+          "bible": {
+            "ref": "Phil 2; Heb 1",
+            "chapters": 2
+          },
+          "assignments": [
+            {
+              "title": "Student Questions",
+              "type": "assignment"
+            }
+          ]
+        },
+        {
+          "date": "2026-11-03",
+          "topic": "Intro to Salvation",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Webster, God Without Measure",
+              "ref": "ch. 10",
+              "estPages": 18,
+              "estimated": true
+            },
+            {
+              "order": 2,
+              "source": "Wellum, God the Son Incarnate",
+              "ref": "ch. 3",
+              "estPages": 30,
+              "estimated": true
+            },
+            {
+              "order": 3,
+              "source": "Beeke & Smalley, Reformed Systematic Theology",
+              "ref": "3:267–283",
+              "ranges": [
+                [
+                  267,
+                  283
+                ]
+              ],
+              "format": "pdf"
+            }
+          ],
+          "bible": {
+            "ref": "Rom 5:12–21",
+            "chapters": 1
+          },
+          "assignments": [
+            {
+              "title": "Student Questions",
+              "type": "assignment"
+            }
+          ]
+        },
+        {
+          "date": "2026-11-10",
+          "topic": "The Work of Christ",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Athanasius, On the Incarnation",
+              "ref": "§§19–32",
+              "estPages": 30,
+              "estimated": true
+            },
+            {
+              "order": 2,
+              "source": "Horton, Pilgrim Theology",
+              "ref": "191–228",
+              "ranges": [
+                [
+                  191,
+                  228
+                ]
+              ],
+              "format": "pdf"
+            },
+            {
+              "order": 3,
+              "source": "Turretin, Institutes of Elenctic Theology",
+              "ref": "XVI.v",
+              "estPages": 20,
+              "estimated": true,
+              "format": "pdf"
+            }
+          ],
+          "bible": {
+            "ref": "Matt 1–2; Rom 3; 1 Cor 15",
+            "chapters": 4
+          },
+          "assignments": [
+            {
+              "title": "Student Questions",
+              "type": "assignment"
+            }
+          ]
+        },
+        {
+          "date": "2026-11-17",
+          "topic": "The Spirit & Union with Christ",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Mastricht, Theoretical-Practical Theology",
+              "ref": "1.2.27",
+              "estPages": 20,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 2,
+              "source": "Calvin, Institutes",
+              "ref": "1.13.14–15; 3.1.1–4; 3.10.11",
+              "estPages": 25,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 3,
+              "source": "Johnson, One with Christ",
+              "ref": "ch. 1",
+              "estPages": 22,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 4,
+              "source": "Gaffin, “The Work of Christ Applied”",
+              "ref": "in Christian Dogmatics",
+              "estPages": 20,
+              "estimated": true,
+              "format": "pdf"
+            }
+          ],
+          "bible": {
+            "ref": "Eph 1–2",
+            "chapters": 2
+          },
+          "assignments": [
+            {
+              "title": "Student Questions",
+              "type": "assignment"
+            }
+          ]
+        },
+        {
+          "date": "2026-11-24",
+          "topic": "Justification & Sanctification",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Catholic Document Selections",
+              "ref": "the set extracts",
+              "estPages": 20,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 2,
+              "source": "Calvin, Institutes",
+              "ref": "III.xi.1–4",
+              "estPages": 15,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 3,
+              "source": "Bavinck, The Wonderful Works of God",
+              "ref": "chs. xxi–xxii",
+              "estPages": 30,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 4,
+              "source": "Synopsis of a Purer Theology",
+              "ref": "disp. 33",
+              "estPages": 18,
+              "estimated": true,
+              "format": "pdf"
+            }
+          ],
+          "bible": {
+            "ref": "Rom 4–5; Gal 2–4",
+            "chapters": 5
+          },
+          "assignments": [
+            {
+              "title": "Student Questions",
+              "type": "assignment"
+            }
+          ]
+        },
+        {
+          "date": "2026-12-01",
+          "topic": "Eschatology: The Millennium & Beatific Vision",
+          "readings": [
+            {
+              "order": 1,
+              "source": "À Brakel, The Christian’s Reasonable Service",
+              "ref": "4:339–370",
+              "ranges": [
+                [
+                  339,
+                  370
+                ]
+              ],
+              "format": "pdf"
+            },
+            {
+              "order": 2,
+              "source": "Bandy, “Views of the Millennium”",
+              "ref": "the whole essay",
+              "estPages": 20,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 3,
+              "source": "Augustine, City of God",
+              "ref": "XXII.29–30",
+              "estPages": 12,
+              "estimated": true,
+              "format": "pdf"
+            },
+            {
+              "order": 4,
+              "source": "Turretin, Institutes of Elenctic Theology",
+              "ref": "XX.viii",
+              "estPages": 15,
+              "estimated": true,
+              "format": "pdf"
+            }
+          ],
+          "bible": {
+            "ref": "Rev 20–22",
+            "chapters": 3
+          },
+          "assignments": [
+            {
+              "title": "Final Paper",
+              "type": "paper",
+              "due": "2026-12-03",
+              "dueTime": "23:59",
+              "note": "Due Thu Dec 3rd, 11:59pm — two days after the last teaching class. 3,000+ words, SBL style, word count at the bottom, PDF to Populi.",
+              "effortMinutes": 900,
+              "startPlanning": "2026-10-27"
+            }
+          ]
+        },
+        {
+          "date": "2026-12-08",
+          "topic": "Paper Presentations",
+          "readings": [
+            {
+              "order": 1,
+              "source": "Jamieson & Wittman, Biblical Reasoning",
+              "ref": "conclusion",
+              "estPages": 12,
+              "estimated": true
+            },
+            {
+              "order": 2,
+              "source": "Classmate papers",
+              "ref": "skim",
+              "estPages": 20,
+              "estimated": true
+            }
+          ],
+          "assignments": [
+            {
+              "title": "Paper Presentation",
+              "type": "presentation",
+              "note": "Three minutes on your thesis, what you learned and where it could improve, then about twelve minutes of questions.",
+              "effortMinutes": 90,
+              "startPlanning": "2026-12-03"
+            },
+            {
+              "title": "Church Ministry Project",
+              "type": "project",
+              "note": "At least two sit-downs with your pastor across the semester on Christology, pneumatology, soteriology or eschatology. Cannot be done in one go at the end.",
+              "effortMinutes": 300,
+              "startPlanning": "2026-10-27"
+            }
+          ]
+        }
+      ],
+      "grading": {
+        "source": "§5 Course Requirements and Grading, p. 2",
+        "categories": [
+          {
+            "id": "reading",
+            "title": "Reading",
+            "weight": 40,
+            "basis": "completion",
+            "note": "The single biggest block of the course. You upload a reading log to Populi saying what percentage you completed, by the last day of class.",
+            "match": {
+              "kind": [
+                "reading",
+                "bible"
+              ]
+            }
+          },
+          {
+            "id": "participation",
+            "title": "Participation",
+            "weight": 10,
+            "basis": "performance",
+            "note": "Quality of questions and comments, and attentive listening — not how much you talk."
+          },
+          {
+            "id": "ministry",
+            "title": "Church Ministry Project",
+            "weight": 10,
+            "basis": "performance",
+            "note": "Two sit-downs with your pastor on Christology, pneumatology, soteriology or eschatology.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "titleIncludes": "Church Ministry Project"
+            }
+          },
+          {
+            "id": "comments",
+            "title": "Weekly Comments/Questions",
+            "weight": 10,
+            "basis": "completion",
+            "note": "One thing learned, questioned or critiqued, every class except the first. Submitted on Moodle.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "titleIncludes": "Student Questions"
+            },
+            "minutesPerItem": 20
+          },
+          {
+            "id": "paper",
+            "title": "Research Paper",
+            "weight": 20,
+            "basis": "performance",
+            "note": "3,000+ words. Argument/research 75 pts, writing 10, church application 10, SBL style 5.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "paper"
+              ]
+            }
+          },
+          {
+            "id": "presentation",
+            "title": "Research Paper presentation",
+            "weight": 10,
+            "basis": "performance",
+            "note": "Three minutes plus about twelve of questions.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "presentation"
+              ]
+            }
+          }
+        ],
+        "watch": [
+          "NO late work. Past the due time is a zero unless something genuinely extreme stopped you.",
+          "The Final Paper is due Thu Dec 3rd at 11:59pm — two days AFTER the last teaching class on Dec 1st, and a week before the presentation. It is easy to read the Dec 1st row and assume the paper is due in class.",
+          "Reading is 40% and self-reported in a log on Populi. Nothing is checked week to week, so the log is the grade — keep it honest and keep it current, because reconstructing a semester of it on the last day is how people lose the easiest 40 points in the course.",
+          "The Church Ministry Project needs TWO separate meetings with your pastor across the semester. It cannot be done in one sitting in December.",
+          "Papers need a word count at the bottom and go up as a PDF to Populi, in SBL style, 2nd ed.",
+          "The syllabus contradicts itself on Weekly Comments: §5.4 says every class “except the first”, but the schedule table lists Student Questions against Oct 20 as well. Six are scheduled here, matching the table. Worth one question in class so you are not short one at the end."
+        ]
+      }
     },
     {
       "id": "greek",
@@ -915,7 +1380,124 @@
       "instructor": "David Larson, Chris Bruno",
       "location": "Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701",
       "syllabus": "./syllabi/intermediate-greek-grek-6003-fall-2026.pdf",
-      "credits": 3
+      "credits": 3,
+      "grading": {
+        "source": "§5 Course Requirements and Grading, pp. 2–3",
+        "categories": [
+          {
+            "id": "reading",
+            "title": "Reading",
+            "weight": 20,
+            "basis": "completion",
+            "note": "Credit for completing the assigned reading before class.",
+            "match": {
+              "kind": [
+                "reading"
+              ],
+              "unit": [
+                "pages"
+              ]
+            }
+          },
+          {
+            "id": "participation",
+            "title": "Participation",
+            "weight": 5,
+            "basis": "performance",
+            "note": "One excused absence. Every other absence costs 10 points off this."
+          },
+          {
+            "id": "translations",
+            "title": "Greek Translations",
+            "weight": 10,
+            "basis": "completion",
+            "note": "Graded on spending at least one hour on the passage — not on getting it right.",
+            "match": {
+              "kind": [
+                "reading"
+              ],
+              "unit": [
+                "verses"
+              ]
+            },
+            "minutesPerItem": 60
+          },
+          {
+            "id": "diagrams",
+            "title": "Sentence Diagrams",
+            "weight": 10,
+            "basis": "completion",
+            "note": "Credit for uploading the Translation & Diagram before class begins.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "translation"
+              ]
+            },
+            "minutesPerItem": 45
+          },
+          {
+            "id": "quizzes",
+            "title": "Quizzes",
+            "weight": 20,
+            "basis": "performance",
+            "note": "On the chapter read and your John 1:1–18 translation & diagram.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "quiz"
+              ]
+            },
+            "minutesPerItem": 45
+          },
+          {
+            "id": "midterm",
+            "title": "Midterm Exam",
+            "weight": 15,
+            "basis": "performance",
+            "note": "First half only. Vocabulary, translation, parsing, classification.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "exam"
+              ],
+              "titleIncludes": "Midterm"
+            },
+            "minutesPerItem": 300
+          },
+          {
+            "id": "final",
+            "title": "Final Exam",
+            "weight": 20,
+            "basis": "performance",
+            "note": "The whole course, cumulative. Vocabulary, translation, parsing, classification.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "exam"
+              ],
+              "titleIncludes": "Final"
+            },
+            "minutesPerItem": 420
+          }
+        ],
+        "watch": [
+          "45% of this course — reading, translations, diagrams, participation — is credit for doing the work rather than for being right. Translations are graded on spending the hour; diagrams on uploading before class starts. That is the cheapest grade on offer anywhere in your schedule.",
+          "The other 55% — quizzes, midterm, final — is cumulative language skill, and the final covers the whole course. It cannot be crammed the way a reading week can.",
+          "Diagrams must be uploaded BEFORE class begins to count. Late is zero, not reduced.",
+          "NO late work policy, same as Theology.",
+          "Quizzes draw on your John 1:1–18 translation & diagram as well as the chapter, so the T&D work pays twice.",
+          "Check whether your programme needs a C (70) rather than a D- (60) for this to count toward the degree or to clear the prerequisite for next semester's exegesis course."
+        ]
+      }
     },
     {
       "id": "applied3",
@@ -1083,7 +1665,135 @@
             }
           ]
         }
-      ]
+      ],
+      "grading": {
+        "source": "Grading Scale, p. 3",
+        "categories": [
+          {
+            "id": "reading",
+            "title": "Reading",
+            "weight": 25,
+            "basis": "completion",
+            "match": {
+              "kind": [
+                "reading"
+              ]
+            }
+          },
+          {
+            "id": "discussions",
+            "title": "Book Discussions",
+            "weight": 25,
+            "basis": "completion",
+            "note": "Three meetings on the Perkins readings.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "discussion"
+              ]
+            },
+            "minutesPerItem": 75
+          },
+          {
+            "id": "meetings",
+            "title": "Pastoral Meetings",
+            "weight": 20,
+            "basis": "completion",
+            "note": "Three meetings with your pastor. Tell the professor once all three are done.",
+            "match": {
+              "kind": [
+                "assignment"
+              ],
+              "type": [
+                "meeting"
+              ]
+            },
+            "minutesPerItem": 60
+          },
+          {
+            "id": "ministry",
+            "title": "Ministry Opportunity",
+            "weight": 10,
+            "basis": "performance",
+            "note": "Preach, then a ~500-word reflection.",
+            "match": {
+              "sessionIds": [
+                "ministry"
+              ]
+            }
+          },
+          {
+            "id": "paper",
+            "title": "Final Reflection Paper",
+            "weight": 20,
+            "basis": "performance",
+            "note": "~750 words on the Perkins readings, especially his biblical exegesis.",
+            "match": {
+              "sessionIds": [
+                "final-paper"
+              ]
+            }
+          }
+        ],
+        "watch": [
+          "70% of this course is just showing up and having read — reading, book discussions and pastoral meetings. None of it is graded on brilliance.",
+          "Nothing here has a date until you arrange it. That makes it the easiest thing in your schedule to let slide to December, when every other deadline lands at once.",
+          "The first two book discussions are meant to be scheduled in the first half of term.",
+          "Securing a preaching slot depends on other people's calendars — start asking early, and contact the professor for an alternative if you cannot get one."
+        ]
+      }
+    }
+  ],
+  "gradeScale": [
+    {
+      "grade": "A",
+      "min": 94
+    },
+    {
+      "grade": "A-",
+      "min": 90
+    },
+    {
+      "grade": "B+",
+      "min": 87
+    },
+    {
+      "grade": "B",
+      "min": 84
+    },
+    {
+      "grade": "B-",
+      "min": 80
+    },
+    {
+      "grade": "C+",
+      "min": 77
+    },
+    {
+      "grade": "C",
+      "min": 74
+    },
+    {
+      "grade": "C-",
+      "min": 70
+    },
+    {
+      "grade": "D+",
+      "min": 67
+    },
+    {
+      "grade": "D",
+      "min": 64
+    },
+    {
+      "grade": "D-",
+      "min": 60
+    },
+    {
+      "grade": "F",
+      "min": 0
     }
   ]
 }

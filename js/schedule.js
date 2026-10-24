@@ -606,6 +606,113 @@ export function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- what the work is actually worth ---------- */
+
+/** Which tasks a grading category covers. Every field present has to match. */
+function inCategory(task, m) {
+  if (!m) return false;
+  if (m.kind && !m.kind.includes(task.kind)) return false;
+  if (m.type && !m.type.includes(task.type)) return false;
+  if (m.unit && !m.unit.includes(task.unit)) return false;
+  if (m.sessionIds && !m.sessionIds.includes(task.sessionId)) return false;
+  if (m.titleIncludes && !String(task.title || '').includes(m.titleIncludes)) return false;
+  return true;
+}
+
+/** Where a percentage lands on the syllabus's letter scale. */
+export function letterFor(pct, scale) {
+  if (!scale?.length || !Number.isFinite(pct)) return null;
+  return (scale.find((row) => pct >= row.min) || scale[scale.length - 1]).grade;
+}
+
+/**
+ * One course's grade, broken down by category.
+ *
+ * Two kinds of category, and the difference matters more than anything else
+ * here. Where the syllabus gives credit for *doing* the work — reading before
+ * class, uploading the diagram, spending the hour — ticking it off is the
+ * grade, so the ticks already being made drive the figure. Where work is marked
+ * on how good it is, no amount of ticking says anything, so it reads "not
+ * marked" rather than inventing a number that would feel safer than it is.
+ *
+ * A mark you were actually given always wins, and settles that category.
+ */
+export function gradeReport(course, tasks, { scores = {}, effort = {}, target = 60, scale = [] } = {}) {
+  const grading = course.grading;
+  if (!grading) return null;
+  const mine = tasks.filter((t) => t.courseId === course.id);
+
+  const categories = grading.categories.map((cat) => {
+    const items = cat.match ? mine.filter((t) => inCategory(t, cat.match)) : [];
+    const done = items.filter((t) => t.complete).length;
+    const left = items.length - done;
+
+    // What is left to do, in minutes. Revision for a quiz or an exam costs time
+    // the planner never counts, so the syllabus data carries a per-sitting
+    // estimate; your own correction beats both.
+    const override = effort[`${course.id}|${cat.id}`];
+    const perItem = (t) => (cat.minutesPerItem != null ? cat.minutesPerItem : t.remaining ?? t.minutes ?? 0);
+    const minutesLeft =
+      override != null ? override : items.filter((t) => !t.complete).reduce((n, t) => n + perItem(t), 0);
+
+    const marked = scores[`${course.id}|${cat.id}`];
+    const hasMark = Number.isFinite(marked);
+    const byTicks = cat.basis === 'completion' && items.length > 0;
+
+    let earned, atStake;
+    if (hasMark) {
+      earned = (cat.weight * marked) / 100;
+      atStake = 0;
+    } else if (byTicks) {
+      earned = (cat.weight * done) / items.length;
+      atStake = (cat.weight * left) / items.length;
+    } else {
+      earned = 0;
+      atStake = cat.weight;
+    }
+
+    return {
+      ...cat,
+      items: items.length,
+      done,
+      left,
+      minutesLeft,
+      marked: hasMark ? marked : null,
+      source: hasMark ? 'marked' : byTicks ? 'ticks' : 'unknown',
+      earned,
+      atStake,
+      // The number to sort a week by: how much of the final grade one hour of
+      // this is still worth. Nothing to do, or no idea how long, is not a
+      // bargain — it is incomparable, so it sorts out rather than to the top.
+      perHour: atStake > 0 && minutesLeft > 0 ? atStake / (minutesLeft / 60) : null
+    };
+  });
+
+  const weightTotal = categories.reduce((n, c) => n + c.weight, 0);
+  const earned = categories.reduce((n, c) => n + c.earned, 0);
+  const atStake = categories.reduce((n, c) => n + c.atStake, 0);
+  const minutesLeft = categories.reduce((n, c) => n + c.minutesLeft, 0);
+  const needed = atStake > 0 ? ((target - earned) / atStake) * 100 : null;
+
+  return {
+    course,
+    categories,
+    weightTotal,
+    weightsOff: Math.abs(weightTotal - 100) > 0.5,
+    source: grading.source || null,
+    watch: grading.watch || [],
+    earned,
+    atStake,
+    minutesLeft,
+    max: earned + atStake,
+    target,
+    needed,
+    secured: needed !== null && needed <= 0,
+    lost: needed !== null && needed > 100,
+    letter: letterFor(earned + atStake, scale)
+  };
+}
+
 /* ---------- the daily rhythm ---------- */
 
 /**
