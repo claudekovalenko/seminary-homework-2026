@@ -8,7 +8,7 @@ import { emphasisRuns, EM as EM_MARK, STRONG as STRONG_MARK } from './text.js';
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v40 · 2026-10-24';
+const BUILD = 'v41 · 2026-10-26';
 
 let DATA = null;
 let TASKS = [];
@@ -909,8 +909,14 @@ function catchUpCard(plans, projects) {
       }
       ${
         lateProjects.length
-          ? `<p class="note warn-note">Past its due date:
-               ${lateProjects.map((p) => esc(p.task.title)).join(', ')}.</p>`
+          ? `<p class="note warn-note">
+               Past its due date. Tick ${lateProjects.length === 1 ? 'it' : 'them'} off if
+               ${lateProjects.length === 1 ? 'it is' : 'they are'} handed in — this used to name them
+               and give you no way to say so.
+             </p>
+             <ul class="tasks">${lateProjects
+               .map((p) => taskLine(p.task, { showCourse: true, withTimer: true }))
+               .join('')}</ul>`
           : ''
       }
     </section>`;
@@ -1060,11 +1066,83 @@ function deadlineRow(g) {
     </div>`;
 }
 
+/**
+ * What working a week ahead would actually cost, and the switch to do it.
+ *
+ * The setting lived in Settings, which is not where the question occurs to you.
+ * It occurs to you here, looking at a week you have a grip on and wondering
+ * whether next week could be made easier. So the number is worked out — the
+ * hours the class after next would add — and the switch sits next to it.
+ */
+function getAheadCard() {
+  const on = (store.settings().aheadClasses ?? 0) >= 1;
+
+  // The classes that would be pulled in, which is the second upcoming one per
+  // course that has dates at all.
+  const seen = new Map();
+  const nextUp = [];
+  for (const u of S.upcomingSessions(DATA)) {
+    if (u.course.datesUnknown) continue;
+    const n = (seen.get(u.course.id) || 0) + 1;
+    seen.set(u.course.id, n);
+    if (n === 2) nextUp.push(u);
+  }
+  if (!nextUp.length && !on) return '';
+
+  const extra = nextUp.map((u) => {
+    const slot = u.session.date || u.session.id;
+    const tasks = TASKS.filter((t) => t.courseId === u.course.id && t.sessionDate === slot);
+    return { ...u, minutes: S.workload(tasks).remaining };
+  });
+  const total = extra.reduce((n, x) => n + x.minutes, 0);
+
+  return `
+    <section class="card">
+      <div class="card-head">
+        <h2>Getting ahead</h2>
+        <span class="card-when">${on ? 'on' : 'off'}</span>
+      </div>
+      ${
+        on
+          ? `<p class="note ok">
+               You are working a week ahead. Each course's plan above carries the class after next
+               as well, against the nearer date. Once you are genuinely a week in front, this stops
+               feeling like double and starts feeling like a normal week finished seven days early.
+             </p>`
+          : `<p class="note">
+               Right now the plan carries one class per course — the next one. Working a week ahead
+               pulls the class after it into the same plan, against <em>this</em> week's date, which
+               is what being a week ahead actually means.
+             </p>
+             ${
+               extra.length
+                 ? `<ul class="ahead-list">${extra
+                     .map(
+                       (x) => `<li>${dot(x.course.color)}<span>${esc(x.course.short || x.course.name)} — ${esc(
+                         x.session.topic
+                       )}</span><strong>${esc(S.formatMinutes(x.minutes))}</strong></li>`
+                     )
+                     .join('')}</ul>
+                    <p class="note">
+                      That is <strong>${esc(S.formatMinutes(total))}</strong> on top of this week while you
+                      catch the extra week up. After that it levels off — you are simply a week in front.
+                    </p>`
+                 : ''
+             }`
+      }
+      <div class="chips">
+        <button class="chip ${on ? '' : 'on'}" data-action="set-ahead" data-ahead="0">Just the next class</button>
+        <button class="chip ${on ? 'on' : ''}" data-action="set-ahead" data-ahead="1">A week ahead</button>
+      </div>
+    </section>`;
+}
+
 function viewPlan() {
   const plans = currentPlans();
   const projects = activeProjects();
 
   return `
+    ${getAheadCard()}
     ${plans
       .map(({ course, session, date, tasks, owed, alsoPlanned, plan, pace }) => {
         const all = [...owed, ...tasks];
