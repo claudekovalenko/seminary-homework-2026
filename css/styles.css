@@ -2194,3 +2194,113 @@ details.fold.ahead > summary::-webkit-details-marker {
   font-weight: 600;
 }
 
+/* ---------- the long game ---------- */
+
+.lg-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.lg {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.lg.is-pressing {
+  border-left: 3px solid var(--warn);
+  padding-left: 10px;
+  margin-left: -13px;
+}
+
+.lg-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lg-title {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.lg-weight {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.lg-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.lg-start {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.lg-start.warn {
+  color: var(--warn);
+}
+
+.lg-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* The task's own line keeps its tick and its stopwatch; it just needs to sit
+   under the framing rather than repeat it. */
+.lg-actions .task {
+  padding-top: 6px;
+}
+
+/* The row already names the work and says what it is; the task line is here
+   for its tick, its stopwatch and its time log, not to repeat all that. */
+.lg-actions .task-detail,
+.lg-actions .task-title {
+  display: none;
+}
+
+.lg-actions .task-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lg-arrange {
+  padding: 12px 0 2px;
+  border-top: 1px solid var(--line);
+}
+
+.lg-arrange-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 12.5px;
+}
+
+.lg-arrange-list li {
+  padding: 4px 0;
+  color: var(--muted);
+}
+
+.lg-arrange-list small {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lg-arrange-list em {
+  font-style: normal;
+  color: var(--warn);
+  font-size: 11.5px;
+}
+

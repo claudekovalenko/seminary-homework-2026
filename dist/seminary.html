@@ -2208,6 +2208,116 @@ details.fold.ahead > summary::-webkit-details-marker {
   font-weight: 600;
 }
 
+/* ---------- the long game ---------- */
+
+.lg-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.lg {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.lg.is-pressing {
+  border-left: 3px solid var(--warn);
+  padding-left: 10px;
+  margin-left: -13px;
+}
+
+.lg-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lg-title {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.lg-weight {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.lg-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.lg-start {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.lg-start.warn {
+  color: var(--warn);
+}
+
+.lg-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* The task's own line keeps its tick and its stopwatch; it just needs to sit
+   under the framing rather than repeat it. */
+.lg-actions .task {
+  padding-top: 6px;
+}
+
+/* The row already names the work and says what it is; the task line is here
+   for its tick, its stopwatch and its time log, not to repeat all that. */
+.lg-actions .task-detail,
+.lg-actions .task-title {
+  display: none;
+}
+
+.lg-actions .task-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lg-arrange {
+  padding: 12px 0 2px;
+  border-top: 1px solid var(--line);
+}
+
+.lg-arrange-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 12.5px;
+}
+
+.lg-arrange-list li {
+  padding: 4px 0;
+  color: var(--muted);
+}
+
+.lg-arrange-list small {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lg-arrange-list em {
+  font-style: normal;
+  color: var(--warn);
+  font-size: 11.5px;
+}
+
 
 </style>
   </head>
@@ -2252,7 +2362,7 @@ details.fold.ahead > summary::-webkit-details-marker {
     </nav>
 
     <script type="module">
-globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical thing a reading lives in, when that differs from \"source\" — so a book assigned four times is attached once. A chapter photocopied out of a collection is its own thing, not the collection: the three Christian Dogmatics chapters are by three different authors and arrive as three separate PDFs, so each carries its own material and its own attachment.","suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own.","grading: per-course weights read off the syllabi. basis 'completion' means the syllabus gives credit for doing the work, so ticks drive the figure; 'performance' means only a real mark counts and the app will not guess one. watch: the things in a syllabus that cost people marks."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Swain, \"Divine Trinity\" — Christian Dogmatics ch. 4"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Swain, \"Covenant of Redemption\" — Christian Dogmatics ch. 5"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Vanhoozer, \"Holy Scripture\" — Christian Dogmatics ch. 2"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"theo2","name":"Systematic Theology 2","short":"Theo 2","color":"#c2683d","meetingDay":"Tuesday","classTime":"19:00","code":"THEO 7004","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/systematic-theology-2-theo-7004-fall-2026.pdf","credits":3,"sessions":[{"date":"2026-10-20","topic":"Context & Metaphysics of the Incarnation","readings":[{"order":1,"source":"Athanasius, On the Incarnation","ref":"§§1–18","estPages":38,"estimated":true},{"order":2,"source":"Wellum, God the Son Incarnate","ref":"pp. 278–311","ranges":[[278,311]]},{"order":3,"source":"Sanders, “Introduction to Christology”","ref":"the whole essay","estPages":20,"estimated":true,"format":"pdf"}],"bible":{"ref":"John 1","chapters":1},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-10-27","topic":"Metaphysics & Hermeneutics of the Incarnation","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"141–153","ranges":[[141,153]],"format":"pdf"},{"order":2,"source":"Wellum, God the Son Incarnate","ref":"chs. 9 & 13","estPages":60,"estimated":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 7–8","estPages":40,"estimated":true}],"bible":{"ref":"Phil 2; Heb 1","chapters":2},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-03","topic":"Intro to Salvation","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 10","estPages":18,"estimated":true},{"order":2,"source":"Wellum, God the Son Incarnate","ref":"ch. 3","estPages":30,"estimated":true},{"order":3,"source":"Beeke & Smalley, Reformed Systematic Theology","ref":"3:267–283","ranges":[[267,283]],"format":"pdf"}],"bible":{"ref":"Rom 5:12–21","chapters":1},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-10","topic":"The Work of Christ","readings":[{"order":1,"source":"Athanasius, On the Incarnation","ref":"§§19–32","estPages":30,"estimated":true},{"order":2,"source":"Horton, Pilgrim Theology","ref":"191–228","ranges":[[191,228]],"format":"pdf"},{"order":3,"source":"Turretin, Institutes of Elenctic Theology","ref":"XVI.v","estPages":20,"estimated":true,"format":"pdf"}],"bible":{"ref":"Matt 1–2; Rom 3; 1 Cor 15","chapters":4},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-17","topic":"The Spirit & Union with Christ","readings":[{"order":1,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.2.27","estPages":20,"estimated":true,"format":"pdf"},{"order":2,"source":"Calvin, Institutes","ref":"1.13.14–15; 3.1.1–4; 3.10.11","estPages":25,"estimated":true,"format":"pdf"},{"order":3,"source":"Johnson, One with Christ","ref":"ch. 1","estPages":22,"estimated":true,"format":"pdf"},{"order":4,"source":"Gaffin, “The Work of Christ Applied”","ref":"in Christian Dogmatics","estPages":20,"estimated":true,"format":"pdf"}],"bible":{"ref":"Eph 1–2","chapters":2},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-24","topic":"Justification & Sanctification","readings":[{"order":1,"source":"Catholic Document Selections","ref":"the set extracts","estPages":20,"estimated":true,"format":"pdf"},{"order":2,"source":"Calvin, Institutes","ref":"III.xi.1–4","estPages":15,"estimated":true,"format":"pdf"},{"order":3,"source":"Bavinck, The Wonderful Works of God","ref":"chs. xxi–xxii","estPages":30,"estimated":true,"format":"pdf"},{"order":4,"source":"Synopsis of a Purer Theology","ref":"disp. 33","estPages":18,"estimated":true,"format":"pdf"}],"bible":{"ref":"Rom 4–5; Gal 2–4","chapters":5},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-12-01","topic":"Eschatology: The Millennium & Beatific Vision","readings":[{"order":1,"source":"À Brakel, The Christian’s Reasonable Service","ref":"4:339–370","ranges":[[339,370]],"format":"pdf"},{"order":2,"source":"Bandy, “Views of the Millennium”","ref":"the whole essay","estPages":20,"estimated":true,"format":"pdf"},{"order":3,"source":"Augustine, City of God","ref":"XXII.29–30","estPages":12,"estimated":true,"format":"pdf"},{"order":4,"source":"Turretin, Institutes of Elenctic Theology","ref":"XX.viii","estPages":15,"estimated":true,"format":"pdf"}],"bible":{"ref":"Rev 20–22","chapters":3},"assignments":[{"title":"Final Paper","type":"paper","due":"2026-12-03","dueTime":"23:59","note":"Due Thu Dec 3rd, 11:59pm — two days after the last teaching class. 3,000+ words, SBL style, word count at the bottom, PDF to Populi.","effortMinutes":900,"startPlanning":"2026-10-27"}]},{"date":"2026-12-08","topic":"Paper Presentations","readings":[{"order":1,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"conclusion","estPages":12,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":20,"estimated":true}],"assignments":[{"title":"Paper Presentation","type":"presentation","note":"Three minutes on your thesis, what you learned and where it could improve, then about twelve minutes of questions.","effortMinutes":90,"startPlanning":"2026-12-03"},{"title":"Church Ministry Project","type":"project","note":"At least two sit-downs with your pastor across the semester on Christology, pneumatology, soteriology or eschatology. Cannot be done in one go at the end.","effortMinutes":300,"startPlanning":"2026-10-27"}]}],"grading":{"source":"§5 Course Requirements and Grading, p. 2","categories":[{"id":"reading","title":"Reading","weight":40,"basis":"completion","note":"The single biggest block of the course. You upload a reading log to Populi saying what percentage you completed, by the last day of class.","match":{"kind":["reading","bible"]}},{"id":"participation","title":"Participation","weight":10,"basis":"performance","note":"Quality of questions and comments, and attentive listening — not how much you talk."},{"id":"ministry","title":"Church Ministry Project","weight":10,"basis":"performance","note":"Two sit-downs with your pastor on Christology, pneumatology, soteriology or eschatology.","match":{"kind":["assignment"],"titleIncludes":"Church Ministry Project"}},{"id":"comments","title":"Weekly Comments/Questions","weight":10,"basis":"completion","note":"One thing learned, questioned or critiqued, every class except the first. Submitted on Moodle.","match":{"kind":["assignment"],"titleIncludes":"Student Questions"},"minutesPerItem":20},{"id":"paper","title":"Research Paper","weight":20,"basis":"performance","note":"3,000+ words. Argument/research 75 pts, writing 10, church application 10, SBL style 5.","match":{"kind":["assignment"],"type":["paper"]}},{"id":"presentation","title":"Research Paper presentation","weight":10,"basis":"performance","note":"Three minutes plus about twelve of questions.","match":{"kind":["assignment"],"type":["presentation"]}}],"watch":["NO late work. Past the due time is a zero unless something genuinely extreme stopped you.","The Final Paper is due Thu Dec 3rd at 11:59pm — two days AFTER the last teaching class on Dec 1st, and a week before the presentation. It is easy to read the Dec 1st row and assume the paper is due in class.","Reading is 40% and self-reported in a log on Populi. Nothing is checked week to week, so the log is the grade — keep it honest and keep it current, because reconstructing a semester of it on the last day is how people lose the easiest 40 points in the course.","The Church Ministry Project needs TWO separate meetings with your pastor across the semester. It cannot be done in one sitting in December.","Papers need a word count at the bottom and go up as a PDF to Populi, in SBL style, 2nd ed.","The syllabus contradicts itself on Weekly Comments: §5.4 says every class “except the first”, but the schedule table lists Student Questions against Oct 20 as well. Six are scheduled here, matching the table. Worth one question in class so you are not short one at the end."]}},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2 — pp. 51–74","ranges":[[51,74]]},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3,"grading":{"source":"§5 Course Requirements and Grading, pp. 2–3","categories":[{"id":"reading","title":"Reading","weight":20,"basis":"completion","note":"Credit for completing the assigned reading before class.","match":{"kind":["reading"],"unit":["pages"]}},{"id":"participation","title":"Participation","weight":5,"basis":"performance","note":"One excused absence. Every other absence costs 10 points off this."},{"id":"translations","title":"Greek Translations","weight":10,"basis":"completion","note":"Graded on spending at least one hour on the passage — not on getting it right.","match":{"kind":["reading"],"unit":["verses"]},"minutesPerItem":60},{"id":"diagrams","title":"Sentence Diagrams","weight":10,"basis":"completion","note":"Credit for uploading the Translation & Diagram before class begins.","match":{"kind":["assignment"],"type":["translation"]},"minutesPerItem":45},{"id":"quizzes","title":"Quizzes","weight":20,"basis":"performance","note":"On the chapter read and your John 1:1–18 translation & diagram.","match":{"kind":["assignment"],"type":["quiz"]},"minutesPerItem":45},{"id":"midterm","title":"Midterm Exam","weight":15,"basis":"performance","note":"First half only. Vocabulary, translation, parsing, classification.","match":{"kind":["assignment"],"type":["exam"],"titleIncludes":"Midterm"},"minutesPerItem":300},{"id":"final","title":"Final Exam","weight":20,"basis":"performance","note":"The whole course, cumulative. Vocabulary, translation, parsing, classification.","match":{"kind":["assignment"],"type":["exam"],"titleIncludes":"Final"},"minutesPerItem":420}],"watch":["45% of this course — reading, translations, diagrams, participation — is credit for doing the work rather than for being right. Translations are graded on spending the hour; diagrams on uploading before class starts. That is the cheapest grade on offer anywhere in your schedule.","The other 55% — quizzes, midterm, final — is cumulative language skill, and the final covers the whole course. It cannot be crammed the way a reading week can.","Diagrams must be uploaded BEFORE class begins to count. Late is zero, not reduced.","NO late work policy, same as Theology.","Quizzes draw on your John 1:1–18 translation & diagram as well as the chapter, so the T&D work pays twice.","Check whether your programme needs a C (70) rather than a D- (60) for this to count toward the degree or to clear the prerequisite for next semester's exegesis course."]}},{"id":"applied3","name":"Applied Theology III","short":"Applied 3","color":"#d98b3f","credits":1,"instructor":"Todd Morikawa","location":"Various — arranged with the professor and your pastor","syllabus":"./syllabi/applied-theology-iii-fall-2026.pdf","datesUnknown":true,"meetingDay":null,"classTime":null,"sessions":[{"id":"discussion-1","date":null,"topic":"Book discussion 1","when":"Schedule within the first half of term","suggest":"2026-09-11","suggestNote":"Three weeks in: early enough that discussion 2 still fits before the midpoint.","readings":[{"source":"Perkins, The Art of Prophesying","ref":"Preface, Introduction, chs. 1–6","material":"Perkins, The Art of Prophesying","estPages":60,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-2","date":null,"topic":"Book discussion 2","when":"Schedule within the first half of term","suggest":"2026-10-09","suggestNote":"Just before the midpoint of term, which is where \"the first half\" runs out.","readings":[{"source":"Perkins, The Art of Prophesying","ref":"chs. 7–11 and summary","material":"Perkins, The Art of Prophesying","estPages":55,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"discussion-3","date":null,"topic":"Book discussion 3","when":"Schedule as close to the end of term as possible","suggest":"2026-12-04","suggestNote":"The last Friday of term — the syllabus asks for this one as late as possible.","readings":[{"source":"Perkins, The Calling of the Ministry","ref":"the whole work","material":"Perkins, The Calling of the Ministry","estPages":90,"driver":true,"flag":"The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true}]},{"id":"ministry","date":null,"topic":"Preaching opportunity","when":"Arrange with your pastor as soon as you can","suggest":"2026-10-25","suggestNote":"A Sunday, and far enough out that your pastor has a service to give you.","assignments":[{"title":"Preach to or on behalf of your church","type":"ministry","note":"Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."},{"title":"Reflection paper on preaching (~500 words)","type":"paper","note":"What text and venue, how your studies shaped the sermon, what you would do differently.","effortMinutes":180}]},{"id":"pastoral-1","date":null,"topic":"Pastoral meeting 1 of 3","when":"Three times across the term, whenever suits","suggest":"2026-09-04","suggestNote":"Early, so the other two are not squeezed into December.","assignments":[{"title":"Meet your pastor (1 of 3)","type":"meeting"}]},{"id":"pastoral-2","date":null,"topic":"Pastoral meeting 2 of 3","when":"Three times across the term, whenever suits","suggest":"2026-10-23","suggestNote":"Mid-term, roughly halfway between the other two.","assignments":[{"title":"Meet your pastor (2 of 3)","type":"meeting"}]},{"id":"pastoral-3","date":null,"topic":"Pastoral meeting 3 of 3","when":"Three times across the term, whenever suits","suggest":"2026-11-20","suggestNote":"Before finals week swallows the calendar.","assignments":[{"title":"Meet your pastor (3 of 3)","type":"meeting","note":"Drop the professor a note once all three are done."}]},{"id":"final-paper","date":null,"topic":"Final reflection paper","when":"Due within a week of the last day of term","suggest":"2026-12-15","suggestNote":"A week after the last day of term, which is the deadline the syllabus sets.","assignments":[{"title":"Final reflection paper (~750 words)","type":"paper","note":"On the Perkins readings, especially his biblical exegesis.","effortMinutes":300}]}],"grading":{"source":"Grading Scale, p. 3","categories":[{"id":"reading","title":"Reading","weight":25,"basis":"completion","match":{"kind":["reading"]}},{"id":"discussions","title":"Book Discussions","weight":25,"basis":"completion","note":"Three meetings on the Perkins readings.","match":{"kind":["assignment"],"type":["discussion"]},"minutesPerItem":75},{"id":"meetings","title":"Pastoral Meetings","weight":20,"basis":"completion","note":"Three meetings with your pastor. Tell the professor once all three are done.","match":{"kind":["assignment"],"type":["meeting"]},"minutesPerItem":60},{"id":"ministry","title":"Ministry Opportunity","weight":10,"basis":"performance","note":"Preach, then a ~500-word reflection.","match":{"sessionIds":["ministry"]}},{"id":"paper","title":"Final Reflection Paper","weight":20,"basis":"performance","note":"~750 words on the Perkins readings, especially his biblical exegesis.","match":{"sessionIds":["final-paper"]}}],"watch":["70% of this course is just showing up and having read — reading, book discussions and pastoral meetings. None of it is graded on brilliance.","Nothing here has a date until you arrange it. That makes it the easiest thing in your schedule to let slide to December, when every other deadline lands at once.","The first two book discussions are meant to be scheduled in the first half of term.","Securing a preaching slot depends on other people's calendars — start asking early, and contact the professor for an alternative if you cannot get one."]}}],"gradeScale":[{"grade":"A","min":94},{"grade":"A-","min":90},{"grade":"B+","min":87},{"grade":"B","min":84},{"grade":"B-","min":80},{"grade":"C+","min":77},{"grade":"C","min":74},{"grade":"C-","min":70},{"grade":"D+","min":67},{"grade":"D","min":64},{"grade":"D-","min":60},{"grade":"F","min":0}]};
+globalThis.__COURSES__ = {"term":"Fall 2026","generated":"2026-08-08","notes":["Dates transcribed from the course syllabi. Numbered ordering is the suggested reading order.","driver: true == the underlined reading that drives class discussion.","pages marked estimated:true are educated guesses for chapter-only assignments — tap a workload number in the app to correct it.","classTime: null means the meeting time is unconfirmed; the app assumes 6:00 pm and says so. Set the real time in Settings, or fill it in here as \"18:00\".","Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.","material: names the physical thing a reading lives in, when that differs from \"source\" — so a book assigned four times is attached once. A chapter photocopied out of a collection is its own thing, not the collection: the three Christian Dogmatics chapters are by three different authors and arrive as three separate PDFs, so each carries its own material and its own attachment.","suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own.","grading: per-course weights read off the syllabi. basis 'completion' means the syllabus gives credit for doing the work, so ticks drive the figure; 'performance' means only a real mark counts and the app will not guess one. watch: the things in a syllabus that cost people marks.","effortMinutes on an exam is revision time, so the planner paces it instead of letting 20% of a grade arrive as a checkbox on the day. dependsOnOthers marks work that waits on somebody else's calendar and so cannot be started in its due week."],"courses":[{"id":"theo1","name":"Theology 1","short":"Theo 1","color":"#5b6ef5","meetingDay":"Tuesday","classTime":"19:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Prolegomena: Nature & Ends of Theology","readings":[{"order":1,"source":"John Webster, \"Biblical Reasoning\"","ref":"128–132","format":"pdf","ranges":[[128,132]]},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"vii–xii & ch. 1","estPages":26,"estimated":true},{"order":3,"source":"Webster, God Without Measure","ref":"ch. 14","estPages":15,"estimated":true,"driver":true}],"bible":{"ref":"Ps 1; Ps 27; 1 Cor 13; Rev 22","chapters":4},"assignments":[]},{"date":"2026-08-25","topic":"God: Essence & Attributes","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"22–32","format":"pdf","ranges":[[22,32]]},{"order":2,"source":"Bavinck, Reformed Dogmatics","ref":"29–41; 97–110; 149–177","ranges":[[29,41],[97,110],[149,177]],"driver":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"ch. 4","estPages":20,"estimated":true},{"order":4,"source":"Aquinas, Summa theologiae","ref":"Ia.2.3; Ia.3–4 (pp. 20–43)","format":"pdf","ranges":[[20,43]],"driver":true}],"bible":{"ref":"Isa 40–48","chapters":9},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-01","topic":"God: The Holy Trinity","readings":[{"order":1,"source":"Swain, \"Divine Trinity\"","ref":"ch. 4 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Swain, \"Divine Trinity\" — Christian Dogmatics ch. 4"},{"order":2,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 5–6","estPages":40,"estimated":true},{"order":3,"source":"Augustine, De Trinitate","ref":"bk. 5","format":"pdf","estPages":20,"estimated":true},{"order":4,"source":"Webster, God Without Measure","ref":"ch. 3","estPages":15,"estimated":true}],"bible":{"ref":"Deut 6; Mark 12; 2 Cor 3","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-08","topic":"Divine Decrees","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"341–347; 370–374","ranges":[[341,347],[370,374]]},{"order":2,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.3.1","format":"pdf","estPages":15,"estimated":true},{"order":3,"source":"Swain, \"Covenant of Redemption\"","ref":"ch. 5 in Christian Dogmatics","estPages":25,"estimated":true,"driver":true,"material":"Swain, \"Covenant of Redemption\" — Christian Dogmatics ch. 5"}],"bible":{"ref":"Eph 1","chapters":1},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-15","topic":"Creation & Providence","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"407–408; 416–420; 426–439; 591–598; 604–619","ranges":[[407,408],[416,420],[426,439],[591,598],[604,619]]},{"order":2,"source":"Davison, Participation in God","ref":"42–52","format":"pdf","ranges":[[42,52]]},{"order":3,"source":"Webster, God Without Measure","ref":"chs. 7 & 9","estPages":30,"estimated":true,"driver":true}],"bible":{"ref":"Gen 1; Ps 104","chapters":2},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-22","topic":"Revelation & Scripture","readings":[{"order":1,"source":"John Calvin, Institutes","ref":"Book 1, chs. 1–7","estPages":30,"estimated":true,"driver":true},{"order":2,"source":"Vanhoozer, \"Holy Scripture\"","ref":"ch. 2 in Christian Dogmatics","estPages":25,"estimated":true,"material":"Vanhoozer, \"Holy Scripture\" — Christian Dogmatics ch. 2"},{"order":3,"source":"Beeke & Smalley, Essentials of Reformed Systematic Theology","ref":"chs. 6–7","format":"pdf","estPages":30,"estimated":true}],"bible":{"ref":"Ps 19; Rom 1–2:15; 2 Tim 3:16–17","chapters":3},"assignments":[{"title":"Weekly Comments","type":"assignment"}]},{"date":"2026-09-29","topic":"Man & Sin","readings":[{"order":1,"source":"Bavinck, Reformed Dogmatics","ref":"530–580","ranges":[[530,580]]},{"order":2,"source":"Augustine, Enchiridion","ref":"chs. 3–4","format":"pdf","estPages":6,"estimated":true},{"order":3,"source":"Augustine, City of God","ref":"12.1–8","format":"pdf","estPages":14,"estimated":true}],"bible":{"ref":"Gen 1–3; Rom 5:12–21; Jas 1","chapters":5},"assignments":[{"title":"Weekly Comments","type":"assignment"},{"title":"Church Project","type":"project","effortMinutes":300,"startPlanning":"2026-09-08"}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[{"title":"Final Paper","type":"paper","due":"2026-10-08","dueTime":"23:59","note":"Due Oct 8th, 11:59pm","effortMinutes":720,"startPlanning":"2026-09-08"}]},{"date":"2026-10-13","topic":"Paper Presentations","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 2","estPages":15,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":25,"estimated":true}],"assignments":[{"title":"Weekly Comments on Classmate Papers","type":"assignment"},{"title":"Paper Presentation","type":"presentation","effortMinutes":90,"startPlanning":"2026-10-08"},{"title":"Theological Definitions","type":"assignment"}]}],"code":"THEO 7003","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/theology-1-theo-7003-fall-2026.pdf","credits":3},{"id":"theo2","name":"Systematic Theology 2","short":"Theo 2","color":"#c2683d","meetingDay":"Tuesday","classTime":"19:00","code":"THEO 7004","endTime":"20:45","instructor":"David Larson","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/systematic-theology-2-theo-7004-fall-2026.pdf","credits":3,"sessions":[{"date":"2026-10-20","topic":"Context & Metaphysics of the Incarnation","readings":[{"order":1,"source":"Athanasius, On the Incarnation","ref":"§§1–18","estPages":38,"estimated":true},{"order":2,"source":"Wellum, God the Son Incarnate","ref":"pp. 278–311","ranges":[[278,311]]},{"order":3,"source":"Sanders, “Introduction to Christology”","ref":"the whole essay","estPages":20,"estimated":true,"format":"pdf"}],"bible":{"ref":"John 1","chapters":1},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-10-27","topic":"Metaphysics & Hermeneutics of the Incarnation","readings":[{"order":1,"source":"Duby, Jesus and the God of Classical Theism","ref":"141–153","ranges":[[141,153]],"format":"pdf"},{"order":2,"source":"Wellum, God the Son Incarnate","ref":"chs. 9 & 13","estPages":60,"estimated":true},{"order":3,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"chs. 7–8","estPages":40,"estimated":true}],"bible":{"ref":"Phil 2; Heb 1","chapters":2},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-03","topic":"Intro to Salvation","readings":[{"order":1,"source":"Webster, God Without Measure","ref":"ch. 10","estPages":18,"estimated":true},{"order":2,"source":"Wellum, God the Son Incarnate","ref":"ch. 3","estPages":30,"estimated":true},{"order":3,"source":"Beeke & Smalley, Reformed Systematic Theology","ref":"3:267–283","ranges":[[267,283]],"format":"pdf"}],"bible":{"ref":"Rom 5:12–21","chapters":1},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-10","topic":"The Work of Christ","readings":[{"order":1,"source":"Athanasius, On the Incarnation","ref":"§§19–32","estPages":30,"estimated":true},{"order":2,"source":"Horton, Pilgrim Theology","ref":"191–228","ranges":[[191,228]],"format":"pdf"},{"order":3,"source":"Turretin, Institutes of Elenctic Theology","ref":"XVI.v","estPages":20,"estimated":true,"format":"pdf"}],"bible":{"ref":"Matt 1–2; Rom 3; 1 Cor 15","chapters":4},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-17","topic":"The Spirit & Union with Christ","readings":[{"order":1,"source":"Mastricht, Theoretical-Practical Theology","ref":"1.2.27","estPages":20,"estimated":true,"format":"pdf"},{"order":2,"source":"Calvin, Institutes","ref":"1.13.14–15; 3.1.1–4; 3.10.11","estPages":25,"estimated":true,"format":"pdf"},{"order":3,"source":"Johnson, One with Christ","ref":"ch. 1","estPages":22,"estimated":true,"format":"pdf"},{"order":4,"source":"Gaffin, “The Work of Christ Applied”","ref":"in Christian Dogmatics","estPages":20,"estimated":true,"format":"pdf"}],"bible":{"ref":"Eph 1–2","chapters":2},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-11-24","topic":"Justification & Sanctification","readings":[{"order":1,"source":"Catholic Document Selections","ref":"the set extracts","estPages":20,"estimated":true,"format":"pdf"},{"order":2,"source":"Calvin, Institutes","ref":"III.xi.1–4","estPages":15,"estimated":true,"format":"pdf"},{"order":3,"source":"Bavinck, The Wonderful Works of God","ref":"chs. xxi–xxii","estPages":30,"estimated":true,"format":"pdf"},{"order":4,"source":"Synopsis of a Purer Theology","ref":"disp. 33","estPages":18,"estimated":true,"format":"pdf"}],"bible":{"ref":"Rom 4–5; Gal 2–4","chapters":5},"assignments":[{"title":"Student Questions","type":"assignment"}]},{"date":"2026-12-01","topic":"Eschatology: The Millennium & Beatific Vision","readings":[{"order":1,"source":"À Brakel, The Christian’s Reasonable Service","ref":"4:339–370","ranges":[[339,370]],"format":"pdf"},{"order":2,"source":"Bandy, “Views of the Millennium”","ref":"the whole essay","estPages":20,"estimated":true,"format":"pdf"},{"order":3,"source":"Augustine, City of God","ref":"XXII.29–30","estPages":12,"estimated":true,"format":"pdf"},{"order":4,"source":"Turretin, Institutes of Elenctic Theology","ref":"XX.viii","estPages":15,"estimated":true,"format":"pdf"}],"bible":{"ref":"Rev 20–22","chapters":3},"assignments":[{"title":"Final Paper","type":"paper","due":"2026-12-03","dueTime":"23:59","note":"Due Thu Dec 3rd, 11:59pm — two days after the last teaching class. 3,000+ words, SBL style, word count at the bottom, PDF to Populi.","effortMinutes":900,"startPlanning":"2026-10-27"}]},{"date":"2026-12-08","topic":"Paper Presentations","readings":[{"order":1,"source":"Jamieson & Wittman, Biblical Reasoning","ref":"conclusion","estPages":12,"estimated":true},{"order":2,"source":"Classmate papers","ref":"skim","estPages":20,"estimated":true}],"assignments":[{"title":"Paper Presentation","type":"presentation","note":"Three minutes on your thesis, what you learned and where it could improve, then about twelve minutes of questions.","effortMinutes":90,"startPlanning":"2026-12-03"},{"title":"Church Ministry Project","type":"project","note":"At least two sit-downs with your pastor across the semester on Christology, pneumatology, soteriology or eschatology. Cannot be done in one go at the end.","effortMinutes":300,"startPlanning":"2026-10-27","dependsOnOthers":true}]}],"grading":{"source":"§5 Course Requirements and Grading, p. 2","categories":[{"id":"reading","title":"Reading","weight":40,"basis":"completion","note":"The single biggest block of the course. You upload a reading log to Populi saying what percentage you completed, by the last day of class.","match":{"kind":["reading","bible"]}},{"id":"participation","title":"Participation","weight":10,"basis":"performance","note":"Quality of questions and comments, and attentive listening — not how much you talk."},{"id":"ministry","title":"Church Ministry Project","weight":10,"basis":"performance","note":"Two sit-downs with your pastor on Christology, pneumatology, soteriology or eschatology.","match":{"kind":["assignment"],"titleIncludes":"Church Ministry Project"}},{"id":"comments","title":"Weekly Comments/Questions","weight":10,"basis":"completion","note":"One thing learned, questioned or critiqued, every class except the first. Submitted on Moodle.","match":{"kind":["assignment"],"titleIncludes":"Student Questions"},"minutesPerItem":20},{"id":"paper","title":"Research Paper","weight":20,"basis":"performance","note":"3,000+ words. Argument/research 75 pts, writing 10, church application 10, SBL style 5.","match":{"kind":["assignment"],"type":["paper"]}},{"id":"presentation","title":"Research Paper presentation","weight":10,"basis":"performance","note":"Three minutes plus about twelve of questions.","match":{"kind":["assignment"],"type":["presentation"]}}],"watch":["NO late work. Past the due time is a zero unless something genuinely extreme stopped you.","The Final Paper is due Thu Dec 3rd at 11:59pm — two days AFTER the last teaching class on Dec 1st, and a week before the presentation. It is easy to read the Dec 1st row and assume the paper is due in class.","Reading is 40% and self-reported in a log on Populi. Nothing is checked week to week, so the log is the grade — keep it honest and keep it current, because reconstructing a semester of it on the last day is how people lose the easiest 40 points in the course.","The Church Ministry Project needs TWO separate meetings with your pastor across the semester. It cannot be done in one sitting in December.","Papers need a word count at the bottom and go up as a PDF to Populi, in SBL style, 2nd ed.","The syllabus contradicts itself on Weekly Comments: §5.4 says every class “except the first”, but the schedule table lists Student Questions against Oct 20 as well. Six are scheduled here, matching the table. Worth one question in class so you are not short one at the end."]}},{"id":"greek","name":"Intermediate Greek","short":"Greek","color":"#1f9d78","meetingDay":"Tuesday","classTime":"17:00","classTimeNote":"Time not confirmed — likely Tuesday evening. Set it in Settings.","sessions":[{"date":"2026-08-18","topic":"Intro & Sentence Diagramming","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 1 — vocabulary section only","estPages":8,"estimated":true},{"order":2,"source":"Schreiner, Interpreting the Pauline Epistles","ref":"ch. 5","estPages":20,"estimated":true}],"assignments":[]},{"date":"2026-08-25","topic":"Nominative, Vocative, Accusative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 2 — pp. 51–74","ranges":[[51,74]]},{"order":2,"source":"Matt 18:10–20 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:1","type":"translation","verses":1},{"title":"Quiz: ch. 1 vocab","type":"quiz","atClass":true}]},{"date":"2026-09-01","topic":"Genitive","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 3","estPages":30,"estimated":true},{"order":2,"source":"Romans 3:19–31 in Greek","ref":"13 verses","unit":"verses","verses":13,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:2","type":"translation","verses":1},{"title":"Quiz: ch. 2","type":"quiz","atClass":true}]},{"date":"2026-09-08","topic":"Dative","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 4","estPages":30,"estimated":true},{"order":2,"source":"Jude 1–3, 17–25 in Greek","ref":"12 verses","unit":"verses","verses":12,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:3","type":"translation","verses":1},{"title":"Quiz: ch. 3","type":"quiz","atClass":true}]},{"date":"2026-09-15","topic":"Article & Adjective","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 5","estPages":30,"estimated":true},{"order":2,"source":"John 2:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:4–5","type":"translation","verses":2},{"title":"Quiz: ch. 4","type":"quiz","atClass":true}]},{"date":"2026-09-22","topic":"Other Parts of Speech","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 12","estPages":30,"estimated":true},{"order":2,"source":"Titus 2:1–10 in Greek","ref":"10 verses","unit":"verses","verses":10,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:6","type":"translation","verses":1},{"title":"Quiz: ch. 5","type":"quiz","atClass":true}]},{"date":"2026-09-29","topic":"Review","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"skim/review previous chapters","estPages":25,"estimated":true},{"order":2,"source":"Greek passage TBD","ref":"TBD","unit":"verses","verses":12,"estimated":true,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:7","type":"translation","verses":1},{"title":"Quiz: ch. 12","type":"quiz","atClass":true}]},{"date":"2026-10-06","topic":"Fall Break — no class","noClass":true,"readings":[],"assignments":[]},{"date":"2026-10-13","topic":"Midterm Exam","exam":true,"readings":[],"assignments":[{"title":"Midterm Exam","type":"exam","atClass":true}]},{"date":"2026-10-20","topic":"Verbs","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 6","estPages":30,"estimated":true},{"order":2,"source":"James 5:12–20 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:8","type":"translation","verses":1}]},{"date":"2026-10-27","topic":"Tense & Verbal Aspect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 7","estPages":30,"estimated":true},{"order":2,"source":"Matt 2:19–23 in Greek","ref":"5 verses — syllabus prints \"James Matt 2:19–23\"; confirm with professor","unit":"verses","verses":5,"flag":"Syllabus reads \"James Matt 2:19–23\" — likely a typo. Confirm the passage.","material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:9–10","type":"translation","verses":2},{"title":"Quiz: ch. 6","type":"quiz","atClass":true}]},{"date":"2026-11-03","topic":"Present, Imperfect & Future","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 8","estPages":30,"estimated":true},{"order":2,"source":"Acts 2:37–47 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:11–13","type":"translation","verses":3},{"title":"Quiz: ch. 7","type":"quiz","atClass":true}]},{"date":"2026-11-10","topic":"Aorist, Perfect & Pluperfect","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 9","estPages":30,"estimated":true},{"order":2,"source":"John 11:30–44 in Greek","ref":"15 verses","unit":"verses","verses":15,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:14–15","type":"translation","verses":2},{"title":"Quiz: ch. 8","type":"quiz","atClass":true}]},{"date":"2026-11-17","topic":"Participles","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 10","estPages":30,"estimated":true},{"order":2,"source":"1 Peter 5:1–11 in Greek","ref":"11 verses","unit":"verses","verses":11,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:16–17","type":"translation","verses":2},{"title":"Quiz: ch. 9","type":"quiz","atClass":true}]},{"date":"2026-11-24","topic":"Infinitives","readings":[{"order":1,"source":"Going Deeper with NT Greek","ref":"ch. 11","estPages":30,"estimated":true},{"order":2,"source":"1 Timothy 6:11–19 in Greek","ref":"9 verses","unit":"verses","verses":9,"material":"Greek New Testament"}],"assignments":[{"title":"T&D: John 1:18","type":"translation","verses":1},{"title":"Quiz: ch. 10","type":"quiz","atClass":true}]},{"date":"2026-12-01","topic":"Review","readings":[{"order":1,"source":"Review all chapters","ref":"review","estPages":40,"estimated":true,"material":"Going Deeper with NT Greek"}],"assignments":[]},{"date":"2026-12-08","topic":"Final Exam","exam":true,"readings":[],"assignments":[{"title":"Final Exam","type":"exam","atClass":true,"effortMinutes":600,"startPlanning":"2026-11-03","note":"Cumulative over the whole course: vocabulary, translation, parsing and classification. Revision is paced from Nov 3 rather than appearing on the day."}]}],"code":"GREK 6003","endTime":"18:45","instructor":"David Larson, Chris Bruno","location":"Aiea Heights Church, 99-400 Aiea Heights Dr, Aiea, HI 96701","syllabus":"./syllabi/intermediate-greek-grek-6003-fall-2026.pdf","credits":3,"grading":{"source":"§5 Course Requirements and Grading, pp. 2–3","categories":[{"id":"reading","title":"Reading","weight":20,"basis":"completion","note":"Credit for completing the assigned reading before class.","match":{"kind":["reading"],"unit":["pages"]}},{"id":"participation","title":"Participation","weight":5,"basis":"performance","note":"One excused absence. Every other absence costs 10 points off this."},{"id":"translations","title":"Greek Translations","weight":10,"basis":"completion","note":"Graded on spending at least one hour on the passage — not on getting it right.","match":{"kind":["reading"],"unit":["verses"]},"minutesPerItem":60},{"id":"diagrams","title":"Sentence Diagrams","weight":10,"basis":"completion","note":"Credit for uploading the Translation & Diagram before class begins.","match":{"kind":["assignment"],"type":["translation"]},"minutesPerItem":45},{"id":"quizzes","title":"Quizzes","weight":20,"basis":"performance","note":"On the chapter read and your John 1:1–18 translation & diagram.","match":{"kind":["assignment"],"type":["quiz"]},"minutesPerItem":45},{"id":"midterm","title":"Midterm Exam","weight":15,"basis":"performance","note":"First half only. Vocabulary, translation, parsing, classification.","match":{"kind":["assignment"],"type":["exam"],"titleIncludes":"Midterm"},"minutesPerItem":300},{"id":"final","title":"Final Exam","weight":20,"basis":"performance","note":"The whole course, cumulative. Vocabulary, translation, parsing, classification.","match":{"kind":["assignment"],"type":["exam"],"titleIncludes":"Final"},"minutesPerItem":420}],"watch":["45% of this course — reading, translations, diagrams, participation — is credit for doing the work rather than for being right. Translations are graded on spending the hour; diagrams on uploading before class starts. That is the cheapest grade on offer anywhere in your schedule.","The other 55% — quizzes, midterm, final — is cumulative language skill, and the final covers the whole course. It cannot be crammed the way a reading week can.","Diagrams must be uploaded BEFORE class begins to count. Late is zero, not reduced.","NO late work policy, same as Theology.","Quizzes draw on your John 1:1–18 translation & diagram as well as the chapter, so the T&D work pays twice.","Check whether your programme needs a C (70) rather than a D- (60) for this to count toward the degree or to clear the prerequisite for next semester's exegesis course."]}},{"id":"applied3","name":"Applied Theology III","short":"Applied 3","color":"#d98b3f","credits":1,"instructor":"Todd Morikawa","location":"Various — arranged with the professor and your pastor","syllabus":"./syllabi/applied-theology-iii-fall-2026.pdf","datesUnknown":true,"meetingDay":null,"classTime":null,"sessions":[{"id":"discussion-1","date":null,"topic":"Book discussion 1","when":"Schedule within the first half of term","suggest":"2026-09-11","suggestNote":"Three weeks in: early enough that discussion 2 still fits before the midpoint.","readings":[{"source":"Perkins, The Art of Prophesying","ref":"Preface, Introduction, chs. 1–6","material":"Perkins, The Art of Prophesying","estPages":60,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true,"dependsOnOthers":true}]},{"id":"discussion-2","date":null,"topic":"Book discussion 2","when":"Schedule within the first half of term","suggest":"2026-10-09","suggestNote":"Just before the midpoint of term, which is where \"the first half\" runs out.","readings":[{"source":"Perkins, The Art of Prophesying","ref":"chs. 7–11 and summary","material":"Perkins, The Art of Prophesying","estPages":55,"driver":true}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true,"dependsOnOthers":true}]},{"id":"discussion-3","date":null,"topic":"Book discussion 3","when":"Schedule as close to the end of term as possible","suggest":"2026-12-04","suggestNote":"The last Friday of term — the syllabus asks for this one as late as possible.","readings":[{"source":"Perkins, The Calling of the Ministry","ref":"the whole work","material":"Perkins, The Calling of the Ministry","estPages":90,"driver":true,"flag":"The syllabus calls this the longest of the three readings. Page count is a guess — tap it to set the real one."}],"assignments":[{"title":"Meet to discuss (bring notes: insights, questions, how to apply it)","type":"discussion","atClass":true,"dependsOnOthers":true}]},{"id":"ministry","date":null,"topic":"Preaching opportunity","when":"Arrange with your pastor as soon as you can","suggest":"2026-10-25","suggestNote":"A Sunday, and far enough out that your pastor has a service to give you.","assignments":[{"title":"Preach to or on behalf of your church","type":"ministry","note":"Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative.","dependsOnOthers":true},{"title":"Reflection paper on preaching (~500 words)","type":"paper","note":"What text and venue, how your studies shaped the sermon, what you would do differently.","effortMinutes":180}]},{"id":"pastoral-1","date":null,"topic":"Pastoral meeting 1 of 3","when":"Three times across the term, whenever suits","suggest":"2026-09-04","suggestNote":"Early, so the other two are not squeezed into December.","assignments":[{"title":"Meet your pastor (1 of 3)","type":"meeting","dependsOnOthers":true}]},{"id":"pastoral-2","date":null,"topic":"Pastoral meeting 2 of 3","when":"Three times across the term, whenever suits","suggest":"2026-10-23","suggestNote":"Mid-term, roughly halfway between the other two.","assignments":[{"title":"Meet your pastor (2 of 3)","type":"meeting","dependsOnOthers":true}]},{"id":"pastoral-3","date":null,"topic":"Pastoral meeting 3 of 3","when":"Three times across the term, whenever suits","suggest":"2026-11-20","suggestNote":"Before finals week swallows the calendar.","assignments":[{"title":"Meet your pastor (3 of 3)","type":"meeting","note":"Drop the professor a note once all three are done.","dependsOnOthers":true}]},{"id":"final-paper","date":null,"topic":"Final reflection paper","when":"Due within a week of the last day of term","suggest":"2026-12-15","suggestNote":"A week after the last day of term, which is the deadline the syllabus sets.","assignments":[{"title":"Final reflection paper (~750 words)","type":"paper","note":"On the Perkins readings, especially his biblical exegesis.","effortMinutes":300}]}],"grading":{"source":"Grading Scale, p. 3","categories":[{"id":"reading","title":"Reading","weight":25,"basis":"completion","match":{"kind":["reading"]}},{"id":"discussions","title":"Book Discussions","weight":25,"basis":"completion","note":"Three meetings on the Perkins readings.","match":{"kind":["assignment"],"type":["discussion"]},"minutesPerItem":75},{"id":"meetings","title":"Pastoral Meetings","weight":20,"basis":"completion","note":"Three meetings with your pastor. Tell the professor once all three are done.","match":{"kind":["assignment"],"type":["meeting"]},"minutesPerItem":60},{"id":"ministry","title":"Ministry Opportunity","weight":10,"basis":"performance","note":"Preach, then a ~500-word reflection.","match":{"sessionIds":["ministry"]}},{"id":"paper","title":"Final Reflection Paper","weight":20,"basis":"performance","note":"~750 words on the Perkins readings, especially his biblical exegesis.","match":{"sessionIds":["final-paper"]}}],"watch":["70% of this course is just showing up and having read — reading, book discussions and pastoral meetings. None of it is graded on brilliance.","Nothing here has a date until you arrange it. That makes it the easiest thing in your schedule to let slide to December, when every other deadline lands at once.","The first two book discussions are meant to be scheduled in the first half of term.","Securing a preaching slot depends on other people's calendars — start asking early, and contact the professor for an alternative if you cannot get one."]}}],"gradeScale":[{"grade":"A","min":94},{"grade":"A-","min":90},{"grade":"B+","min":87},{"grade":"B","min":84},{"grade":"B-","min":80},{"grade":"C+","min":77},{"grade":"C","min":74},{"grade":"C-","min":70},{"grade":"D+","min":67},{"grade":"D","min":64},{"grade":"D-","min":60},{"grade":"F","min":0}]};
 // Generated by tools/build.mjs — edit js/*.js, not this file.
 const __mod_text = (() => {
 // Emphasis, as it travels from the page to the screen.
@@ -3565,6 +3675,96 @@ function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the long game ---------- */
+
+// Half an hour a day is about the pace a big piece of work is bearable at.
+// Start later than that and it stops being planned and becomes a weekend.
+const COMFORTABLE_DAILY = 30;
+
+/**
+ * The last day you could begin and still keep to half an hour a day.
+ *
+ * Counted in study days walked back from the deadline, so a week with only two
+ * reading days in it demands an earlier start than a week with six. A date in
+ * the past is a real answer: it means the comfortable start has gone and what
+ * is left will be denser than that.
+ */
+function latestStart(minutes, deadline, studyDays) {
+  const need = Math.max(1, Math.ceil(minutes / COMFORTABLE_DAILY));
+  let d = parseDay(deadline);
+  let counted = 0;
+  for (let i = 0; i < 500; i++) {
+    if (studyDays.includes(d.getDay())) counted += 1;
+    if (counted >= need) return d;
+    d = addDays(d, -1);
+  }
+  return d;
+}
+
+/** What slice of a course's grade one task belongs to, as a percentage. */
+function weightOf(course, task) {
+  const hit = (course?.grading?.categories || []).find((c) => c.match && inCategory(task, c.match));
+  return hit ? hit.weight : null;
+}
+
+/**
+ * The work that is genuinely large, across every course, ordered by when it has
+ * to be *started* rather than when it is due.
+ *
+ * Those two orderings disagree, and the disagreement is the whole point: a
+ * fifteen-hour paper due in six weeks needs starting before a two-hour one due
+ * next Tuesday. A weekly reading announces itself — it is on the page every
+ * day until it is done. The big things do the opposite: they sit silently at a
+ * date far enough away to ignore, and then arrive all at once. Three of them
+ * land in the same fortnight this term.
+ *
+ * Work that waits on somebody else's calendar counts as big however short it
+ * is, because the task is not the hard part — getting the date is.
+ */
+function bigTasks(data, tasks, { from = startOfToday(), minMinutes = 120 } = {}) {
+  const s = settings();
+  const out = [];
+  for (const t of tasks) {
+    if (t.complete) continue;
+    const effort = t.raw?.effortMinutes ?? null;
+    const needsOthers = Boolean(t.raw?.dependsOnOthers);
+    if (!needsOthers && (effort == null || effort < minMinutes)) continue;
+
+    const course = data.courses.find((c) => c.id === t.courseId) || null;
+    const deadline = dueAt(t);
+    // Work whose date has gone is not the long game any more, whatever its
+    // size. It is late, and the home page already lists it where it can be
+    // ticked off. This is for what is still coming.
+    if (deadline && daysBetween(from, deadline) < 0) continue;
+    const remaining = t.remaining ?? t.minutes ?? effort ?? 0;
+    const startBy = deadline ? latestStart(remaining, deadline, s.studyDays) : null;
+
+    out.push({
+      task: t,
+      course,
+      weight: weightOf(course, t),
+      effort,
+      remaining,
+      done: effort ? Math.max(0, effort - remaining) : 0,
+      deadline,
+      daysLeft: deadline ? daysBetween(from, deadline) : null,
+      startBy,
+      // Past its comfortable start, so every day from here is denser than planned.
+      overdueStart: Boolean(startBy) && daysBetween(from, startBy) < 0,
+      needsOthers,
+      undated: !deadline
+    });
+  }
+  return out.sort((a, b) => {
+    // Work you have to arrange yourself has no date to sort by, but it is the
+    // easiest to let slide, so it sits at the end rather than dropping off.
+    if (a.undated !== b.undated) return a.undated ? 1 : -1;
+    const ax = a.startBy ? a.startBy.getTime() : Infinity;
+    const bx = b.startBy ? b.startBy.getTime() : Infinity;
+    return ax - bx || (b.remaining || 0) - (a.remaining || 0);
+  });
+}
+
 /* ---------- what the work is actually worth ---------- */
 
 /** Which tasks a grading category covers. Every field present has to match. */
@@ -3985,7 +4185,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, letterFor, gradeReport, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, bigTasks, letterFor, gradeReport, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -4280,7 +4480,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v41 · 2026-10-26';
+const BUILD = 'v42 · 2026-10-26';
 
 let DATA = null;
 let TASKS = [];
@@ -5409,11 +5609,126 @@ function getAheadCard() {
     </section>`;
 }
 
+/**
+ * The big pieces, ordered by when they have to be started.
+ *
+ * Everything else in the app is organised by when work is due, which is the
+ * right order for a week's reading: it is on the page every day until it is
+ * done, so it cannot be forgotten. Large work behaves the other way round. It
+ * sits at a date far enough off to ignore, stays quiet while it is ignored, and
+ * then arrives — and this term three of them arrive in the same fortnight.
+ *
+ * So this is sorted by the last day you could comfortably begin, not by the
+ * deadline, and the two orders genuinely disagree.
+ */
+function longGameCard() {
+  const big = S.bigTasks(DATA, TASKS);
+  if (!big.length) return '';
+
+  // Work with a date gets a row each; it is the stuff that actually arrives on
+  // a day. Work you have to arrange yourself is grouped per course, because
+  // seven near-identical "meet your pastor" rows bury the one exam that is
+  // worth a fifth of a course — which is the opposite of what this is for.
+  const dated = big.filter((x) => !x.undated);
+  const toArrange = new Map();
+  for (const x of big.filter((y) => y.undated)) {
+    const key = x.course?.id || 'other';
+    const g = toArrange.get(key) || { course: x.course, items: [], minutes: 0 };
+    g.items.push(x);
+    g.minutes += x.remaining || 0;
+    toArrange.set(key, g);
+  }
+
+  const pressing = dated.filter((x) => x.overdueStart).length;
+  const id = 'long-game';
+  const shut = store.isCollapsed(id);
+
+  const row = (x) => {
+    const t = x.task;
+    const started = x.done > 0;
+    const pct = x.effort ? Math.min(100, Math.round((x.done / x.effort) * 100)) : 0;
+
+    const when = x.undated
+      ? 'No date yet — you arrange it'
+      : `due ${S.formatDate(x.deadline)}${x.daysLeft >= 0 ? ` · ${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'}` : ' · past'}`;
+
+    const start = x.undated
+      ? ''
+      : x.overdueStart
+        ? `<span class="lg-start warn">Should have started ${esc(S.formatDate(x.startBy))}</span>`
+        : `<span class="lg-start">Start by ${esc(S.formatDate(x.startBy))}</span>`;
+
+    return `
+      <li class="lg ${x.overdueStart && !started ? 'is-pressing' : ''}">
+        <div class="lg-head">
+          <span class="lg-title">${dot(x.course?.color)}${esc(t.title)}</span>
+          ${x.weight != null ? `<span class="lg-weight">${x.weight}% of ${esc(x.course?.short || '')}</span>` : ''}
+        </div>
+        <div class="lg-meta">
+          <span>${esc(x.effort ? S.formatMinutes(x.effort) : 'short, but not yours to schedule')}</span>
+          <span>${esc(when)}</span>
+        </div>
+        ${start ? `<div class="lg-meta">${start}</div>` : ''}
+        ${x.needsOthers
+          ? `<div class="lg-note">Waits on somebody else's calendar — the asking is the slow part, not the doing.</div>`
+          : ''}
+        ${x.effort ? progressBar(pct, { size: 'progress-sm' }) : ''}
+        <ul class="tasks lg-actions">${taskLine(t, { withTimer: true })}</ul>
+      </li>`;
+  };
+
+  return `
+    <details class="card fold long-game" ${shut ? '' : 'open'}>
+      <summary data-collapse="${esc(id)}">
+        <span class="fold-title">The long game</span>
+        <span class="card-when">
+          ${dated.length} dated${pressing ? ` · ${pressing} needs starting` : ''}${
+            toArrange.size ? ` · ${big.length - dated.length} to arrange` : ''
+          }
+        </span>
+      </summary>
+      <p class="note">
+        Ordered by the last day you could comfortably begin — half an hour a day on it — rather than
+        by when it is due. Those two orders disagree, which is the point: a fifteen-hour paper due in
+        six weeks wants starting before a two-hour one due on Tuesday.
+      </p>
+      <ul class="lg-list">${dated.map(row).join('')}</ul>
+      ${[...toArrange.values()]
+        .map(
+          (g) => `
+        <div class="lg-arrange">
+          <div class="lg-head">
+            <span class="lg-title">${dot(g.course?.color)}${esc(g.course?.name || 'To arrange')}</span>
+            <span class="lg-weight">${g.items.length} to arrange</span>
+          </div>
+          <p class="note">
+            None of this has a date until you set one, which makes it the easiest work in your term
+            to let slide to December — and most of it waits on somebody else's calendar, so the
+            asking has to happen weeks before the doing.
+            ${g.minutes ? `About ${esc(S.formatMinutes(g.minutes))} of your own time in it.` : ''}
+          </p>
+          <ul class="lg-arrange-list">
+            ${g.items
+              .map(
+                (x) => `<li>${esc(x.task.title)}${
+                  x.weight != null ? ` <small>${x.weight}%</small>` : ''
+                }${x.needsOthers ? ' <em>needs a date from someone</em>' : ''}</li>`
+              )
+              .join('')}
+          </ul>
+          <p class="note"><a href="#schedule">Set dates on the Schedule tab</a> and they join the plan.</p>
+        </div>`
+        )
+        .join('')}
+    </details>`;
+}
+
 function viewPlan() {
   const plans = currentPlans();
   const projects = activeProjects();
 
   return `
+    ${longGameCard()}
     ${getAheadCard()}
     ${plans
       .map(({ course, session, date, tasks, owed, alsoPlanned, plan, pace }) => {

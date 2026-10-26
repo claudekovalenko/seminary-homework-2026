@@ -606,6 +606,96 @@ export function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the long game ---------- */
+
+// Half an hour a day is about the pace a big piece of work is bearable at.
+// Start later than that and it stops being planned and becomes a weekend.
+const COMFORTABLE_DAILY = 30;
+
+/**
+ * The last day you could begin and still keep to half an hour a day.
+ *
+ * Counted in study days walked back from the deadline, so a week with only two
+ * reading days in it demands an earlier start than a week with six. A date in
+ * the past is a real answer: it means the comfortable start has gone and what
+ * is left will be denser than that.
+ */
+function latestStart(minutes, deadline, studyDays) {
+  const need = Math.max(1, Math.ceil(minutes / COMFORTABLE_DAILY));
+  let d = parseDay(deadline);
+  let counted = 0;
+  for (let i = 0; i < 500; i++) {
+    if (studyDays.includes(d.getDay())) counted += 1;
+    if (counted >= need) return d;
+    d = addDays(d, -1);
+  }
+  return d;
+}
+
+/** What slice of a course's grade one task belongs to, as a percentage. */
+function weightOf(course, task) {
+  const hit = (course?.grading?.categories || []).find((c) => c.match && inCategory(task, c.match));
+  return hit ? hit.weight : null;
+}
+
+/**
+ * The work that is genuinely large, across every course, ordered by when it has
+ * to be *started* rather than when it is due.
+ *
+ * Those two orderings disagree, and the disagreement is the whole point: a
+ * fifteen-hour paper due in six weeks needs starting before a two-hour one due
+ * next Tuesday. A weekly reading announces itself — it is on the page every
+ * day until it is done. The big things do the opposite: they sit silently at a
+ * date far enough away to ignore, and then arrive all at once. Three of them
+ * land in the same fortnight this term.
+ *
+ * Work that waits on somebody else's calendar counts as big however short it
+ * is, because the task is not the hard part — getting the date is.
+ */
+export function bigTasks(data, tasks, { from = startOfToday(), minMinutes = 120 } = {}) {
+  const s = settings();
+  const out = [];
+  for (const t of tasks) {
+    if (t.complete) continue;
+    const effort = t.raw?.effortMinutes ?? null;
+    const needsOthers = Boolean(t.raw?.dependsOnOthers);
+    if (!needsOthers && (effort == null || effort < minMinutes)) continue;
+
+    const course = data.courses.find((c) => c.id === t.courseId) || null;
+    const deadline = dueAt(t);
+    // Work whose date has gone is not the long game any more, whatever its
+    // size. It is late, and the home page already lists it where it can be
+    // ticked off. This is for what is still coming.
+    if (deadline && daysBetween(from, deadline) < 0) continue;
+    const remaining = t.remaining ?? t.minutes ?? effort ?? 0;
+    const startBy = deadline ? latestStart(remaining, deadline, s.studyDays) : null;
+
+    out.push({
+      task: t,
+      course,
+      weight: weightOf(course, t),
+      effort,
+      remaining,
+      done: effort ? Math.max(0, effort - remaining) : 0,
+      deadline,
+      daysLeft: deadline ? daysBetween(from, deadline) : null,
+      startBy,
+      // Past its comfortable start, so every day from here is denser than planned.
+      overdueStart: Boolean(startBy) && daysBetween(from, startBy) < 0,
+      needsOthers,
+      undated: !deadline
+    });
+  }
+  return out.sort((a, b) => {
+    // Work you have to arrange yourself has no date to sort by, but it is the
+    // easiest to let slide, so it sits at the end rather than dropping off.
+    if (a.undated !== b.undated) return a.undated ? 1 : -1;
+    const ax = a.startBy ? a.startBy.getTime() : Infinity;
+    const bx = b.startBy ? b.startBy.getTime() : Infinity;
+    return ax - bx || (b.remaining || 0) - (a.remaining || 0);
+  });
+}
+
 /* ---------- what the work is actually worth ---------- */
 
 /** Which tasks a grading category covers. Every field present has to match. */
