@@ -1310,6 +1310,96 @@ function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the long game ---------- */
+
+// Half an hour a day is about the pace a big piece of work is bearable at.
+// Start later than that and it stops being planned and becomes a weekend.
+const COMFORTABLE_DAILY = 30;
+
+/**
+ * The last day you could begin and still keep to half an hour a day.
+ *
+ * Counted in study days walked back from the deadline, so a week with only two
+ * reading days in it demands an earlier start than a week with six. A date in
+ * the past is a real answer: it means the comfortable start has gone and what
+ * is left will be denser than that.
+ */
+function latestStart(minutes, deadline, studyDays) {
+  const need = Math.max(1, Math.ceil(minutes / COMFORTABLE_DAILY));
+  let d = parseDay(deadline);
+  let counted = 0;
+  for (let i = 0; i < 500; i++) {
+    if (studyDays.includes(d.getDay())) counted += 1;
+    if (counted >= need) return d;
+    d = addDays(d, -1);
+  }
+  return d;
+}
+
+/** What slice of a course's grade one task belongs to, as a percentage. */
+function weightOf(course, task) {
+  const hit = (course?.grading?.categories || []).find((c) => c.match && inCategory(task, c.match));
+  return hit ? hit.weight : null;
+}
+
+/**
+ * The work that is genuinely large, across every course, ordered by when it has
+ * to be *started* rather than when it is due.
+ *
+ * Those two orderings disagree, and the disagreement is the whole point: a
+ * fifteen-hour paper due in six weeks needs starting before a two-hour one due
+ * next Tuesday. A weekly reading announces itself — it is on the page every
+ * day until it is done. The big things do the opposite: they sit silently at a
+ * date far enough away to ignore, and then arrive all at once. Three of them
+ * land in the same fortnight this term.
+ *
+ * Work that waits on somebody else's calendar counts as big however short it
+ * is, because the task is not the hard part — getting the date is.
+ */
+function bigTasks(data, tasks, { from = startOfToday(), minMinutes = 120 } = {}) {
+  const s = settings();
+  const out = [];
+  for (const t of tasks) {
+    if (t.complete) continue;
+    const effort = t.raw?.effortMinutes ?? null;
+    const needsOthers = Boolean(t.raw?.dependsOnOthers);
+    if (!needsOthers && (effort == null || effort < minMinutes)) continue;
+
+    const course = data.courses.find((c) => c.id === t.courseId) || null;
+    const deadline = dueAt(t);
+    // Work whose date has gone is not the long game any more, whatever its
+    // size. It is late, and the home page already lists it where it can be
+    // ticked off. This is for what is still coming.
+    if (deadline && daysBetween(from, deadline) < 0) continue;
+    const remaining = t.remaining ?? t.minutes ?? effort ?? 0;
+    const startBy = deadline ? latestStart(remaining, deadline, s.studyDays) : null;
+
+    out.push({
+      task: t,
+      course,
+      weight: weightOf(course, t),
+      effort,
+      remaining,
+      done: effort ? Math.max(0, effort - remaining) : 0,
+      deadline,
+      daysLeft: deadline ? daysBetween(from, deadline) : null,
+      startBy,
+      // Past its comfortable start, so every day from here is denser than planned.
+      overdueStart: Boolean(startBy) && daysBetween(from, startBy) < 0,
+      needsOthers,
+      undated: !deadline
+    });
+  }
+  return out.sort((a, b) => {
+    // Work you have to arrange yourself has no date to sort by, but it is the
+    // easiest to let slide, so it sits at the end rather than dropping off.
+    if (a.undated !== b.undated) return a.undated ? 1 : -1;
+    const ax = a.startBy ? a.startBy.getTime() : Infinity;
+    const bx = b.startBy ? b.startBy.getTime() : Infinity;
+    return ax - bx || (b.remaining || 0) - (a.remaining || 0);
+  });
+}
+
 /* ---------- what the work is actually worth ---------- */
 
 /** Which tasks a grading category covers. Every field present has to match. */
@@ -1730,7 +1820,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, letterFor, gradeReport, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, bigTasks, letterFor, gradeReport, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -2025,7 +2115,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v41 · 2026-10-26';
+const BUILD = 'v42 · 2026-10-26';
 
 let DATA = null;
 let TASKS = [];
@@ -3154,11 +3244,126 @@ function getAheadCard() {
     </section>`;
 }
 
+/**
+ * The big pieces, ordered by when they have to be started.
+ *
+ * Everything else in the app is organised by when work is due, which is the
+ * right order for a week's reading: it is on the page every day until it is
+ * done, so it cannot be forgotten. Large work behaves the other way round. It
+ * sits at a date far enough off to ignore, stays quiet while it is ignored, and
+ * then arrives — and this term three of them arrive in the same fortnight.
+ *
+ * So this is sorted by the last day you could comfortably begin, not by the
+ * deadline, and the two orders genuinely disagree.
+ */
+function longGameCard() {
+  const big = S.bigTasks(DATA, TASKS);
+  if (!big.length) return '';
+
+  // Work with a date gets a row each; it is the stuff that actually arrives on
+  // a day. Work you have to arrange yourself is grouped per course, because
+  // seven near-identical "meet your pastor" rows bury the one exam that is
+  // worth a fifth of a course — which is the opposite of what this is for.
+  const dated = big.filter((x) => !x.undated);
+  const toArrange = new Map();
+  for (const x of big.filter((y) => y.undated)) {
+    const key = x.course?.id || 'other';
+    const g = toArrange.get(key) || { course: x.course, items: [], minutes: 0 };
+    g.items.push(x);
+    g.minutes += x.remaining || 0;
+    toArrange.set(key, g);
+  }
+
+  const pressing = dated.filter((x) => x.overdueStart).length;
+  const id = 'long-game';
+  const shut = store.isCollapsed(id);
+
+  const row = (x) => {
+    const t = x.task;
+    const started = x.done > 0;
+    const pct = x.effort ? Math.min(100, Math.round((x.done / x.effort) * 100)) : 0;
+
+    const when = x.undated
+      ? 'No date yet — you arrange it'
+      : `due ${S.formatDate(x.deadline)}${x.daysLeft >= 0 ? ` · ${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'}` : ' · past'}`;
+
+    const start = x.undated
+      ? ''
+      : x.overdueStart
+        ? `<span class="lg-start warn">Should have started ${esc(S.formatDate(x.startBy))}</span>`
+        : `<span class="lg-start">Start by ${esc(S.formatDate(x.startBy))}</span>`;
+
+    return `
+      <li class="lg ${x.overdueStart && !started ? 'is-pressing' : ''}">
+        <div class="lg-head">
+          <span class="lg-title">${dot(x.course?.color)}${esc(t.title)}</span>
+          ${x.weight != null ? `<span class="lg-weight">${x.weight}% of ${esc(x.course?.short || '')}</span>` : ''}
+        </div>
+        <div class="lg-meta">
+          <span>${esc(x.effort ? S.formatMinutes(x.effort) : 'short, but not yours to schedule')}</span>
+          <span>${esc(when)}</span>
+        </div>
+        ${start ? `<div class="lg-meta">${start}</div>` : ''}
+        ${x.needsOthers
+          ? `<div class="lg-note">Waits on somebody else's calendar — the asking is the slow part, not the doing.</div>`
+          : ''}
+        ${x.effort ? progressBar(pct, { size: 'progress-sm' }) : ''}
+        <ul class="tasks lg-actions">${taskLine(t, { withTimer: true })}</ul>
+      </li>`;
+  };
+
+  return `
+    <details class="card fold long-game" ${shut ? '' : 'open'}>
+      <summary data-collapse="${esc(id)}">
+        <span class="fold-title">The long game</span>
+        <span class="card-when">
+          ${dated.length} dated${pressing ? ` · ${pressing} needs starting` : ''}${
+            toArrange.size ? ` · ${big.length - dated.length} to arrange` : ''
+          }
+        </span>
+      </summary>
+      <p class="note">
+        Ordered by the last day you could comfortably begin — half an hour a day on it — rather than
+        by when it is due. Those two orders disagree, which is the point: a fifteen-hour paper due in
+        six weeks wants starting before a two-hour one due on Tuesday.
+      </p>
+      <ul class="lg-list">${dated.map(row).join('')}</ul>
+      ${[...toArrange.values()]
+        .map(
+          (g) => `
+        <div class="lg-arrange">
+          <div class="lg-head">
+            <span class="lg-title">${dot(g.course?.color)}${esc(g.course?.name || 'To arrange')}</span>
+            <span class="lg-weight">${g.items.length} to arrange</span>
+          </div>
+          <p class="note">
+            None of this has a date until you set one, which makes it the easiest work in your term
+            to let slide to December — and most of it waits on somebody else's calendar, so the
+            asking has to happen weeks before the doing.
+            ${g.minutes ? `About ${esc(S.formatMinutes(g.minutes))} of your own time in it.` : ''}
+          </p>
+          <ul class="lg-arrange-list">
+            ${g.items
+              .map(
+                (x) => `<li>${esc(x.task.title)}${
+                  x.weight != null ? ` <small>${x.weight}%</small>` : ''
+                }${x.needsOthers ? ' <em>needs a date from someone</em>' : ''}</li>`
+              )
+              .join('')}
+          </ul>
+          <p class="note"><a href="#schedule">Set dates on the Schedule tab</a> and they join the plan.</p>
+        </div>`
+        )
+        .join('')}
+    </details>`;
+}
+
 function viewPlan() {
   const plans = currentPlans();
   const projects = activeProjects();
 
   return `
+    ${longGameCard()}
     ${getAheadCard()}
     ${plans
       .map(({ course, session, date, tasks, owed, alsoPlanned, plan, pace }) => {

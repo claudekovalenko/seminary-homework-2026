@@ -9,7 +9,8 @@
     "Each session may carry \"mode\": \"in-person\" | \"online\" | \"hybrid\" once the in-person/online schedule is known.",
     "material: names the physical thing a reading lives in, when that differs from \"source\" — so a book assigned four times is attached once. A chapter photocopied out of a collection is its own thing, not the collection: the three Christian Dogmatics chapters are by three different authors and arrive as three separate PDFs, so each carries its own material and its own attachment.",
     "suggest: a date the app offers for a meeting you arrange yourself — inside the window the syllabus gives, one tap to accept, and overridden the moment you pick your own.",
-    "grading: per-course weights read off the syllabi. basis 'completion' means the syllabus gives credit for doing the work, so ticks drive the figure; 'performance' means only a real mark counts and the app will not guess one. watch: the things in a syllabus that cost people marks."
+    "grading: per-course weights read off the syllabi. basis 'completion' means the syllabus gives credit for doing the work, so ticks drive the figure; 'performance' means only a real mark counts and the app will not guess one. watch: the things in a syllabus that cost people marks.",
+    "effortMinutes on an exam is revision time, so the planner paces it instead of letting 20% of a grade arrive as a checkbox on the day. dependsOnOthers marks work that waits on somebody else's calendar and so cannot be started in its due week."
   ],
   "courses": [
     {
@@ -803,7 +804,8 @@
               "type": "project",
               "note": "At least two sit-downs with your pastor across the semester on Christology, pneumatology, soteriology or eschatology. Cannot be done in one go at the end.",
               "effortMinutes": 300,
-              "startPlanning": "2026-10-27"
+              "startPlanning": "2026-10-27",
+              "dependsOnOthers": true
             }
           ]
         }
@@ -1370,7 +1372,10 @@
             {
               "title": "Final Exam",
               "type": "exam",
-              "atClass": true
+              "atClass": true,
+              "effortMinutes": 600,
+              "startPlanning": "2026-11-03",
+              "note": "Cumulative over the whole course: vocabulary, translation, parsing and classification. Revision is paced from Nov 3 rather than appearing on the day."
             }
           ]
         }
@@ -1532,7 +1537,8 @@
             {
               "title": "Meet to discuss (bring notes: insights, questions, how to apply it)",
               "type": "discussion",
-              "atClass": true
+              "atClass": true,
+              "dependsOnOthers": true
             }
           ]
         },
@@ -1556,7 +1562,8 @@
             {
               "title": "Meet to discuss (bring notes: insights, questions, how to apply it)",
               "type": "discussion",
-              "atClass": true
+              "atClass": true,
+              "dependsOnOthers": true
             }
           ]
         },
@@ -1581,7 +1588,8 @@
             {
               "title": "Meet to discuss (bring notes: insights, questions, how to apply it)",
               "type": "discussion",
-              "atClass": true
+              "atClass": true,
+              "dependsOnOthers": true
             }
           ]
         },
@@ -1596,7 +1604,8 @@
             {
               "title": "Preach to or on behalf of your church",
               "type": "ministry",
-              "note": "Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative."
+              "note": "Ask your pastors for the right venue. If you cannot secure one, contact the professor for an alternative.",
+              "dependsOnOthers": true
             },
             {
               "title": "Reflection paper on preaching (~500 words)",
@@ -1616,7 +1625,8 @@
           "assignments": [
             {
               "title": "Meet your pastor (1 of 3)",
-              "type": "meeting"
+              "type": "meeting",
+              "dependsOnOthers": true
             }
           ]
         },
@@ -1630,7 +1640,8 @@
           "assignments": [
             {
               "title": "Meet your pastor (2 of 3)",
-              "type": "meeting"
+              "type": "meeting",
+              "dependsOnOthers": true
             }
           ]
         },
@@ -1645,7 +1656,8 @@
             {
               "title": "Meet your pastor (3 of 3)",
               "type": "meeting",
-              "note": "Drop the professor a note once all three are done."
+              "note": "Drop the professor a note once all three are done.",
+              "dependsOnOthers": true
             }
           ]
         },
