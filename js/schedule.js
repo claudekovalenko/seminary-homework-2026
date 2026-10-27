@@ -803,6 +803,58 @@ export function gradeReport(course, tasks, { scores = {}, effort = {}, target = 
   };
 }
 
+/* ---------- the cheap points ---------- */
+
+/**
+ * Work that is graded on being *done* rather than on being good, still
+ * outstanding, with what each piece is actually worth.
+ *
+ * This is the other half of the long game. Large work is dangerous because it
+ * is quiet; this work is dangerous because it is small. A single week's reading
+ * looks like an evening you can afford to skip, and it is — the cost only shows
+ * up as a category quietly bleeding points all term. Naming the number on each
+ * one puts the choice where it belongs: this reading is worth 1.2 points of
+ * your final grade, and no part of that depends on how well you do it.
+ *
+ * A category's weight is split evenly across its items, which is how a syllabus
+ * that says "credit for completing the assigned reading" actually behaves.
+ */
+export function quickWins(data, tasks, { from = startOfToday(), withinDays = 14 } = {}) {
+  const out = [];
+  for (const course of data.courses) {
+    const cats = (course.grading?.categories || []).filter((c) => c.basis === 'completion' && c.match);
+    if (!cats.length) continue;
+    const mine = tasks.filter((t) => t.courseId === course.id);
+    for (const cat of cats) {
+      const items = mine.filter((t) => inCategory(t, cat.match));
+      if (!items.length) continue;
+      const perItem = cat.weight / items.length;
+      for (const t of items) {
+        if (t.complete) continue;
+        const deadline = dueAt(t);
+        // Undated work cannot be "this fortnight's"; it is in the long game's
+        // list of things to arrange instead.
+        if (!deadline) continue;
+        const days = daysBetween(from, deadline);
+        if (days < 0 || days > withinDays) continue;
+        const minutes = t.remaining ?? t.minutes ?? 0;
+        out.push({
+          task: t,
+          course,
+          category: cat,
+          points: perItem,
+          minutes,
+          days,
+          deadline,
+          perHour: minutes > 0 ? perItem / (minutes / 60) : null
+        });
+      }
+    }
+  }
+  // Best value first — the whole point is which of these to do tonight.
+  return out.sort((a, b) => (b.perHour ?? -1) - (a.perHour ?? -1) || a.days - b.days);
+}
+
 /* ---------- the daily rhythm ---------- */
 
 /**

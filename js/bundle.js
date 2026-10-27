@@ -1507,6 +1507,58 @@ function gradeReport(course, tasks, { scores = {}, effort = {}, target = 60, sca
   };
 }
 
+/* ---------- the cheap points ---------- */
+
+/**
+ * Work that is graded on being *done* rather than on being good, still
+ * outstanding, with what each piece is actually worth.
+ *
+ * This is the other half of the long game. Large work is dangerous because it
+ * is quiet; this work is dangerous because it is small. A single week's reading
+ * looks like an evening you can afford to skip, and it is — the cost only shows
+ * up as a category quietly bleeding points all term. Naming the number on each
+ * one puts the choice where it belongs: this reading is worth 1.2 points of
+ * your final grade, and no part of that depends on how well you do it.
+ *
+ * A category's weight is split evenly across its items, which is how a syllabus
+ * that says "credit for completing the assigned reading" actually behaves.
+ */
+function quickWins(data, tasks, { from = startOfToday(), withinDays = 14 } = {}) {
+  const out = [];
+  for (const course of data.courses) {
+    const cats = (course.grading?.categories || []).filter((c) => c.basis === 'completion' && c.match);
+    if (!cats.length) continue;
+    const mine = tasks.filter((t) => t.courseId === course.id);
+    for (const cat of cats) {
+      const items = mine.filter((t) => inCategory(t, cat.match));
+      if (!items.length) continue;
+      const perItem = cat.weight / items.length;
+      for (const t of items) {
+        if (t.complete) continue;
+        const deadline = dueAt(t);
+        // Undated work cannot be "this fortnight's"; it is in the long game's
+        // list of things to arrange instead.
+        if (!deadline) continue;
+        const days = daysBetween(from, deadline);
+        if (days < 0 || days > withinDays) continue;
+        const minutes = t.remaining ?? t.minutes ?? 0;
+        out.push({
+          task: t,
+          course,
+          category: cat,
+          points: perItem,
+          minutes,
+          days,
+          deadline,
+          perHour: minutes > 0 ? perItem / (minutes / 60) : null
+        });
+      }
+    }
+  }
+  // Best value first — the whole point is which of these to do tonight.
+  return out.sort((a, b) => (b.perHour ?? -1) - (a.perHour ?? -1) || a.days - b.days);
+}
+
 /* ---------- the daily rhythm ---------- */
 
 /**
@@ -1820,7 +1872,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, bigTasks, letterFor, gradeReport, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, bigTasks, letterFor, gradeReport, quickWins, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -2115,7 +2167,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v42 · 2026-10-26';
+const BUILD = 'v43 · 2026-10-27';
 
 let DATA = null;
 let TASKS = [];
@@ -3358,11 +3410,75 @@ function longGameCard() {
     </details>`;
 }
 
+/**
+ * The cheap points, best value first.
+ *
+ * The counterpart to the long game. That card is about work that is dangerous
+ * because it is quiet; this is about work that is dangerous because it is
+ * small. One week's reading reads like an evening you can afford to skip, and
+ * on its own it is — the cost only ever shows up as a category bleeding points
+ * all term. So each line carries the number: this is worth 1.2 points of your
+ * final grade, and none of that depends on how well you do it.
+ */
+function quickWinsCard() {
+  const wins = S.quickWins(DATA, TASKS);
+  if (!wins.length) return '';
+
+  const points = wins.reduce((n, w) => n + w.points, 0);
+  const minutes = wins.reduce((n, w) => n + w.minutes, 0);
+  const id = 'quick-wins';
+  const shut = store.isCollapsed(id);
+  const shown = wins.slice(0, 10);
+
+  return `
+    <details class="card fold quick-wins" ${shut ? '' : 'open'}>
+      <summary data-collapse="${esc(id)}">
+        <span class="fold-title">Points for turning up</span>
+        <span class="card-when">${esc(fmtPts(points))} pts · ${esc(S.formatMinutes(minutes))}</span>
+      </summary>
+      <p class="note">
+        Graded on being done, not on being good — reading before class, the weekly comment, the
+        diagram uploaded on time. <strong>${esc(fmtPts(points))} points</strong> are sitting in the
+        next fortnight, spread across your courses' grades, and none of them ask you to be clever.
+        Best value first.
+      </p>
+      <ul class="qw-list">
+        ${shown
+          .map(
+            (w) => `
+          <li class="qw">
+            <div class="qw-head">
+              <span class="qw-title">${dot(w.course.color)}${esc(w.task.title)}</span>
+              <span class="qw-rate">${w.perHour != null ? `${esc(fmtPts(w.perHour))} pts/hr` : ''}</span>
+            </div>
+            <div class="qw-meta">
+              <span><strong>${esc(fmtPts(w.points))} pts</strong> · ${esc(w.category.title)}</span>
+              <span>${esc(S.formatMinutes(w.minutes))}</span>
+              <span>${w.days === 0 ? 'due today' : w.days === 1 ? 'due tomorrow' : `in ${w.days} days`}</span>
+            </div>
+            <ul class="tasks qw-actions">${taskLine(w.task, { withTimer: true })}</ul>
+          </li>`
+          )
+          .join('')}
+      </ul>
+      ${wins.length > shown.length
+        ? `<p class="note muted">${wins.length - shown.length} more in the next fortnight, further down the list.</p>`
+        : ''}
+    </details>`;
+}
+
+/** One decimal, and no trailing ".0" to read past. */
+function fmtPts(n) {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
 function viewPlan() {
   const plans = currentPlans();
   const projects = activeProjects();
 
   return `
+    ${quickWinsCard()}
     ${longGameCard()}
     ${getAheadCard()}
     ${plans
@@ -3524,6 +3640,102 @@ function laterClassesCard() {
     </section>`;
 }
 
+/**
+ * Every course's breakdown on one page: where each stands, what it still needs,
+ * and which of its categories is the cheapest thing left to do.
+ *
+ * The per-course pages answer "how is this class going". This answers the
+ * question you actually ask on a Sunday evening, which is "across all of it,
+ * where is my time worth most" — and that one cannot be answered a course at a
+ * time.
+ */
+function gradeSummaryCard(graded) {
+  if (!graded.length) return '';
+  const target = store.settings().gradeTarget ?? 60;
+  const scale = DATA.gradeScale || [];
+
+  const reports = graded
+    .map((course) =>
+      S.gradeReport(course, TASKS, {
+        scores: store.grades(),
+        effort: store.gradeEffort(),
+        target,
+        scale
+      })
+    )
+    .filter(Boolean);
+  if (!reports.length) return '';
+
+  const hours = reports.reduce((n, r) => n + r.minutesLeft, 0);
+  // Hours add up across courses; percentage points do not — 40 points of
+  // Theology and 20 of Greek are not the same currency, and a total of them
+  // would be a number with no meaning. Each course states its own below.
+  const cheapest = reports
+    .map((r) => ({
+      course: r.course,
+      pts: r.categories.filter((c) => c.basis === 'completion').reduce((m, c) => m + c.atStake, 0)
+    }))
+    .sort((a, b) => b.pts - a.pts)[0];
+
+  return `
+    <section class="card">
+      <h2>Where you stand</h2>
+      <p class="note">
+        ${esc(S.formatMinutes(hours))} of work left across ${reports.length} courses.
+        ${cheapest
+          ? `The softest target is <strong>${esc(cheapest.course.short || cheapest.course.name)}</strong>,
+             where <strong>${esc(fmtPts(cheapest.pts))} of its 100 points</strong> are still handed out for
+             completing work rather than for doing it well.`
+          : ''}
+        Tap a course for its full breakdown and the things in its syllabus that cost people marks.
+      </p>
+      <ul class="gs-list">
+        ${reports
+          .map((r) => {
+            // Only completion work counts as a cheap point. Sorting all the
+            // categories by rate offered an exam already sat and a presentation
+            // that cannot be given early — technically good value per hour,
+            // useless as "what should I do tonight".
+            const best = r.categories
+              .filter((c) => c.basis === 'completion' && c.perHour != null)
+              .sort((a, b) => b.perHour - a.perHour)[0];
+            const verdict = r.secured
+              ? `clear of ${r.target} already`
+              : r.lost
+                ? `${r.target} out of reach — ceiling ${fmtPts(r.max)}`
+                : `needs ${Math.ceil(r.needed)}% of what is left`;
+            return `
+          <li class="gs">
+            <a class="gs-link" href="#course:${esc(r.course.id)}">
+              <div class="gs-head">
+                <span class="gs-title">${dot(r.course.color)}${esc(r.course.short || r.course.name)}</span>
+                <span class="gs-bank">${esc(fmtPts(r.earned))}<small> / ${esc(fmtPts(r.max))}</small></span>
+              </div>
+              <div class="cat-bar" aria-hidden="true">
+                <div class="cat-banked" style="width:${(r.earned / 100) * 100}%"></div>
+                <div class="cat-stake" style="width:${(r.atStake / 100) * 100}%"></div>
+                <div class="cat-lost" style="width:${(Math.max(0, 100 - r.earned - r.atStake) / 100) * 100}%"></div>
+              </div>
+              <div class="gs-meta">
+                <span class="${r.lost ? 'warn-text' : ''}">${esc(verdict)}</span>
+                <span>${esc(S.formatMinutes(r.minutesLeft))} left</span>
+              </div>
+              <div class="gs-best">
+                ${esc(fmtPts(r.categories.filter((c) => c.basis === 'completion').reduce((m, c) => m + c.atStake, 0)))}
+                pts still going spare for completing work${
+                  best && best.perHour != null
+                    ? ` · cheapest is <strong>${esc(best.title)}</strong> at ${esc(fmtPts(best.perHour))} pts/hr`
+                    : ''
+                }
+              </div>
+            </a>
+          </li>`;
+          })
+          .join('')}
+      </ul>
+    </section>`;
+}
+
 function viewSchedule() {
   const today = S.startOfToday();
   const rows = [];
@@ -3539,23 +3751,7 @@ function viewSchedule() {
   const graded = DATA.courses.filter((c) => c.grading);
 
   return `
-    ${graded.length
-      ? `<section class="card">
-          <h2>Your classes</h2>
-          <p class="note">What each one is worth, where its cheap points are, and the things in its
-            syllabus that cost people marks.</p>
-          <div class="course-links">
-            ${graded
-              .map(
-                (c) => `<a class="course-link" href="#course:${esc(c.id)}">
-                          ${dot(c.color)}<span>${esc(c.short || c.name)}</span>
-                          <small>${esc(c.code || '')}</small>
-                        </a>`
-              )
-              .join('')}
-          </div>
-        </section>`
-      : ''}
+    ${gradeSummaryCard(graded)}
     <section class="card">
       <h2>${esc(DATA.term)} — full schedule</h2>
       <div class="schedule">
