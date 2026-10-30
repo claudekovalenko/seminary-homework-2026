@@ -203,15 +203,30 @@ ok('a barely tilted page is left alone too', estimateSkew(ruled(900, 1200, 0.6),
   const DATA = JSON.parse(readFileSync(resolve(ROOT, 'data/courses.json'), 'utf8'));
   const TASKS = S.buildTasks(DATA);
 
-  const duby = TASKS.find((t) => String(t.title).includes('Duby'));
-  ok('the syllabus reading is in the data at all', Boolean(duby), 'Duby, Jesus and the God of Classical Theism');
-  check('and it is the one the syllabus sets', [duby.detail, duby.due], ['22–32', '2026-08-25']);
+  // The book is set twice, by two different courses, out of the same volume.
+  // One attachment serves both, so they must share a material and differ in
+  // nothing but the pages.
+  const dubys = TASKS.filter((t) => String(t.title).includes('Duby'));
+  check(
+    'both Duby readings are in the data',
+    dubys.map((t) => [t.courseId, t.due, t.detail]),
+    [
+      ['theo1', '2026-08-25', '22–32'],
+      ['theo2', '2026-10-27', '141–153']
+    ]
+  );
+  check(
+    'and they share one material, so the PDF is attached once',
+    [...new Set(dubys.map((t) => t.material))],
+    ['Duby, Jesus and the God of Classical Theism']
+  );
+  const duby = dubys[0];
 
   // The state of things the request came out of: its class has met, so with the
   // backlog set aside it is nowhere near the plan.
   const past = new Date('2026-10-30T12:00:00');
   const late = S.overdue(TASKS.filter((t) => t.unit !== 'project'), { from: past });
-  ok('it counts as backlog in late October', late.some((t) => t.key === duby.key), `${late.length} items are`);
+  ok('both count as backlog in late October', dubys.every((t) => late.some((l) => l.key === t.key)), `${late.length} items are`);
 
   // Picking one item up must not pick up the rest.
   store.setTakenUp(duby.key, true);

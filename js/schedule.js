@@ -606,6 +606,255 @@ export function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the long game ---------- */
+
+// Half an hour a day is about the pace a big piece of work is bearable at.
+// Start later than that and it stops being planned and becomes a weekend.
+const COMFORTABLE_DAILY = 30;
+
+/**
+ * The last day you could begin and still keep to half an hour a day.
+ *
+ * Counted in study days walked back from the deadline, so a week with only two
+ * reading days in it demands an earlier start than a week with six. A date in
+ * the past is a real answer: it means the comfortable start has gone and what
+ * is left will be denser than that.
+ */
+function latestStart(minutes, deadline, studyDays) {
+  const need = Math.max(1, Math.ceil(minutes / COMFORTABLE_DAILY));
+  let d = parseDay(deadline);
+  let counted = 0;
+  for (let i = 0; i < 500; i++) {
+    if (studyDays.includes(d.getDay())) counted += 1;
+    if (counted >= need) return d;
+    d = addDays(d, -1);
+  }
+  return d;
+}
+
+/** What slice of a course's grade one task belongs to, as a percentage. */
+function weightOf(course, task) {
+  const hit = (course?.grading?.categories || []).find((c) => c.match && inCategory(task, c.match));
+  return hit ? hit.weight : null;
+}
+
+/**
+ * The work that is genuinely large, across every course, ordered by when it has
+ * to be *started* rather than when it is due.
+ *
+ * Those two orderings disagree, and the disagreement is the whole point: a
+ * fifteen-hour paper due in six weeks needs starting before a two-hour one due
+ * next Tuesday. A weekly reading announces itself — it is on the page every
+ * day until it is done. The big things do the opposite: they sit silently at a
+ * date far enough away to ignore, and then arrive all at once. Three of them
+ * land in the same fortnight this term.
+ *
+ * Work that waits on somebody else's calendar counts as big however short it
+ * is, because the task is not the hard part — getting the date is.
+ */
+export function bigTasks(data, tasks, { from = startOfToday(), minMinutes = 120 } = {}) {
+  const s = settings();
+  const out = [];
+  for (const t of tasks) {
+    if (t.complete) continue;
+    const effort = t.raw?.effortMinutes ?? null;
+    const needsOthers = Boolean(t.raw?.dependsOnOthers);
+    if (!needsOthers && (effort == null || effort < minMinutes)) continue;
+
+    const course = data.courses.find((c) => c.id === t.courseId) || null;
+    const deadline = dueAt(t);
+    // Work whose date has gone is not the long game any more, whatever its
+    // size. It is late, and the home page already lists it where it can be
+    // ticked off. This is for what is still coming.
+    if (deadline && daysBetween(from, deadline) < 0) continue;
+    const remaining = t.remaining ?? t.minutes ?? effort ?? 0;
+    const startBy = deadline ? latestStart(remaining, deadline, s.studyDays) : null;
+
+    out.push({
+      task: t,
+      course,
+      weight: weightOf(course, t),
+      effort,
+      remaining,
+      done: effort ? Math.max(0, effort - remaining) : 0,
+      deadline,
+      daysLeft: deadline ? daysBetween(from, deadline) : null,
+      startBy,
+      // Past its comfortable start, so every day from here is denser than planned.
+      overdueStart: Boolean(startBy) && daysBetween(from, startBy) < 0,
+      needsOthers,
+      undated: !deadline
+    });
+  }
+  return out.sort((a, b) => {
+    // Work you have to arrange yourself has no date to sort by, but it is the
+    // easiest to let slide, so it sits at the end rather than dropping off.
+    if (a.undated !== b.undated) return a.undated ? 1 : -1;
+    const ax = a.startBy ? a.startBy.getTime() : Infinity;
+    const bx = b.startBy ? b.startBy.getTime() : Infinity;
+    return ax - bx || (b.remaining || 0) - (a.remaining || 0);
+  });
+}
+
+/* ---------- what the work is actually worth ---------- */
+
+/** Which tasks a grading category covers. Every field present has to match. */
+function inCategory(task, m) {
+  if (!m) return false;
+  if (m.kind && !m.kind.includes(task.kind)) return false;
+  if (m.type && !m.type.includes(task.type)) return false;
+  if (m.unit && !m.unit.includes(task.unit)) return false;
+  if (m.sessionIds && !m.sessionIds.includes(task.sessionId)) return false;
+  if (m.titleIncludes && !String(task.title || '').includes(m.titleIncludes)) return false;
+  return true;
+}
+
+/** Where a percentage lands on the syllabus's letter scale. */
+export function letterFor(pct, scale) {
+  if (!scale?.length || !Number.isFinite(pct)) return null;
+  return (scale.find((row) => pct >= row.min) || scale[scale.length - 1]).grade;
+}
+
+/**
+ * One course's grade, broken down by category.
+ *
+ * Two kinds of category, and the difference matters more than anything else
+ * here. Where the syllabus gives credit for *doing* the work — reading before
+ * class, uploading the diagram, spending the hour — ticking it off is the
+ * grade, so the ticks already being made drive the figure. Where work is marked
+ * on how good it is, no amount of ticking says anything, so it reads "not
+ * marked" rather than inventing a number that would feel safer than it is.
+ *
+ * A mark you were actually given always wins, and settles that category.
+ */
+export function gradeReport(course, tasks, { scores = {}, effort = {}, target = 60, scale = [] } = {}) {
+  const grading = course.grading;
+  if (!grading) return null;
+  const mine = tasks.filter((t) => t.courseId === course.id);
+
+  const categories = grading.categories.map((cat) => {
+    const items = cat.match ? mine.filter((t) => inCategory(t, cat.match)) : [];
+    const done = items.filter((t) => t.complete).length;
+    const left = items.length - done;
+
+    // What is left to do, in minutes. Revision for a quiz or an exam costs time
+    // the planner never counts, so the syllabus data carries a per-sitting
+    // estimate; your own correction beats both.
+    const override = effort[`${course.id}|${cat.id}`];
+    const perItem = (t) => (cat.minutesPerItem != null ? cat.minutesPerItem : t.remaining ?? t.minutes ?? 0);
+    const minutesLeft =
+      override != null ? override : items.filter((t) => !t.complete).reduce((n, t) => n + perItem(t), 0);
+
+    const marked = scores[`${course.id}|${cat.id}`];
+    const hasMark = Number.isFinite(marked);
+    const byTicks = cat.basis === 'completion' && items.length > 0;
+
+    let earned, atStake;
+    if (hasMark) {
+      earned = (cat.weight * marked) / 100;
+      atStake = 0;
+    } else if (byTicks) {
+      earned = (cat.weight * done) / items.length;
+      atStake = (cat.weight * left) / items.length;
+    } else {
+      earned = 0;
+      atStake = cat.weight;
+    }
+
+    return {
+      ...cat,
+      items: items.length,
+      done,
+      left,
+      minutesLeft,
+      marked: hasMark ? marked : null,
+      source: hasMark ? 'marked' : byTicks ? 'ticks' : 'unknown',
+      earned,
+      atStake,
+      // The number to sort a week by: how much of the final grade one hour of
+      // this is still worth. Nothing to do, or no idea how long, is not a
+      // bargain — it is incomparable, so it sorts out rather than to the top.
+      perHour: atStake > 0 && minutesLeft > 0 ? atStake / (minutesLeft / 60) : null
+    };
+  });
+
+  const weightTotal = categories.reduce((n, c) => n + c.weight, 0);
+  const earned = categories.reduce((n, c) => n + c.earned, 0);
+  const atStake = categories.reduce((n, c) => n + c.atStake, 0);
+  const minutesLeft = categories.reduce((n, c) => n + c.minutesLeft, 0);
+  const needed = atStake > 0 ? ((target - earned) / atStake) * 100 : null;
+
+  return {
+    course,
+    categories,
+    weightTotal,
+    weightsOff: Math.abs(weightTotal - 100) > 0.5,
+    source: grading.source || null,
+    watch: grading.watch || [],
+    earned,
+    atStake,
+    minutesLeft,
+    max: earned + atStake,
+    target,
+    needed,
+    secured: needed !== null && needed <= 0,
+    lost: needed !== null && needed > 100,
+    letter: letterFor(earned + atStake, scale)
+  };
+}
+
+/* ---------- the cheap points ---------- */
+
+/**
+ * Work that is graded on being *done* rather than on being good, still
+ * outstanding, with what each piece is actually worth.
+ *
+ * This is the other half of the long game. Large work is dangerous because it
+ * is quiet; this work is dangerous because it is small. A single week's reading
+ * looks like an evening you can afford to skip, and it is — the cost only shows
+ * up as a category quietly bleeding points all term. Naming the number on each
+ * one puts the choice where it belongs: this reading is worth 1.2 points of
+ * your final grade, and no part of that depends on how well you do it.
+ *
+ * A category's weight is split evenly across its items, which is how a syllabus
+ * that says "credit for completing the assigned reading" actually behaves.
+ */
+export function quickWins(data, tasks, { from = startOfToday(), withinDays = 14 } = {}) {
+  const out = [];
+  for (const course of data.courses) {
+    const cats = (course.grading?.categories || []).filter((c) => c.basis === 'completion' && c.match);
+    if (!cats.length) continue;
+    const mine = tasks.filter((t) => t.courseId === course.id);
+    for (const cat of cats) {
+      const items = mine.filter((t) => inCategory(t, cat.match));
+      if (!items.length) continue;
+      const perItem = cat.weight / items.length;
+      for (const t of items) {
+        if (t.complete) continue;
+        const deadline = dueAt(t);
+        // Undated work cannot be "this fortnight's"; it is in the long game's
+        // list of things to arrange instead.
+        if (!deadline) continue;
+        const days = daysBetween(from, deadline);
+        if (days < 0 || days > withinDays) continue;
+        const minutes = t.remaining ?? t.minutes ?? 0;
+        out.push({
+          task: t,
+          course,
+          category: cat,
+          points: perItem,
+          minutes,
+          days,
+          deadline,
+          perHour: minutes > 0 ? perItem / (minutes / 60) : null
+        });
+      }
+    }
+  }
+  // Best value first — the whole point is which of these to do tonight.
+  return out.sort((a, b) => (b.perHour ?? -1) - (a.perHour ?? -1) || a.days - b.days);
+}
+
 /* ---------- the daily rhythm ---------- */
 
 /**

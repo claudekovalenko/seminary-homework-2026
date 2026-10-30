@@ -91,6 +91,13 @@ const DEFAULT_SETTINGS = {
   rhythm: structuredClone(DEFAULT_RHYTHM),
   // How far ahead the app warns you about a deadline.
   leadDays: 7,
+  // The grade you are actually trying to clear. 60 is the bottom of a D- in all
+  // the syllabi; a programme that wants a C for the course to count wants 70.
+  gradeTarget: 60,
+  // How many classes beyond the next one to fold into the paced plan. 0 plans
+  // the next class only, which is what the app has always done. 1 means being a
+  // week ahead is the plan rather than a good evening's luck.
+  aheadClasses: 0,
   // Effort model, used to turn mixed units into a daily time target.
   minsPerPage: 3,
   minsPerGreekVerse: 5,
@@ -153,6 +160,8 @@ const EMPTY = {
   // place to ask how long a reading has taken in total: by December the
   // September sittings would have quietly fallen off the end of the answer.
   totals: {},
+  grades: {}, // "courseId|categoryId" -> the percentage you were actually given
+  gradeEffort: {}, // "courseId|categoryId" -> minutes you reckon the rest will take
   rhythmLog: {}, // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
   // itemKey -> true, for work from a class already past that you have decided
   // to do anyway. Setting the backlog aside is right in general and wrong for
@@ -206,6 +215,8 @@ function read() {
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
       totals: parsed.totals || totalsFrom(parsed.timeLog),
       rhythmLog: parsed.rhythmLog || {},
+      grades: parsed.grades || {},
+      gradeEffort: parsed.gradeEffort || {},
       takenUp: parsed.takenUp || {}
     };
   } catch {
@@ -519,6 +530,28 @@ function logTime(key, courseId, minutes) {
 
 const timeLog = () => state.timeLog;
 
+/* ---------- marks, and what the rest of a course will cost ---------- */
+
+const gradeKey = (courseId, categoryId) => `${courseId}|${categoryId}`;
+const grades = () => state.grades;
+const gradeEffort = () => state.gradeEffort;
+
+/** A mark you were actually given, as a percentage. Null clears it. */
+function setGrade(courseId, categoryId, percent) {
+  const key = gradeKey(courseId, categoryId);
+  if (percent === null || percent === undefined || Number.isNaN(percent)) delete state.grades[key];
+  else state.grades[key] = Math.max(0, Math.min(100, percent));
+  persist();
+}
+
+/** Your own estimate of what is left in a category, replacing the syllabus's. */
+function setGradeEffort(courseId, categoryId, minutes) {
+  const key = gradeKey(courseId, categoryId);
+  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) delete state.gradeEffort[key];
+  else state.gradeEffort[key] = Math.max(0, Math.round(minutes));
+  persist();
+}
+
 /** Everything ever spent on one item, sittings and hand-corrections alike. */
 const totalOn = (key) => state.totals[key] || 0;
 
@@ -678,6 +711,8 @@ function importData(json) {
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
     totals: parsed.totals || totalsFrom(parsed.timeLog),
     rhythmLog: parsed.rhythmLog || {},
+    grades: parsed.grades || {},
+    gradeEffort: parsed.gradeEffort || {},
     takenUp: parsed.takenUp || {}
   };
   persist();
@@ -696,7 +731,7 @@ function resetAll() {
   state = structuredClone(EMPTY);
   persist();
 }
-return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, highlightsFor, highlightKey, addHighlight, unhighlight, isHighlighted, removeHighlight, removalsFor, removalKey, addRemoval, restoreRemoval, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, totalOn, totals, setTotal, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, isTakenUp, takenUpAll, setTakenUp, toggleTakenUp, clearTakenUp, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
+return { DEFAULT_RHYTHM, DEFAULT_BURST, SLOT_LABELS, SLOT_ORDER, DEFAULT_SETTINGS, subscribe, settings, updateSettings, isCollapsed, setCollapsed, isDone, setDone, toggleDone, progressFor, setProgress, libraryEntry, libraryAll, setLibraryEntry, removeLibraryEntry, readingPos, setReadingPos, flush, bookmarksFor, bookmarksAll, highlightsFor, highlightKey, addHighlight, unhighlight, isHighlighted, removeHighlight, removalsFor, removalKey, addRemoval, restoreRemoval, sessionDates, setSessionDate, readingAll, bookmarkKey, toggleBookmark, removeBookmark, forgetReading, overrideFor, setOverride, runningTimer, startTimer, stopTimer, cancelTimer, logTime, timeLog, gradeKey, grades, gradeEffort, setGrade, setGradeEffort, totalOn, totals, setTotal, rhythm, setRhythm, rhythmKey, isRhythmKey, rhythmDone, setRhythmDone, rhythmLog, toggleRhythmDone, isTakenUp, takenUpAll, setTakenUp, toggleTakenUp, clearTakenUp, logProblem, problems, clearProblems, hasFired, markFired, exportData, importData, resetProgress, resetAll };
 })();
 const __mod_schedule = (() => {
 const {settings, overrideFor, isDone, progressFor, sessionDates} = __mod_store;
@@ -1308,6 +1343,255 @@ function timeOn(log, key) {
   return (log || []).filter((e) => e.key === key).reduce((sum, e) => sum + e.minutes, 0);
 }
 
+/* ---------- the long game ---------- */
+
+// Half an hour a day is about the pace a big piece of work is bearable at.
+// Start later than that and it stops being planned and becomes a weekend.
+const COMFORTABLE_DAILY = 30;
+
+/**
+ * The last day you could begin and still keep to half an hour a day.
+ *
+ * Counted in study days walked back from the deadline, so a week with only two
+ * reading days in it demands an earlier start than a week with six. A date in
+ * the past is a real answer: it means the comfortable start has gone and what
+ * is left will be denser than that.
+ */
+function latestStart(minutes, deadline, studyDays) {
+  const need = Math.max(1, Math.ceil(minutes / COMFORTABLE_DAILY));
+  let d = parseDay(deadline);
+  let counted = 0;
+  for (let i = 0; i < 500; i++) {
+    if (studyDays.includes(d.getDay())) counted += 1;
+    if (counted >= need) return d;
+    d = addDays(d, -1);
+  }
+  return d;
+}
+
+/** What slice of a course's grade one task belongs to, as a percentage. */
+function weightOf(course, task) {
+  const hit = (course?.grading?.categories || []).find((c) => c.match && inCategory(task, c.match));
+  return hit ? hit.weight : null;
+}
+
+/**
+ * The work that is genuinely large, across every course, ordered by when it has
+ * to be *started* rather than when it is due.
+ *
+ * Those two orderings disagree, and the disagreement is the whole point: a
+ * fifteen-hour paper due in six weeks needs starting before a two-hour one due
+ * next Tuesday. A weekly reading announces itself — it is on the page every
+ * day until it is done. The big things do the opposite: they sit silently at a
+ * date far enough away to ignore, and then arrive all at once. Three of them
+ * land in the same fortnight this term.
+ *
+ * Work that waits on somebody else's calendar counts as big however short it
+ * is, because the task is not the hard part — getting the date is.
+ */
+function bigTasks(data, tasks, { from = startOfToday(), minMinutes = 120 } = {}) {
+  const s = settings();
+  const out = [];
+  for (const t of tasks) {
+    if (t.complete) continue;
+    const effort = t.raw?.effortMinutes ?? null;
+    const needsOthers = Boolean(t.raw?.dependsOnOthers);
+    if (!needsOthers && (effort == null || effort < minMinutes)) continue;
+
+    const course = data.courses.find((c) => c.id === t.courseId) || null;
+    const deadline = dueAt(t);
+    // Work whose date has gone is not the long game any more, whatever its
+    // size. It is late, and the home page already lists it where it can be
+    // ticked off. This is for what is still coming.
+    if (deadline && daysBetween(from, deadline) < 0) continue;
+    const remaining = t.remaining ?? t.minutes ?? effort ?? 0;
+    const startBy = deadline ? latestStart(remaining, deadline, s.studyDays) : null;
+
+    out.push({
+      task: t,
+      course,
+      weight: weightOf(course, t),
+      effort,
+      remaining,
+      done: effort ? Math.max(0, effort - remaining) : 0,
+      deadline,
+      daysLeft: deadline ? daysBetween(from, deadline) : null,
+      startBy,
+      // Past its comfortable start, so every day from here is denser than planned.
+      overdueStart: Boolean(startBy) && daysBetween(from, startBy) < 0,
+      needsOthers,
+      undated: !deadline
+    });
+  }
+  return out.sort((a, b) => {
+    // Work you have to arrange yourself has no date to sort by, but it is the
+    // easiest to let slide, so it sits at the end rather than dropping off.
+    if (a.undated !== b.undated) return a.undated ? 1 : -1;
+    const ax = a.startBy ? a.startBy.getTime() : Infinity;
+    const bx = b.startBy ? b.startBy.getTime() : Infinity;
+    return ax - bx || (b.remaining || 0) - (a.remaining || 0);
+  });
+}
+
+/* ---------- what the work is actually worth ---------- */
+
+/** Which tasks a grading category covers. Every field present has to match. */
+function inCategory(task, m) {
+  if (!m) return false;
+  if (m.kind && !m.kind.includes(task.kind)) return false;
+  if (m.type && !m.type.includes(task.type)) return false;
+  if (m.unit && !m.unit.includes(task.unit)) return false;
+  if (m.sessionIds && !m.sessionIds.includes(task.sessionId)) return false;
+  if (m.titleIncludes && !String(task.title || '').includes(m.titleIncludes)) return false;
+  return true;
+}
+
+/** Where a percentage lands on the syllabus's letter scale. */
+function letterFor(pct, scale) {
+  if (!scale?.length || !Number.isFinite(pct)) return null;
+  return (scale.find((row) => pct >= row.min) || scale[scale.length - 1]).grade;
+}
+
+/**
+ * One course's grade, broken down by category.
+ *
+ * Two kinds of category, and the difference matters more than anything else
+ * here. Where the syllabus gives credit for *doing* the work — reading before
+ * class, uploading the diagram, spending the hour — ticking it off is the
+ * grade, so the ticks already being made drive the figure. Where work is marked
+ * on how good it is, no amount of ticking says anything, so it reads "not
+ * marked" rather than inventing a number that would feel safer than it is.
+ *
+ * A mark you were actually given always wins, and settles that category.
+ */
+function gradeReport(course, tasks, { scores = {}, effort = {}, target = 60, scale = [] } = {}) {
+  const grading = course.grading;
+  if (!grading) return null;
+  const mine = tasks.filter((t) => t.courseId === course.id);
+
+  const categories = grading.categories.map((cat) => {
+    const items = cat.match ? mine.filter((t) => inCategory(t, cat.match)) : [];
+    const done = items.filter((t) => t.complete).length;
+    const left = items.length - done;
+
+    // What is left to do, in minutes. Revision for a quiz or an exam costs time
+    // the planner never counts, so the syllabus data carries a per-sitting
+    // estimate; your own correction beats both.
+    const override = effort[`${course.id}|${cat.id}`];
+    const perItem = (t) => (cat.minutesPerItem != null ? cat.minutesPerItem : t.remaining ?? t.minutes ?? 0);
+    const minutesLeft =
+      override != null ? override : items.filter((t) => !t.complete).reduce((n, t) => n + perItem(t), 0);
+
+    const marked = scores[`${course.id}|${cat.id}`];
+    const hasMark = Number.isFinite(marked);
+    const byTicks = cat.basis === 'completion' && items.length > 0;
+
+    let earned, atStake;
+    if (hasMark) {
+      earned = (cat.weight * marked) / 100;
+      atStake = 0;
+    } else if (byTicks) {
+      earned = (cat.weight * done) / items.length;
+      atStake = (cat.weight * left) / items.length;
+    } else {
+      earned = 0;
+      atStake = cat.weight;
+    }
+
+    return {
+      ...cat,
+      items: items.length,
+      done,
+      left,
+      minutesLeft,
+      marked: hasMark ? marked : null,
+      source: hasMark ? 'marked' : byTicks ? 'ticks' : 'unknown',
+      earned,
+      atStake,
+      // The number to sort a week by: how much of the final grade one hour of
+      // this is still worth. Nothing to do, or no idea how long, is not a
+      // bargain — it is incomparable, so it sorts out rather than to the top.
+      perHour: atStake > 0 && minutesLeft > 0 ? atStake / (minutesLeft / 60) : null
+    };
+  });
+
+  const weightTotal = categories.reduce((n, c) => n + c.weight, 0);
+  const earned = categories.reduce((n, c) => n + c.earned, 0);
+  const atStake = categories.reduce((n, c) => n + c.atStake, 0);
+  const minutesLeft = categories.reduce((n, c) => n + c.minutesLeft, 0);
+  const needed = atStake > 0 ? ((target - earned) / atStake) * 100 : null;
+
+  return {
+    course,
+    categories,
+    weightTotal,
+    weightsOff: Math.abs(weightTotal - 100) > 0.5,
+    source: grading.source || null,
+    watch: grading.watch || [],
+    earned,
+    atStake,
+    minutesLeft,
+    max: earned + atStake,
+    target,
+    needed,
+    secured: needed !== null && needed <= 0,
+    lost: needed !== null && needed > 100,
+    letter: letterFor(earned + atStake, scale)
+  };
+}
+
+/* ---------- the cheap points ---------- */
+
+/**
+ * Work that is graded on being *done* rather than on being good, still
+ * outstanding, with what each piece is actually worth.
+ *
+ * This is the other half of the long game. Large work is dangerous because it
+ * is quiet; this work is dangerous because it is small. A single week's reading
+ * looks like an evening you can afford to skip, and it is — the cost only shows
+ * up as a category quietly bleeding points all term. Naming the number on each
+ * one puts the choice where it belongs: this reading is worth 1.2 points of
+ * your final grade, and no part of that depends on how well you do it.
+ *
+ * A category's weight is split evenly across its items, which is how a syllabus
+ * that says "credit for completing the assigned reading" actually behaves.
+ */
+function quickWins(data, tasks, { from = startOfToday(), withinDays = 14 } = {}) {
+  const out = [];
+  for (const course of data.courses) {
+    const cats = (course.grading?.categories || []).filter((c) => c.basis === 'completion' && c.match);
+    if (!cats.length) continue;
+    const mine = tasks.filter((t) => t.courseId === course.id);
+    for (const cat of cats) {
+      const items = mine.filter((t) => inCategory(t, cat.match));
+      if (!items.length) continue;
+      const perItem = cat.weight / items.length;
+      for (const t of items) {
+        if (t.complete) continue;
+        const deadline = dueAt(t);
+        // Undated work cannot be "this fortnight's"; it is in the long game's
+        // list of things to arrange instead.
+        if (!deadline) continue;
+        const days = daysBetween(from, deadline);
+        if (days < 0 || days > withinDays) continue;
+        const minutes = t.remaining ?? t.minutes ?? 0;
+        out.push({
+          task: t,
+          course,
+          category: cat,
+          points: perItem,
+          minutes,
+          days,
+          deadline,
+          perHour: minutes > 0 ? perItem / (minutes / 60) : null
+        });
+      }
+    }
+  }
+  // Best value first — the whole point is which of these to do tonight.
+  return out.sort((a, b) => (b.perHour ?? -1) - (a.perHour ?? -1) || a.days - b.days);
+}
+
 /* ---------- the daily rhythm ---------- */
 
 /**
@@ -1621,7 +1905,7 @@ function deadlines(tasks, { from = startOfToday(), withinDays = 21, includeDone 
   }
   return [...groups.values()].sort((a, b) => a.date - b.date);
 }
-return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
+return { parseDate, toISO, startOfToday, addDays, daysBetween, withTime, formatDate, relativeDay, rangePages, mergeRanges, formatRanges, sliceRanges, pagesOf, minutesOf, amountLabel, isEstimated, formatMinutes, ASSUMED_CLASS_TIME, classTimeFor, classTimeIsAssumed, lastStudyDay, finishDay, targetDay, finishLineApplies, bibleUnits, spread, keyFor, sessionDate, projectPace, buildTasks, dueAt, upcomingSessions, nextSessionPerCourse, windowStartFor, pace, overdue, weekStart, weekOfWork, timeOn, bigTasks, letterFor, gradeReport, quickWins, rhythmProgress, nextBlockDay, planFor, itemPct, workload, deadlines };
 })();
 const __mod_notify = (() => {
 const {settings, hasFired, markFired, updateSettings} = __mod_store;
@@ -1916,7 +2200,7 @@ const {emphasisRuns, EM: EM_MARK, STRONG: STRONG_MARK} = __mod_text;
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v39 · 2026-10-30';
+const BUILD = 'v44 · 2026-10-30';
 
 let DATA = null;
 let TASKS = [];
@@ -1990,11 +2274,34 @@ function takenUpWork(from = new Date()) {
   return readings;
 }
 
+/**
+ * The classes being planned for, per course.
+ *
+ * Normally one: the next class, which is the only work with a deadline you can
+ * be behind on. Set "work ahead" and the class after it is pulled into the same
+ * plan against the *earlier* deadline — which is what being a week ahead
+ * actually means. It roughly doubles the daily number, and the app says so
+ * rather than hiding it.
+ */
+function plannedSessions() {
+  const ahead = store.settings().aheadClasses ?? 0;
+  const byCourse = new Map();
+  for (const u of S.upcomingSessions(DATA)) {
+    const list = byCourse.get(u.course.id) || [];
+    // A course whose meetings have no date yet cannot be got ahead of.
+    if (list.length <= (u.course.datesUnknown ? 0 : ahead)) list.push(u);
+    byCourse.set(u.course.id, list);
+  }
+  return [...byCourse.values()].sort((a, b) => a[0].date - b[0].date);
+}
+
 function currentPlans() {
   const late = carriedWork();
-  return S.nextSessionPerCourse(DATA).map(({ course, session, date }) => {
-    const slot = session.date || session.id;
-    const tasks = TASKS.filter((t) => t.courseId === course.id && t.sessionDate === slot);
+  return plannedSessions().map((group) => {
+    const { course, session, date } = group[0];
+    const slots = group.map((u) => u.session.date || u.session.id);
+    const tasks = TASKS.filter((t) => t.courseId === course.id && slots.includes(t.sessionDate));
+    const alsoPlanned = group.slice(1).map((u) => u.session);
     const owed = late.filter((t) => t.courseId === course.id);
     // Pass the deadline with its hour attached: an evening class leaves the
     // class day itself available to read in.
@@ -2006,6 +2313,7 @@ function currentPlans() {
       deadline,
       tasks,
       owed,
+      alsoPlanned,
       // What you owe from last week is planned first, ahead of this week's
       // reading — otherwise it sits at the back of the queue for ever.
       plan: S.planFor([...owed, ...tasks], deadline),
@@ -2877,8 +3185,14 @@ function catchUpCard(plans, projects) {
       }
       ${
         lateProjects.length
-          ? `<p class="note warn-note">Past its due date:
-               ${lateProjects.map((p) => esc(p.task.title)).join(', ')}.</p>`
+          ? `<p class="note warn-note">
+               Past its due date. Tick ${lateProjects.length === 1 ? 'it' : 'them'} off if
+               ${lateProjects.length === 1 ? 'it is' : 'they are'} handed in — this used to name them
+               and give you no way to say so.
+             </p>
+             <ul class="tasks">${lateProjects
+               .map((p) => taskLine(p.task, { showCourse: true, withTimer: true }))
+               .join('')}</ul>`
           : ''
       }
     </section>`;
@@ -3029,13 +3343,264 @@ function deadlineRow(g) {
     </div>`;
 }
 
+/**
+ * What working a week ahead would actually cost, and the switch to do it.
+ *
+ * The setting lived in Settings, which is not where the question occurs to you.
+ * It occurs to you here, looking at a week you have a grip on and wondering
+ * whether next week could be made easier. So the number is worked out — the
+ * hours the class after next would add — and the switch sits next to it.
+ */
+function getAheadCard() {
+  const on = (store.settings().aheadClasses ?? 0) >= 1;
+
+  // The classes that would be pulled in, which is the second upcoming one per
+  // course that has dates at all.
+  const seen = new Map();
+  const nextUp = [];
+  for (const u of S.upcomingSessions(DATA)) {
+    if (u.course.datesUnknown) continue;
+    const n = (seen.get(u.course.id) || 0) + 1;
+    seen.set(u.course.id, n);
+    if (n === 2) nextUp.push(u);
+  }
+  if (!nextUp.length && !on) return '';
+
+  const extra = nextUp.map((u) => {
+    const slot = u.session.date || u.session.id;
+    const tasks = TASKS.filter((t) => t.courseId === u.course.id && t.sessionDate === slot);
+    return { ...u, minutes: S.workload(tasks).remaining };
+  });
+  const total = extra.reduce((n, x) => n + x.minutes, 0);
+
+  return `
+    <section class="card">
+      <div class="card-head">
+        <h2>Getting ahead</h2>
+        <span class="card-when">${on ? 'on' : 'off'}</span>
+      </div>
+      ${
+        on
+          ? `<p class="note ok">
+               You are working a week ahead. Each course's plan above carries the class after next
+               as well, against the nearer date. Once you are genuinely a week in front, this stops
+               feeling like double and starts feeling like a normal week finished seven days early.
+             </p>`
+          : `<p class="note">
+               Right now the plan carries one class per course — the next one. Working a week ahead
+               pulls the class after it into the same plan, against <em>this</em> week's date, which
+               is what being a week ahead actually means.
+             </p>
+             ${
+               extra.length
+                 ? `<ul class="ahead-list">${extra
+                     .map(
+                       (x) => `<li>${dot(x.course.color)}<span>${esc(x.course.short || x.course.name)} — ${esc(
+                         x.session.topic
+                       )}</span><strong>${esc(S.formatMinutes(x.minutes))}</strong></li>`
+                     )
+                     .join('')}</ul>
+                    <p class="note">
+                      That is <strong>${esc(S.formatMinutes(total))}</strong> on top of this week while you
+                      catch the extra week up. After that it levels off — you are simply a week in front.
+                    </p>`
+                 : ''
+             }`
+      }
+      <div class="chips">
+        <button class="chip ${on ? '' : 'on'}" data-action="set-ahead" data-ahead="0">Just the next class</button>
+        <button class="chip ${on ? 'on' : ''}" data-action="set-ahead" data-ahead="1">A week ahead</button>
+      </div>
+    </section>`;
+}
+
+/**
+ * The big pieces, ordered by when they have to be started.
+ *
+ * Everything else in the app is organised by when work is due, which is the
+ * right order for a week's reading: it is on the page every day until it is
+ * done, so it cannot be forgotten. Large work behaves the other way round. It
+ * sits at a date far enough off to ignore, stays quiet while it is ignored, and
+ * then arrives — and this term three of them arrive in the same fortnight.
+ *
+ * So this is sorted by the last day you could comfortably begin, not by the
+ * deadline, and the two orders genuinely disagree.
+ */
+function longGameCard() {
+  const big = S.bigTasks(DATA, TASKS);
+  if (!big.length) return '';
+
+  // Work with a date gets a row each; it is the stuff that actually arrives on
+  // a day. Work you have to arrange yourself is grouped per course, because
+  // seven near-identical "meet your pastor" rows bury the one exam that is
+  // worth a fifth of a course — which is the opposite of what this is for.
+  const dated = big.filter((x) => !x.undated);
+  const toArrange = new Map();
+  for (const x of big.filter((y) => y.undated)) {
+    const key = x.course?.id || 'other';
+    const g = toArrange.get(key) || { course: x.course, items: [], minutes: 0 };
+    g.items.push(x);
+    g.minutes += x.remaining || 0;
+    toArrange.set(key, g);
+  }
+
+  const pressing = dated.filter((x) => x.overdueStart).length;
+  const id = 'long-game';
+  const shut = store.isCollapsed(id);
+
+  const row = (x) => {
+    const t = x.task;
+    const started = x.done > 0;
+    const pct = x.effort ? Math.min(100, Math.round((x.done / x.effort) * 100)) : 0;
+
+    const when = x.undated
+      ? 'No date yet — you arrange it'
+      : `due ${S.formatDate(x.deadline)}${x.daysLeft >= 0 ? ` · ${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'}` : ' · past'}`;
+
+    const start = x.undated
+      ? ''
+      : x.overdueStart
+        ? `<span class="lg-start warn">Should have started ${esc(S.formatDate(x.startBy))}</span>`
+        : `<span class="lg-start">Start by ${esc(S.formatDate(x.startBy))}</span>`;
+
+    return `
+      <li class="lg ${x.overdueStart && !started ? 'is-pressing' : ''}">
+        <div class="lg-head">
+          <span class="lg-title">${dot(x.course?.color)}${esc(t.title)}</span>
+          ${x.weight != null ? `<span class="lg-weight">${x.weight}% of ${esc(x.course?.short || '')}</span>` : ''}
+        </div>
+        <div class="lg-meta">
+          <span>${esc(x.effort ? S.formatMinutes(x.effort) : 'short, but not yours to schedule')}</span>
+          <span>${esc(when)}</span>
+        </div>
+        ${start ? `<div class="lg-meta">${start}</div>` : ''}
+        ${x.needsOthers
+          ? `<div class="lg-note">Waits on somebody else's calendar — the asking is the slow part, not the doing.</div>`
+          : ''}
+        ${x.effort ? progressBar(pct, { size: 'progress-sm' }) : ''}
+        <ul class="tasks lg-actions">${taskLine(t, { withTimer: true })}</ul>
+      </li>`;
+  };
+
+  return `
+    <details class="card fold long-game" ${shut ? '' : 'open'}>
+      <summary data-collapse="${esc(id)}">
+        <span class="fold-title">The long game</span>
+        <span class="card-when">
+          ${dated.length} dated${pressing ? ` · ${pressing} needs starting` : ''}${
+            toArrange.size ? ` · ${big.length - dated.length} to arrange` : ''
+          }
+        </span>
+      </summary>
+      <p class="note">
+        Ordered by the last day you could comfortably begin — half an hour a day on it — rather than
+        by when it is due. Those two orders disagree, which is the point: a fifteen-hour paper due in
+        six weeks wants starting before a two-hour one due on Tuesday.
+      </p>
+      <ul class="lg-list">${dated.map(row).join('')}</ul>
+      ${[...toArrange.values()]
+        .map(
+          (g) => `
+        <div class="lg-arrange">
+          <div class="lg-head">
+            <span class="lg-title">${dot(g.course?.color)}${esc(g.course?.name || 'To arrange')}</span>
+            <span class="lg-weight">${g.items.length} to arrange</span>
+          </div>
+          <p class="note">
+            None of this has a date until you set one, which makes it the easiest work in your term
+            to let slide to December — and most of it waits on somebody else's calendar, so the
+            asking has to happen weeks before the doing.
+            ${g.minutes ? `About ${esc(S.formatMinutes(g.minutes))} of your own time in it.` : ''}
+          </p>
+          <ul class="lg-arrange-list">
+            ${g.items
+              .map(
+                (x) => `<li>${esc(x.task.title)}${
+                  x.weight != null ? ` <small>${x.weight}%</small>` : ''
+                }${x.needsOthers ? ' <em>needs a date from someone</em>' : ''}</li>`
+              )
+              .join('')}
+          </ul>
+          <p class="note"><a href="#schedule">Set dates on the Schedule tab</a> and they join the plan.</p>
+        </div>`
+        )
+        .join('')}
+    </details>`;
+}
+
+/**
+ * The cheap points, best value first.
+ *
+ * The counterpart to the long game. That card is about work that is dangerous
+ * because it is quiet; this is about work that is dangerous because it is
+ * small. One week's reading reads like an evening you can afford to skip, and
+ * on its own it is — the cost only ever shows up as a category bleeding points
+ * all term. So each line carries the number: this is worth 1.2 points of your
+ * final grade, and none of that depends on how well you do it.
+ */
+function quickWinsCard() {
+  const wins = S.quickWins(DATA, TASKS);
+  if (!wins.length) return '';
+
+  const points = wins.reduce((n, w) => n + w.points, 0);
+  const minutes = wins.reduce((n, w) => n + w.minutes, 0);
+  const id = 'quick-wins';
+  const shut = store.isCollapsed(id);
+  const shown = wins.slice(0, 10);
+
+  return `
+    <details class="card fold quick-wins" ${shut ? '' : 'open'}>
+      <summary data-collapse="${esc(id)}">
+        <span class="fold-title">Points for turning up</span>
+        <span class="card-when">${esc(fmtPts(points))} pts · ${esc(S.formatMinutes(minutes))}</span>
+      </summary>
+      <p class="note">
+        Graded on being done, not on being good — reading before class, the weekly comment, the
+        diagram uploaded on time. <strong>${esc(fmtPts(points))} points</strong> are sitting in the
+        next fortnight, spread across your courses' grades, and none of them ask you to be clever.
+        Best value first.
+      </p>
+      <ul class="qw-list">
+        ${shown
+          .map(
+            (w) => `
+          <li class="qw">
+            <div class="qw-head">
+              <span class="qw-title">${dot(w.course.color)}${esc(w.task.title)}</span>
+              <span class="qw-rate">${w.perHour != null ? `${esc(fmtPts(w.perHour))} pts/hr` : ''}</span>
+            </div>
+            <div class="qw-meta">
+              <span><strong>${esc(fmtPts(w.points))} pts</strong> · ${esc(w.category.title)}</span>
+              <span>${esc(S.formatMinutes(w.minutes))}</span>
+              <span>${w.days === 0 ? 'due today' : w.days === 1 ? 'due tomorrow' : `in ${w.days} days`}</span>
+            </div>
+            <ul class="tasks qw-actions">${taskLine(w.task, { withTimer: true })}</ul>
+          </li>`
+          )
+          .join('')}
+      </ul>
+      ${wins.length > shown.length
+        ? `<p class="note muted">${wins.length - shown.length} more in the next fortnight, further down the list.</p>`
+        : ''}
+    </details>`;
+}
+
+/** One decimal, and no trailing ".0" to read past. */
+function fmtPts(n) {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
 function viewPlan() {
   const plans = currentPlans();
   const projects = activeProjects();
 
   return `
+    ${quickWinsCard()}
+    ${longGameCard()}
+    ${getAheadCard()}
     ${plans
-      .map(({ course, session, date, tasks, owed, plan, pace }) => {
+      .map(({ course, session, date, tasks, owed, alsoPlanned, plan, pace }) => {
         const all = [...owed, ...tasks];
         const w = S.workload(all);
         const pages = all.reduce((a, t) => a + (t.unit === 'pages' ? t.pages : 0), 0);
@@ -3048,6 +3613,13 @@ function viewPlan() {
           </div>
           <p class="topic">${esc(session.topic)}</p>
           <div class="tags">${modePill(session)}</div>
+          ${
+            alsoPlanned.length
+              ? `<p class="note ahead-note">Working a week ahead: ${esc(
+                  alsoPlanned.map((x) => x.topic).join(', ')
+                )} is planned in here too, against <strong>this</strong> class's date rather than its own.</p>`
+              : ''
+          }
           ${progressBar(w)}
           <div class="stats">
             <div><span class="stat">${pagesLeft}</span><small>pages left of ${pages}</small></div>
@@ -3135,17 +3707,19 @@ function viewPlan() {
  * ticking something off here simply means it is done when its week arrives.
  */
 function laterClassesCard() {
+  // However many classes the plan above is carrying, this card starts after
+  // them — otherwise working ahead lists the very work it just folded in.
+  const planned = 1 + (store.settings().aheadClasses ?? 0);
   const perCourse = new Map();
   for (const { course, session, date } of S.upcomingSessions(DATA)) {
     if (course.datesUnknown) continue;
     const list = perCourse.get(course.id) || [];
-    // The first upcoming class per course is the one planned in full above.
-    if (list.length <= AHEAD) list.push({ course, session, date });
+    if (list.length <= AHEAD + planned - 1) list.push({ course, session, date });
     perCourse.set(course.id, list);
   }
 
   const later = [...perCourse.values()]
-    .flatMap((list) => list.slice(1))
+    .flatMap((list) => list.slice(planned))
     .sort((a, b) => a.date - b.date || a.course.id.localeCompare(b.course.id));
   if (!later.length) return '';
 
@@ -3184,6 +3758,102 @@ function laterClassesCard() {
     </section>`;
 }
 
+/**
+ * Every course's breakdown on one page: where each stands, what it still needs,
+ * and which of its categories is the cheapest thing left to do.
+ *
+ * The per-course pages answer "how is this class going". This answers the
+ * question you actually ask on a Sunday evening, which is "across all of it,
+ * where is my time worth most" — and that one cannot be answered a course at a
+ * time.
+ */
+function gradeSummaryCard(graded) {
+  if (!graded.length) return '';
+  const target = store.settings().gradeTarget ?? 60;
+  const scale = DATA.gradeScale || [];
+
+  const reports = graded
+    .map((course) =>
+      S.gradeReport(course, TASKS, {
+        scores: store.grades(),
+        effort: store.gradeEffort(),
+        target,
+        scale
+      })
+    )
+    .filter(Boolean);
+  if (!reports.length) return '';
+
+  const hours = reports.reduce((n, r) => n + r.minutesLeft, 0);
+  // Hours add up across courses; percentage points do not — 40 points of
+  // Theology and 20 of Greek are not the same currency, and a total of them
+  // would be a number with no meaning. Each course states its own below.
+  const cheapest = reports
+    .map((r) => ({
+      course: r.course,
+      pts: r.categories.filter((c) => c.basis === 'completion').reduce((m, c) => m + c.atStake, 0)
+    }))
+    .sort((a, b) => b.pts - a.pts)[0];
+
+  return `
+    <section class="card">
+      <h2>Where you stand</h2>
+      <p class="note">
+        ${esc(S.formatMinutes(hours))} of work left across ${reports.length} courses.
+        ${cheapest
+          ? `The softest target is <strong>${esc(cheapest.course.short || cheapest.course.name)}</strong>,
+             where <strong>${esc(fmtPts(cheapest.pts))} of its 100 points</strong> are still handed out for
+             completing work rather than for doing it well.`
+          : ''}
+        Tap a course for its full breakdown and the things in its syllabus that cost people marks.
+      </p>
+      <ul class="gs-list">
+        ${reports
+          .map((r) => {
+            // Only completion work counts as a cheap point. Sorting all the
+            // categories by rate offered an exam already sat and a presentation
+            // that cannot be given early — technically good value per hour,
+            // useless as "what should I do tonight".
+            const best = r.categories
+              .filter((c) => c.basis === 'completion' && c.perHour != null)
+              .sort((a, b) => b.perHour - a.perHour)[0];
+            const verdict = r.secured
+              ? `clear of ${r.target} already`
+              : r.lost
+                ? `${r.target} out of reach — ceiling ${fmtPts(r.max)}`
+                : `needs ${Math.ceil(r.needed)}% of what is left`;
+            return `
+          <li class="gs">
+            <a class="gs-link" href="#course:${esc(r.course.id)}">
+              <div class="gs-head">
+                <span class="gs-title">${dot(r.course.color)}${esc(r.course.short || r.course.name)}</span>
+                <span class="gs-bank">${esc(fmtPts(r.earned))}<small> / ${esc(fmtPts(r.max))}</small></span>
+              </div>
+              <div class="cat-bar" aria-hidden="true">
+                <div class="cat-banked" style="width:${(r.earned / 100) * 100}%"></div>
+                <div class="cat-stake" style="width:${(r.atStake / 100) * 100}%"></div>
+                <div class="cat-lost" style="width:${(Math.max(0, 100 - r.earned - r.atStake) / 100) * 100}%"></div>
+              </div>
+              <div class="gs-meta">
+                <span class="${r.lost ? 'warn-text' : ''}">${esc(verdict)}</span>
+                <span>${esc(S.formatMinutes(r.minutesLeft))} left</span>
+              </div>
+              <div class="gs-best">
+                ${esc(fmtPts(r.categories.filter((c) => c.basis === 'completion').reduce((m, c) => m + c.atStake, 0)))}
+                pts still going spare for completing work${
+                  best && best.perHour != null
+                    ? ` · cheapest is <strong>${esc(best.title)}</strong> at ${esc(fmtPts(best.perHour))} pts/hr`
+                    : ''
+                }
+              </div>
+            </a>
+          </li>`;
+          })
+          .join('')}
+      </ul>
+    </section>`;
+}
+
 function viewSchedule() {
   const today = S.startOfToday();
   const rows = [];
@@ -3196,7 +3866,10 @@ function viewSchedule() {
   }
   rows.sort((a, b) => a.date - b.date || a.course.id.localeCompare(b.course.id));
 
+  const graded = DATA.courses.filter((c) => c.grading);
+
   return `
+    ${gradeSummaryCard(graded)}
     <section class="card">
       <h2>${esc(DATA.term)} — full schedule</h2>
       <div class="schedule">
@@ -3876,6 +4549,32 @@ function viewSettings() {
     </section>
 
     <section class="card">
+      <h2>Working a week ahead</h2>
+      <p class="note">
+        The plan normally carries one class per course — the next one, the only work with a
+        deadline you can be behind on. Turn this on and the class after it is planned in too,
+        against <em>this</em> week's date rather than its own, which is what being a week ahead
+        actually means. It roughly doubles the daily figure while you catch the extra week up,
+        and then settles back to a normal week's reading done seven days early.
+      </p>
+      <div class="chips">
+        <button class="chip ${(s.aheadClasses ?? 0) === 0 ? 'on' : ''}" data-action="set-ahead" data-ahead="0">
+          Just the next class
+        </button>
+        <button class="chip ${(s.aheadClasses ?? 0) === 1 ? 'on' : ''}" data-action="set-ahead" data-ahead="1">
+          A week ahead
+        </button>
+      </div>
+      <p class="note">
+        ${
+          (s.aheadClasses ?? 0) === 1
+            ? 'Two classes per course are being planned against the nearer deadline. The Plan tab says which.'
+            : 'Next week\'s reading is still reachable under "Working ahead" on the Plan tab — tickable, timeable, just not paced.'
+        }
+      </p>
+    </section>
+
+    <section class="card">
       <h2>Finish line</h2>
       <p class="note">
         The day a week's work is meant to be <em>done</em>, as opposed to the day it is due. Both
@@ -4053,9 +4752,162 @@ function viewSettings() {
     </section>`;
 }
 
+/* ---------------- one course: what it wants, and what it is worth ---------------- */
+
+const TARGETS = [60, 70, 80];
+const pts = (n) => (Math.round(n * 10) / 10).toString();
+
+/** The one line the breakdown exists to produce. */
+function verdictLine(r) {
+  if (r.atStake <= 0) return `Everything is marked. You finished on <strong>${esc(pts(r.earned))}</strong>.`;
+  if (r.secured) return `Already past ${r.target} — you could score nothing else and still clear it.`;
+  if (r.lost) return `${r.target} is out of reach: the most you can now finish on is <strong>${esc(pts(r.max))}</strong>.`;
+  return `To finish on ${r.target} you need <strong>${esc(Math.ceil(r.needed))}%</strong> across everything still outstanding.`;
+}
+
+function categoryRow(r, cat) {
+  const key = `${r.course.id}|${cat.id}`;
+  const lost = Math.max(0, cat.weight - cat.earned - cat.atStake);
+  const w = (n) => `${(n / cat.weight) * 100}%`;
+  const count = cat.items > 1 ? `${cat.done} of ${cat.items} done` : null;
+  const time = cat.minutesLeft > 0 ? `${S.formatMinutes(cat.minutesLeft)} left` : null;
+
+  const state =
+    cat.source === 'marked'
+      ? `<strong>${esc(pts(cat.earned))}</strong> of ${cat.weight} pts — you scored ${esc(pts(cat.marked))}%`
+      : cat.source === 'ticks'
+        ? `<strong>${esc(pts(cat.earned))}</strong> of ${cat.weight} pts banked`
+        : `Not marked yet — all ${cat.weight} pts still in play`;
+
+  return `
+    <li class="cat">
+      <div class="cat-head">
+        <span class="cat-title">${esc(cat.title)}</span>
+        <span class="cat-weight">${cat.weight}%</span>
+      </div>
+      <div class="cat-bar" aria-hidden="true">
+        <div class="cat-banked" style="width:${w(cat.earned)}"></div>
+        <div class="cat-stake" style="width:${w(cat.atStake)}"></div>
+        <div class="cat-lost" style="width:${w(lost)}"></div>
+      </div>
+      <div class="cat-state">${state}</div>
+      <div class="cat-meta">
+        ${count ? `<span>${esc(count)}</span>` : ''}
+        ${time ? `<button class="linkbtn" data-action="edit-effort" data-key="${esc(key)}"
+                  title="Change how long you think this will take">${esc(time)}</button>` : ''}
+        ${cat.perHour != null
+          ? `<span class="cat-rate" title="Points of your final grade per hour of work">${esc(pts(cat.perHour))} pts/hr</span>`
+          : ''}
+      </div>
+      ${cat.note ? `<div class="cat-note">${esc(cat.note)}</div>` : ''}
+      <div class="cat-actions">
+        <button class="btn small ghost" data-action="edit-mark" data-key="${esc(key)}">
+          ${cat.source === 'marked' ? 'Change the mark' : 'Enter a mark'}
+        </button>
+      </div>
+    </li>`;
+}
+
+/**
+ * The page for one class: what it is worth, where the cheap points are, and the
+ * things in the syllabus that cost people marks.
+ *
+ * Sorted by points per hour rather than by the syllabus's own order, because
+ * the question this page answers is "what is the best use of the next hour",
+ * not "what does §5 list first".
+ */
+function viewCourse(id) {
+  const course = courseById(id);
+  if (!course) return `<section class="card"><h2>Not found</h2>
+    <p class="note">No course with that id. <a href="#schedule">Back to the schedule</a>.</p></section>`;
+
+  const target = store.settings().gradeTarget ?? 60;
+  const scale = DATA.gradeScale || [];
+  const r = S.gradeReport(course, TASKS, {
+    scores: store.grades(),
+    effort: store.gradeEffort(),
+    target,
+    scale
+  });
+
+  const upcoming = S.upcomingSessions(DATA).filter((u) => u.course.id === course.id);
+  const next = upcoming[0] || null;
+
+  const head = `
+    <section class="card">
+      <div class="card-head">
+        <h2>${dot(course.color)}${esc(course.name)}</h2>
+        <span class="card-when">${esc(course.code || '')}</span>
+      </div>
+      <p class="note">
+        ${esc(course.instructor || '')}${course.meetingDay ? ` · ${esc(course.meetingDay)}s` : ''}
+        ${course.classTime ? ` ${esc(clockLabel(course.classTime))}–${esc(clockLabel(course.endTime))}` : ''}
+      </p>
+      ${next
+        ? `<p class="note">Next class <strong>${esc(S.formatDate(next.date))}</strong> — ${esc(next.session.topic)}.</p>`
+        : course.datesUnknown
+          ? `<p class="note">You arrange these yourself — nothing is dated yet. Set a date on one and it joins the plan.</p>`
+          : `<p class="note">Every class has met. This course is finished.</p>`}
+      ${course.syllabus ? `<p class="note"><a href="${esc(course.syllabus)}" target="_blank" rel="noopener">Open the syllabus</a></p>` : ''}
+    </section>`;
+
+  if (!r) return head + `<section class="card"><h2>Grading</h2>
+    <p class="note">No grade breakdown recorded for this course yet.</p></section>`;
+
+  const chips = TARGETS.map((t) => {
+    const letter = S.letterFor(t, scale);
+    return `<button class="chip ${t === target ? 'on' : ''}" data-action="set-target" data-target="${t}">
+              ${t}${letter ? ` <small>${esc(letter)}</small>` : ''}</button>`;
+  }).join('');
+
+  const ordered = [...r.categories].sort((a, b) => (b.perHour ?? -1) - (a.perHour ?? -1));
+
+  return `
+    ${head}
+    <section class="card">
+      <div class="card-head">
+        <h2>What it is worth</h2>
+        <span class="card-when">${esc(S.formatMinutes(r.minutesLeft))} of work left</span>
+      </div>
+      <div class="grade-top">
+        <div><div class="grade-big">${esc(pts(r.earned))}</div><small class="muted">banked</small></div>
+        <div><div class="grade-big muted">${esc(pts(r.atStake))}</div><small class="muted">still in play</small></div>
+        <div><div class="grade-big">${esc(pts(r.max))}${
+          r.letter && !r.weightsOff ? ` <span class="grade-letter">${esc(r.letter)}</span>` : ''
+        }</div><small class="muted">ceiling</small></div>
+      </div>
+      <div class="chips">${chips}</div>
+      <p class="note ${r.lost ? 'warn' : r.secured ? 'ok' : ''}">${verdictLine(r)}</p>
+      ${r.weightsOff
+        ? `<p class="note warn">These weights add up to ${esc(pts(r.weightTotal))}%, not 100%. Treat the projection as rough.</p>`
+        : ''}
+      <h3 class="cat-heading">Cheapest points first</h3>
+      <ul class="cats">${ordered.map((cat) => categoryRow(r, cat)).join('')}</ul>
+      ${r.source ? `<p class="note muted small-note">Weights from ${esc(r.source)}.</p>` : ''}
+    </section>
+    ${r.watch.length
+      ? `<section class="card">
+          <h2>Watch out for</h2>
+          <ul class="watch">${r.watch.map((wch) => `<li>${esc(wch)}</li>`).join('')}</ul>
+        </section>`
+      : ''}
+    <section class="card">
+      <h2>How this is worked out</h2>
+      <p class="note">
+        Where the syllabus gives credit for <em>doing</em> the work, ticking it off here banks the
+        points, because that is the mark. Where work is graded on how good it is, nothing is
+        assumed — it stays "not marked" until you type in what you got.
+        <strong>pts/hr</strong> is how much of the final grade one hour of that category is still
+        worth. A mark you type in is treated as final for its category, so update it as marks come
+        back; hours are the syllabus's estimate until you tap one and give it your own.
+      </p>
+    </section>`;
+}
+
 /* ---------------- shell ---------------- */
 
 const VIEWS = { today: viewToday, plan: viewPlan, schedule: viewSchedule, files: viewFiles, settings: viewSettings };
+const ARG_VIEWS = { course: viewCourse };
 
 /** "read:bavinck-...|theo1|2026-09-29|r|0" — every other view is a bare name. */
 function parseView(hash) {
@@ -4063,6 +4915,7 @@ function parseView(hash) {
   const [name, ...rest] = raw.split(':');
   const arg = rest.join(':') || null;
   if (name !== 'read' || !arg) return { name, arg, taskKey: null };
+  // Everything but the reader takes its argument whole.
   // The material id has no pipes; anything after the first one is the task key.
   const [mat, ...key] = arg.split('|');
   return { name, arg: mat, taskKey: key.length ? key.join('|') : null };
@@ -4071,6 +4924,7 @@ function parseView(hash) {
 // The view the screen is currently showing, so a redraw of the same one can be
 // told apart from a move to a different one.
 let showing = null;
+let showingArg = null;
 
 function render() {
   const main = $('#app');
@@ -4087,14 +4941,21 @@ function render() {
     // of readings, ticking one off threw you back to the top to find your place
     // again, on every single one. Going to the top belongs to arriving at a
     // view, not to redrawing the view you are already reading.
-    const arriving = name !== showing;
+    const arriving = name !== showing || arg !== showingArg;
     const wasAt = window.scrollY;
-    main.innerHTML = (VIEWS[name] || viewToday)();
+    main.innerHTML = ARG_VIEWS[name] ? ARG_VIEWS[name](arg) : (VIEWS[name] || viewToday)();
     window.scrollTo(0, arriving ? 0 : wasAt);
   }
   showing = name;
+  showingArg = arg;
   document.querySelectorAll('.tab').forEach((el) =>
-    el.classList.toggle('on', el.dataset.view === name || (name === 'read' && el.dataset.view === 'files'))
+    el.classList.toggle(
+      'on',
+      el.dataset.view === name ||
+        (name === 'read' && el.dataset.view === 'files') ||
+        // A course page is reached from the schedule and belongs to it.
+        (name === 'course' && el.dataset.view === 'schedule')
+    )
   );
   document.title = name === 'today' ? 'Seminary — Today' : `Seminary — ${name}`;
 
@@ -5334,6 +6195,51 @@ document.addEventListener('click', async (e) => {
     if (answer === null) return;
     const n = parseInt(answer, 10);
     store.setOverride(key, Number.isFinite(n) && n > 0 ? n : null);
+    return refresh();
+  }
+
+  if (action === 'set-ahead') {
+    store.updateSettings({ aheadClasses: Number(el.dataset.ahead) });
+    return refresh();
+  }
+
+  if (action === 'set-target') {
+    store.updateSettings({ gradeTarget: Number(el.dataset.target) });
+    return refresh();
+  }
+
+  if (action === 'edit-mark') {
+    const [courseId, catId] = el.dataset.key.split('|');
+    const course = courseById(courseId);
+    const cat = course?.grading?.categories.find((c) => c.id === catId);
+    if (!cat) return;
+    const now = store.grades()[el.dataset.key];
+    const answer = prompt(
+      `${cat.title} — worth ${cat.weight}% of ${course.short || course.name}.\n\n` +
+        'What percentage are you averaging here? It is taken as your final figure for this ' +
+        'category, so update it as marks come back. Blank goes back to not marked.',
+      now ?? ''
+    );
+    if (answer === null) return;
+    const n = parseFloat(answer);
+    store.setGrade(courseId, catId, answer.trim() === '' || !Number.isFinite(n) ? null : n);
+    return refresh();
+  }
+
+  if (action === 'edit-effort') {
+    const [courseId, catId] = el.dataset.key.split('|');
+    const course = courseById(courseId);
+    const cat = course?.grading?.categories.find((c) => c.id === catId);
+    if (!cat) return;
+    const current = store.gradeEffort()[el.dataset.key];
+    const answer = prompt(
+      `${cat.title} — how many hours do you reckon are left in it?\n\n` +
+        'Leave it blank to go back to the syllabus estimate.',
+      current != null ? current / 60 : ''
+    );
+    if (answer === null) return;
+    const n = parseFloat(answer);
+    store.setGradeEffort(courseId, catId, answer.trim() === '' || !Number.isFinite(n) ? null : n * 60);
     return refresh();
   }
 
