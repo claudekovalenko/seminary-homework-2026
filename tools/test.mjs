@@ -196,5 +196,48 @@ ok('a barely tilted page is left alone too', estimateSkew(ruled(900, 1200, 0.6),
   ok('one threshold for the whole page would have lost the dark side', falseInk > 3000, `${falseInk} pixels`);
 }
 
+/* ---------- backlog taken back up ---------- */
+{
+  const store = await import('../js/store.js');
+  const S = await import('../js/schedule.js');
+  const DATA = JSON.parse(readFileSync(resolve(ROOT, 'data/courses.json'), 'utf8'));
+  const TASKS = S.buildTasks(DATA);
+
+  const duby = TASKS.find((t) => String(t.title).includes('Duby'));
+  ok('the syllabus reading is in the data at all', Boolean(duby), 'Duby, Jesus and the God of Classical Theism');
+  check('and it is the one the syllabus sets', [duby.detail, duby.due], ['22–32', '2026-08-25']);
+
+  // The state of things the request came out of: its class has met, so with the
+  // backlog set aside it is nowhere near the plan.
+  const past = new Date('2026-10-30T12:00:00');
+  const late = S.overdue(TASKS.filter((t) => t.unit !== 'project'), { from: past });
+  ok('it counts as backlog in late October', late.some((t) => t.key === duby.key), `${late.length} items are`);
+
+  // Picking one item up must not pick up the rest.
+  store.setTakenUp(duby.key, true);
+  const picked = late.filter((t) => store.isTakenUp(t.key));
+  check('taking one up takes up exactly one', picked.map((t) => t.title), [duby.title]);
+  ok('and leaves the rest set aside', late.filter((t) => !store.isTakenUp(t.key)).length === late.length - 1);
+
+  // It survives a save and reload, which is what makes it a decision and not a
+  // click: the app re-renders on every tick.
+  const saved = store.exportData();
+  store.clearTakenUp();
+  ok('cleared', !store.isTakenUp(duby.key));
+  store.importData(saved);
+  ok('a taken-up reading survives export and import', store.isTakenUp(duby.key));
+
+  // The reason it needs its own card rather than a place in a course's plan:
+  // Theology 1 has no session left to be planned against.
+  const nexts = S.nextSessionPerCourse(DATA);
+  ok(
+    'Theology 1 has no next session to plan backlog against',
+    !nexts.some((n) => n.course.id === 'theo1'),
+    nexts.map((n) => n.course.id).join(', ') || 'none'
+  );
+
+  store.clearTakenUp();
+}
+
 console.log(`\n${checks - failures}/${checks} checks passed`);
 process.exit(failures ? 1 : 0);

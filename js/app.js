@@ -8,7 +8,7 @@ import { emphasisRuns, EM as EM_MARK, STRONG as STRONG_MARK } from './text.js';
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v38 · 2026-09-03';
+const BUILD = 'v39 · 2026-10-30';
 
 let DATA = null;
 let TASKS = [];
@@ -60,7 +60,26 @@ function lateWork(from = new Date()) {
 
 /** ...and the part of it the plan is currently being asked to carry. */
 function carriedWork(from = new Date()) {
-  return store.settings().carryOverdue ? lateWork(from) : [];
+  const carried = store.settings().carryOverdue ? lateWork(from) : [];
+  // Anything picked out by hand is shown on its own, above, so it must not also
+  // be threaded into a course's plan.
+  return carried.filter((t) => !store.isTakenUp(t.key));
+}
+
+/**
+ * Work from a class already past that you have said you are doing anyway.
+ *
+ * It gets its own card rather than a place in a course's plan, because the
+ * planner works backwards from a course's next session and there may not be
+ * one: Theology 1's last class is in October, and from then until the exam
+ * every unfinished reading it ever set has no deadline to be planned against.
+ * Picked up here, it is simply today's work.
+ */
+function takenUpWork(from = new Date()) {
+  const readings = lateWork(from).filter((t) => store.isTakenUp(t.key));
+  // A paper taken back up is paced in the "Chip away at" card, where projects
+  // belong, so only the readings are listed here.
+  return readings;
 }
 
 function currentPlans() {
@@ -89,10 +108,31 @@ function currentPlans() {
   });
 }
 
-function activeProjects(from = S.startOfToday()) {
+/**
+ * The projects worth pacing today.
+ *
+ * A project whose deadline has gone is paced over the one day that is left,
+ * which means its whole estimate lands on today: three of them, and the home
+ * page opened on a twenty-hour reading target made almost entirely of papers
+ * that were due weeks ago. Setting the backlog aside has to mean this too, or
+ * it only ever half worked — the readings went quiet and the papers went on
+ * shouting. They are listed under Set aside instead, and one can be taken back
+ * up exactly like a reading.
+ */
+function activeProjects(from = S.startOfToday(), { includeSetAside = false } = {}) {
+  const aside = !store.settings().carryOverdue;
   return TASKS.filter((t) => t.unit === 'project' && !t.complete)
     .map((t) => ({ task: t, pace: S.projectPace(t, from), overdue: Boolean(t.due) && S.dueAt(t) < new Date() }))
-    .filter((p) => p.pace);
+    .filter((p) => p.pace)
+    .filter((p) => includeSetAside || !aside || !p.overdue || store.isTakenUp(p.task.key));
+}
+
+/** The overdue projects the home page is currently holding back. */
+function setAsideProjects(from = S.startOfToday()) {
+  if (store.settings().carryOverdue) return [];
+  return activeProjects(from, { includeSetAside: true }).filter(
+    (p) => p.overdue && !store.isTakenUp(p.task.key)
+  );
 }
 
 /** Everything the plan says to do today, flattened across courses. */
@@ -112,6 +152,12 @@ function todayBucket() {
     minutes += day.minutes;
     const owedToday = day.items.filter((a) => a.task.overdue).reduce((sum, a) => sum + a.minutes, 0);
     catchUp += owedToday + Math.max(0, day.minutes - owedToday - pace.evenPerDay);
+  }
+  // Backlog you have put on today's list counts towards today, and all of it is
+  // catching up by definition.
+  for (const t of takenUpWork()) {
+    minutes += t.remaining;
+    catchUp += t.remaining;
   }
   const projects = activeProjects(today).filter((p) => p.pace.todayIsStudyDay);
   projects.forEach((p) => (minutes += p.pace.perDay));
@@ -326,7 +372,7 @@ function watchTimer() {
   tick = setInterval(paint, 1000);
 }
 
-function taskLine(task, { showCourse = false, chunk = null, asPassage = false, withTimer = false, note = '', hideDriver = false } = {}) {
+function taskLine(task, { showCourse = false, chunk = null, asPassage = false, withTimer = false, note = '', hideDriver = false, takeUp = null } = {}) {
   const done = task.complete;
   // A part-way chunk is ticked once you have read past its last page. A whole
   // item is ticked only when it is marked done — page arithmetic cannot answer
@@ -384,6 +430,15 @@ function taskLine(task, { showCourse = false, chunk = null, asPassage = false, w
       </div>
       ${materialButton(task)}
       <div class="task-actions">
+        ${
+          takeUp
+            ? `<button class="chip ${takeUp === 'drop' ? 'on' : ''}" data-action="take-up"
+                       data-key="${esc(task.key)}"
+                       title="${takeUp === 'drop' ? 'Put this back with the rest of the backlog' : "Put this on today's list"}">
+                 ${takeUp === 'drop' ? 'Set aside' : 'Do this'}
+               </button>`
+            : ''
+        }
         ${withTimer ? timeChip(task) : ''}
         ${withTimer ? timerButton(task) : ''}
         <button class="amount ${task.unit === 'pages' && !chunk ? 'editable' : ''}"
@@ -822,11 +877,34 @@ function driverCard(plans) {
  * so nothing is deleted and nothing goes unsaid: it is counted here, listed
  * behind one tap, still tickable, and one button brings all of it back.
  */
+function takenUpCard() {
+  const picked = takenUpWork();
+  if (!picked.length) return '';
+  const minutes = picked.reduce((sum, t) => sum + t.remaining, 0);
+
+  return `
+    <section class="card taken-up">
+      <h2>Taken back up</h2>
+      <p class="note">
+        From classes that have already met, and on today's list because you put it there.
+        ${S.formatMinutes(minutes)} left across ${picked.length}
+        ${picked.length === 1 ? 'reading' : 'readings'}.
+      </p>
+      <ul class="tasks">
+        ${picked.map((t) => taskLine(t, { showCourse: true, withTimer: true, takeUp: 'drop' })).join('')}
+      </ul>
+    </section>`;
+}
+
 function setAsideCard() {
   if (store.settings().carryOverdue) return '';
-  const late = lateWork();
-  if (!late.length) return '';
-  const minutes = late.reduce((sum, t) => sum + t.remaining, 0);
+  const late = lateWork().filter((t) => !store.isTakenUp(t.key));
+  const papers = setAsideProjects();
+  const picked = takenUpWork().length;
+  if (!late.length && !papers.length) return '';
+  const minutes =
+    late.reduce((sum, t) => sum + t.remaining, 0) +
+    papers.reduce((sum, p) => sum + (p.task.remaining || p.task.minutes), 0);
   const id = 'set-aside';
   // Shut unless you have opened it before: out of the way is the point of it.
   const shut = store.settings().collapsed?.[id] !== false;
@@ -835,13 +913,19 @@ function setAsideCard() {
     <details class="card fold set-aside" ${shut ? '' : 'open'}>
       <summary data-collapse="${esc(id)}">
         <span class="fold-title">Set aside</span>
-        <span class="card-when">${late.length} from classes already past · ${S.formatMinutes(minutes)}</span>
+        <span class="card-when">${late.length + papers.length} from classes already past · ${S.formatMinutes(minutes)}</span>
       </summary>
       <p class="note">
-        Out of the plan and out of this week's total, but not gone: tick any of it off here, or
-        bring the lot back into the plan.
+        Out of the plan and out of this week's total, but not gone: tick any of it off here, press
+        <strong>Do this</strong> on the one you have decided to get to, or bring the lot back.
+        ${picked ? `${picked} ${picked === 1 ? 'is' : 'are'} already taken back up, in the card above.` : ''}
       </p>
-      <ul class="tasks">${late.map((t) => taskLine(t, { showCourse: true, withTimer: true })).join('')}</ul>
+      <ul class="tasks">
+        ${late.map((t) => taskLine(t, { showCourse: true, withTimer: true, takeUp: 'add' })).join('')}
+        ${papers
+          .map((p) => taskLine({ ...p.task, overdue: true }, { showCourse: true, withTimer: true, takeUp: 'add' }))
+          .join('')}
+      </ul>
       <button class="btn ghost" data-action="toggle-carry">Bring these back into the plan</button>
     </details>`;
 }
@@ -969,6 +1053,7 @@ function viewToday() {
     ${catchUpCard(plans, activeProjects())}
 
     ${rhythmCard()}
+    ${takenUpCard()}
     ${todaySections(bucket)}
     ${weekOfWorkCard()}
     ${setAsideCard()}
@@ -1222,7 +1307,18 @@ function viewSchedule() {
                 <span class="sched-load">${pages ? `${pages} pp.` : ''}${w.total ? ` · ${S.formatMinutes(w.total)}` : ''}</span>
                 ${w.total ? `<span class="sched-progress">${progressBar(w, { size: 'progress-sm', label: false })}</span>` : ''}
               </summary>
-              <ul class="tasks">${tasks.map((t) => taskLine(t)).join('') || '<li class="empty">No work listed.</li>'}</ul>
+              <ul class="tasks">${
+                tasks
+                  .map((t) =>
+                    // Looking a reading up by the class it was set for is how you
+                    // get back to one you have remembered — so the way to put it
+                    // on today's list belongs here too, not only in Set aside.
+                    taskLine(t, {
+                      takeUp: past && !t.complete ? (store.isTakenUp(t.key) ? 'drop' : 'add') : null
+                    })
+                  )
+                  .join('') || '<li class="empty">No work listed.</li>'
+              }</ul>
             </details>`;
           })
           .join('')}
@@ -1253,6 +1349,10 @@ function materials() {
     // Undated work has no "next" — it stays out of this ordering entirely.
     const due = t.due ? S.parseDate(t.due) : null;
     if (due && !t.complete && due >= S.startOfToday() && (!m.nextDue || due < m.nextDue)) m.nextDue = due;
+    // A reading you have taken back up is wanted now, however long ago its
+    // class met — so the book it lives in belongs at the top of this page,
+    // which is where you come to attach the PDF for it.
+    if (!t.complete && store.isTakenUp(t.key)) m.nextDue = S.startOfToday();
   }
   return [...map.values()].sort((a, b) => {
     if (a.nextDue && b.nextDue && +a.nextDue !== +b.nextDue) return a.nextDue - b.nextDue;
@@ -3407,6 +3507,11 @@ document.addEventListener('click', async (e) => {
         return slots.length ? { ...h, slots } : h;
       })
     );
+    return refresh();
+  }
+
+  if (action === 'take-up') {
+    store.toggleTakenUp(el.dataset.key);
     return refresh();
   }
 

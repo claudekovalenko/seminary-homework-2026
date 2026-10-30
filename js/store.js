@@ -101,7 +101,15 @@ const EMPTY = {
   // place to ask how long a reading has taken in total: by December the
   // September sittings would have quietly fallen off the end of the answer.
   totals: {},
-  rhythmLog: {} // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
+  rhythmLog: {}, // "YYYY-MM-DD|habitId|slot" -> true — the daily ticks
+  // itemKey -> true, for work from a class already past that you have decided
+  // to do anyway. Setting the backlog aside is right in general and wrong for
+  // the one reading you have just remembered you need: this is how a single
+  // item comes back without the other seventy-three coming with it. It is also
+  // the only way reading for a course whose last class has been and gone can be
+  // planned at all — the planner aims at a course's next session, and once there
+  // is no next session it has nowhere to put the work.
+  takenUp: {}
 };
 
 /** The per-item totals, rebuilt from the sittings still on record. */
@@ -145,7 +153,8 @@ function read() {
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
       totals: parsed.totals || totalsFrom(parsed.timeLog),
-      rhythmLog: parsed.rhythmLog || {}
+      rhythmLog: parsed.rhythmLog || {},
+      takenUp: parsed.takenUp || {}
     };
   } catch {
     return structuredClone(EMPTY);
@@ -521,6 +530,28 @@ export function toggleRhythmDone(key) {
   return Boolean(state.rhythmLog[key]);
 }
 
+/* ---------- backlog you have decided to do anyway ---------- */
+
+export const isTakenUp = (key) => Boolean(state.takenUp[key]);
+
+export const takenUpAll = () => state.takenUp;
+
+export function setTakenUp(key, value) {
+  if (value) state.takenUp[key] = true;
+  else delete state.takenUp[key];
+  persist();
+}
+
+export function toggleTakenUp(key) {
+  setTakenUp(key, !isTakenUp(key));
+  return isTakenUp(key);
+}
+
+export function clearTakenUp() {
+  state.takenUp = {};
+  persist();
+}
+
 /* ---------- a record of things going wrong ---------- */
 
 const PROBLEM_KEY = 'seminary.problems';
@@ -594,7 +625,8 @@ export function importData(json) {
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
     totals: parsed.totals || totalsFrom(parsed.timeLog),
-    rhythmLog: parsed.rhythmLog || {}
+    rhythmLog: parsed.rhythmLog || {},
+    takenUp: parsed.takenUp || {}
   };
   persist();
 }
@@ -604,6 +636,7 @@ export function resetProgress() {
   state.progress = {};
   state.fired = {};
   state.rhythmLog = {};
+  state.takenUp = {};
   persist();
 }
 

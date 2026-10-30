@@ -661,6 +661,20 @@ summary {
   color: var(--danger);
 }
 
+/* ---------- backlog taken back up ---------- */
+
+.taken-up {
+  border-left: 3px solid var(--accent);
+}
+
+/* The in-row "Do this" / "Set aside" button. Smaller than a settings chip,
+   which sits on a line of its own and can afford the padding. */
+.task-actions .chip {
+  padding: 4px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* ---------- the daily rhythm ---------- */
 
 .rhythm-habits {
