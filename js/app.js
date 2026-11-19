@@ -8,7 +8,7 @@ import { emphasisRuns, EM as EM_MARK, STRONG as STRONG_MARK } from './text.js';
 // actually running. Bump it alongside the service worker's CACHE.
 const AHEAD = 3;
 
-const BUILD = 'v44 · 2026-10-30';
+const BUILD = 'v45 · 2026-11-19';
 
 let DATA = null;
 let TASKS = [];
@@ -920,6 +920,57 @@ function takenUpCard() {
     </section>`;
 }
 
+/**
+ * The classes whose work is sitting here, each offering the one thing that
+ * actually changes the situation: a new date.
+ *
+ * "Set aside" and "Do this" both decide what to do about a deadline that has
+ * gone. An extension says it has not gone — the work is live again, with a real
+ * date to pace it against, which is a different fact and the only one that puts
+ * the reading back into the plan rather than beside it.
+ */
+function extensionOffer(late) {
+  const classes = new Map();
+  for (const t of late) {
+    const course = courseById(t.courseId);
+    const session = course?.sessions.find((x) => (x.date || x.id) === t.sessionDate);
+    if (!session?.date) continue;
+    classes.set(`${t.courseId}|${session.date}`, { course, session });
+  }
+  // A class that has already been moved has no work sitting here any more, but
+  // the date still wants adjusting from where it was granted.
+  for (const key of Object.keys(store.extensions())) {
+    if (classes.has(key)) continue;
+    const [courseId, original] = key.split('|');
+    const course = courseById(courseId);
+    const session = course?.sessions.find((x) => x.date === original);
+    if (session) classes.set(key, { course, session });
+  }
+  if (!classes.size) return '';
+
+  return `
+    <div class="ext-offer">
+      <p class="note">Given an extension on any of this? Put the new date in and it goes back into the plan.</p>
+      ${[...classes.values()]
+        .map(({ course, session }) => {
+          const moved = S.extensionDays(course, session);
+          return `
+        <div class="ext-row">
+          <span>${dot(course.color)}${esc(course.short || course.name)} — ${esc(session.topic)}</span>
+          <input type="date" value="${esc(S.sessionDate(course, session))}"
+                 data-extend="${esc(course.id)}|${esc(session.date)}"
+                 aria-label="New date for ${esc(session.topic)}">
+          ${moved
+            ? `<span class="ext-moved">+${moved}d</span>
+               <button class="linkbtn" data-action="clear-extension"
+                 data-key="${esc(course.id)}|${esc(session.date)}">put it back</button>`
+            : ''}
+        </div>`;
+        })
+        .join('')}
+    </div>`;
+}
+
 function setAsideCard() {
   if (store.settings().carryOverdue) return '';
   const late = lateWork().filter((t) => !store.isTakenUp(t.key));
@@ -950,6 +1001,7 @@ function setAsideCard() {
           .map((p) => taskLine({ ...p.task, overdue: true }, { showCourse: true, withTimer: true, takeUp: 'add' }))
           .join('')}
       </ul>
+      ${extensionOffer(late)}
       <button class="btn ghost" data-action="toggle-carry">Bring these back into the plan</button>
     </details>`;
 }
@@ -1692,10 +1744,27 @@ function viewSchedule() {
               <summary>
                 <span class="sched-date">${esc(S.formatDate(date, { month: 'short', day: 'numeric' }))}</span>
                 <span class="sched-course">${dot(course.color)}${esc(course.short)}</span>
-                <span class="sched-topic">${esc(session.topic)}${session.mode ? ` <em class="sched-mode">${esc(MODE_LABELS[session.mode])}</em>` : ''}</span>
+                <span class="sched-topic">${esc(session.topic)}${session.mode ? ` <em class="sched-mode">${esc(MODE_LABELS[session.mode])}</em>` : ''}${
+                  S.extensionDays(course, session)
+                    ? ` <em class="sched-moved">moved from ${esc(
+                        S.formatDate(S.parseDate(session.date), { month: 'short', day: 'numeric' })
+                      )}</em>`
+                    : ''
+                }</span>
                 <span class="sched-load">${pages ? `${pages} pp.` : ''}${w.total ? ` · ${S.formatMinutes(w.total)}` : ''}</span>
                 ${w.total ? `<span class="sched-progress">${progressBar(w, { size: 'progress-sm', label: false })}</span>` : ''}
               </summary>
+              ${
+                S.extensionDays(course, session)
+                  ? `<p class="note ext-note">
+                       Extended to ${esc(S.formatDate(date))}, so it is planned as live work.
+                       <button class="linkbtn" data-action="clear-extension"
+                               data-key="${esc(course.id)}|${esc(session.date)}">Put it back to ${esc(
+                         S.formatDate(S.parseDate(session.date), { month: 'short', day: 'numeric' })
+                       )}</button>
+                     </p>`
+                  : ''
+              }
               <ul class="tasks">${
                 tasks
                   .map((t) =>
@@ -4137,6 +4206,12 @@ document.addEventListener('click', async (e) => {
     return refresh();
   }
 
+  if (action === 'clear-extension') {
+    const [courseId, original] = el.dataset.key.split('|');
+    store.setExtension(courseId, original, null);
+    return refresh();
+  }
+
   if (action === 'toggle-carry') {
     store.updateSettings({ carryOverdue: !store.settings().carryOverdue });
     return refresh();
@@ -4344,6 +4419,15 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  const ext = e.target.closest('[data-extend]');
+  if (ext) {
+    const [courseId, original] = ext.dataset.extend.split('|');
+    // Clearing the field, or setting it back to the syllabus date, is the same
+    // as never having had an extension.
+    store.setExtension(courseId, original, ext.value && ext.value !== original ? ext.value : null);
+    return refresh();
+  }
+
   const when = e.target.closest('[data-sessiondate]');
   if (when) {
     const [courseId, sessionId] = when.dataset.sessiondate.split('|');

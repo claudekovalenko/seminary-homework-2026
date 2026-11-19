@@ -1,7 +1,7 @@
 // Turns the raw syllabus JSON into dated, measurable work:
 // page counts, effort estimates, deadlines, and a day-by-day reading plan.
 
-import { settings, overrideFor, isDone, progressFor, sessionDates } from './store.js';
+import { settings, overrideFor, isDone, progressFor, sessionDates, extensions } from './store.js';
 
 /* ---------- dates ---------- */
 
@@ -275,7 +275,21 @@ export const keyFor = (courseId, date, kind, idx) => `${courseId}|${date}|${kind
  * real and tickable but has no deadline, and nothing may pretend otherwise.
  */
 export function sessionDate(course, session) {
-  return session.date || sessionDates()[`${course.id}|${session.id}`] || null;
+  // A class the syllabus dated can be moved by an extension; the syllabus date
+  // is kept underneath it, so giving the extension back restores the original.
+  if (session.date) return extensions()[`${course.id}|${session.date}`] || session.date;
+  // A meeting you arrange yourself has no date until you set one.
+  return sessionDates()[`${course.id}|${session.id}`] || null;
+}
+
+/** The date a session was originally set for, whatever it has been moved to. */
+export const originalDate = (session) => session.date || null;
+
+/** How many days an extension moved a class, or 0 if it has not been moved. */
+export function extensionDays(course, session) {
+  if (!session.date) return 0;
+  const moved = extensions()[`${course.id}|${session.date}`];
+  return moved ? daysBetween(parseDate(session.date), parseDate(moved)) : 0;
 }
 
 /** The part of a task's key that identifies its session, dated or not. */

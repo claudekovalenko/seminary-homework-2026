@@ -2433,3 +2433,56 @@ details.fold.ahead > summary::-webkit-details-marker {
   color: var(--accent);
 }
 
+/* ---------- extensions ---------- */
+
+.ext-offer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.ext-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  padding: 6px 0;
+}
+
+.ext-row > span {
+  flex: 1;
+  min-width: 140px;
+}
+
+.ext-row input[type='date'] {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+
+.ext-moved {
+  color: var(--ok);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.sched-moved {
+  color: var(--ok);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.note.ext-note {
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  border-radius: 9px;
+  padding: 8px 10px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
