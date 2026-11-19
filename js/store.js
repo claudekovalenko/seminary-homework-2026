@@ -101,6 +101,7 @@ const EMPTY = {
   // move and nothing is ever actually lost.
   removals: {},
   sessionDates: {}, // "courseId|sessionId" -> ISO date, for meetings you arrange
+  extensions: {}, // "courseId|originalDate" -> the new date you were given
   running: null, // { key, courseId, startedAt } — the stopwatch, if one is going
   timeLog: [], // [{ key, courseId, minutes, at }] — sittings, for weekly totals
   // itemKey -> minutes, for good. The log above is trimmed to the last few
@@ -159,6 +160,7 @@ function read() {
       highlights: parsed.highlights || {},
       removals: parsed.removals || {},
       sessionDates: parsed.sessionDates || {},
+      extensions: parsed.extensions || {},
       running: parsed.running || null,
       timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
       totals: parsed.totals || totalsFrom(parsed.timeLog),
@@ -375,6 +377,23 @@ export function restoreRemoval(id, key) {
 /* ---------- dates you have arranged yourself ---------- */
 
 export const sessionDates = () => state.sessionDates;
+
+export const extensions = () => state.extensions;
+
+/**
+ * Record an extension on a class whose date the syllabus already fixed.
+ *
+ * Kept apart from sessionDates, which holds the date you chose for a meeting
+ * you arrange yourself. The two look alike and mean opposite things: one is the
+ * only date that work has ever had, the other overrides a date that still
+ * exists on the syllabus and that you may want back.
+ */
+export function setExtension(courseId, originalDate, iso) {
+  const key = `${courseId}|${originalDate}`;
+  if (iso) state.extensions[key] = iso;
+  else delete state.extensions[key];
+  persist();
+}
 
 export function setSessionDate(courseId, sessionId, iso) {
   const key = `${courseId}|${sessionId}`;
@@ -655,6 +674,7 @@ export function importData(json) {
     highlights: parsed.highlights || {},
     removals: parsed.removals || {},
     sessionDates: parsed.sessionDates || {},
+    extensions: parsed.extensions || {},
     running: parsed.running || null,
     timeLog: Array.isArray(parsed.timeLog) ? parsed.timeLog : [],
     totals: parsed.totals || totalsFrom(parsed.timeLog),
